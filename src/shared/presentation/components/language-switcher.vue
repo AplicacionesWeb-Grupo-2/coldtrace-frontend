@@ -7,6 +7,12 @@ const options = [
     {label: 'ES', value: 'es', icon: '/icons/flag-es.svg'},
 ];
 
+/**
+ * Handles set language behavior in the shared context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function setLanguage(value) {
     locale.value = value;
 }

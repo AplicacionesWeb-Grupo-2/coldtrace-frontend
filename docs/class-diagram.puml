@@ -1,0 +1,1003 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "root" {
+  class App
+  class Router {
+    + routes
+    + beforeEach()
+  }
+  class I18n {
+    + en
+    + es
+  }
+  class Pinia
+}
+
+package "shared.infrastructure" {
+  class BaseApi {
+    - http
+    + http
+  }
+  class BaseEndpoint {
+    - http
+    - endpointPath
+    + getAll()
+    + getById(id)
+    + create(resource)
+    + update(id, resource)
+    + delete(id)
+    + requestItem(method, id, data)
+    + collectionFallbackResponse(response)
+    + shouldUseCollectionFallback(response, fallbackResponse)
+    + fallbackBaseURL()
+    + requestCollectionWrite(method, data)
+  }
+}
+
+package "shared.presentation.components" {
+  class DashboardShell {
+    - accessDropdownOpen: Boolean
+    - reportsDropdownOpen: Boolean
+    - settingsDropdownOpen: Boolean
+    + toggleAccessDropdown(): void
+    + toggleReportsDropdown(): void
+    + toggleSettingsDropdown(): void
+    + logout(): void
+    + loadShellData(): Promise
+    + startTelemetryUpdates(): void
+    + downloadCurrentMonthReport(): Promise
+  }
+  class LanguageSwitcher {
+    - options
+    + setLanguage(value): void
+  }
+  class Layout {
+    - dashboardRoutePaths
+    - showDashboardShell: Boolean
+    - showLanguageSwitcher: Boolean
+  }
+  class ListPagination {
+    - total: Number
+    - pageSize: Number
+    - modelValue: Number
+    + update:modelValue(): void <<event>>
+    + goToPage(page): void
+  }
+}
+
+package "shared.presentation.views" {
+  class PageNotFound
+}
+
+package "identity-access.domain.model" {
+  class Organization {
+    - id: Number
+    - legalName: string
+    - commercialName: string
+    - taxId: string
+    - contactEmail: string
+  }
+  class Permission {
+    - id: Number
+    - resource: string
+    - action: string
+    - description: string
+  }
+  class Role {
+    - id: Number
+    - name: string
+    - label: string
+    - permissions: Permission[]
+  }
+  class RoleName <<enumeration>> {
+    SuperAdministrator
+    Administrator
+    OperationsManager
+    Operator
+    Auditor
+  }
+  class User {
+    - id: Number
+    - uuid: string
+    - organizationUserId: Number
+    - firstName: string
+    - lastName: string
+    - email: string
+    - organizationId: Number
+    - roleId: Number
+    + fullName
+  }
+}
+
+package "identity-access.infrastructure" {
+  class IdentityAccessApi {
+    - usersEndpoint: BaseEndpoint
+    - organizationsEndpoint: BaseEndpoint
+    - rolesEndpoint: BaseEndpoint
+    + getUsers()
+    + createUser(resource)
+    + updateUser(resource)
+    + deleteUser(id)
+    + getOrganizations()
+    + createOrganization(resource)
+    + getRoles()
+    + updateRole(resource)
+  }
+  class UserAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class OrganizationAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class RoleAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+}
+
+package "identity-access.application" {
+  class useIdentityAccessStore {
+    - users
+    - organizations
+    - roles
+    - currentUser
+    - currentOrganization
+    - currentRole
+    + fetchAccessData()
+    + signIn(email, password)
+    + createAccount(payload)
+    + createOrganizationUser(payload)
+    + updateUserRole(user, roleId)
+    + deleteUser(user)
+    + toggleRolePermission(role, permissionKey, checked)
+    + canManageAccess()
+    + canManageUsers()
+    + canManageAssets()
+    + canMonitorAssets()
+  }
+}
+
+package "identity-access.presentation.views" {
+  class SignIn {
+    - form
+    - feedback
+    + submit(): Promise
+  }
+  class SignUp {
+    - form
+    - feedback
+    + submit(): Promise
+  }
+  class PasswordRecovery
+  class ResetPassword
+  class UserAccessList {
+    - searchTerm
+    - currentPage
+    + updateUserRole(): Promise
+    + deleteUser(): Promise
+  }
+  class UserForm {
+    - form
+    + submit(): Promise
+  }
+  class RolePermissionForm {
+    - savingRoleId
+    + toggleRolePermission(role, permissionKey, checked): Promise
+  }
+}
+
+package "identity-access.presentation" {
+  class IdentityAccessRoutes {
+    + dashboard
+    + passwordRecovery
+    + resetPassword
+    + rolesPermissions
+    + userNew
+    + signIn
+    + signUp
+  }
+}
+
+package "asset-management.domain.model" {
+  class Asset {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - type: AssetType
+    - gatewayId: Number
+    - name: string
+    - location: string
+    - capacity: Number
+    - status: AssetStatus
+    - lastIncident: string
+    - currentTemperature: string
+    - connectivity: ConnectivityStatus
+  }
+  class AssetSettings {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - assetTypes: string[]
+    - iotDeviceTypes: string[]
+    - minimumTemperature: Number
+    - maximumTemperature: Number
+    - maximumHumidity: Number
+    - calibrationFrequencyDays: Number
+    - assetId: Number
+  }
+  class DefaultAssetSettings <<utility>> {
+    + DEFAULT_ASSET_SETTING_VALUES
+    + buildDefaultAssetSettings(id, organizationId, uuid, assetId, fallbackSettings)
+  }
+  class Gateway {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - name: string
+    - location: string
+    - network: string
+    - status: GatewayStatus
+  }
+  class IoTDevice {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - deviceType: string
+    - model: string
+    - measurementType: string
+    - assetId: Number
+    - status: IoTDeviceStatus
+    - calibrationStatus: CalibrationStatus
+    - measurementParameters: string[]
+    - readingFrequencySeconds: Number
+  }
+  class AssetStatus <<enumeration>>
+  class AssetType <<enumeration>>
+  class CalibrationStatus <<enumeration>>
+  class ConnectivityStatus <<enumeration>>
+  class GatewayStatus <<enumeration>>
+  class IoTDeviceStatus <<enumeration>>
+  class IOT_DEVICE_DEFINITIONS <<constant>>
+}
+
+package "asset-management.infrastructure" {
+  class AssetManagementApi {
+    - assetsEndpoint: BaseEndpoint
+    - iotDevicesEndpoint: BaseEndpoint
+    - gatewaysEndpoint: BaseEndpoint
+    - assetSettingsEndpoint: BaseEndpoint
+    + getAssets()
+    + createAsset(resource)
+    + updateAsset(resource)
+    + deleteAsset(id)
+    + getIoTDevices()
+    + createIoTDevice(resource)
+    + updateIoTDevice(resource)
+    + deleteIoTDevice(id)
+    + getGateways()
+    + createGateway(resource)
+    + updateGateway(resource)
+    + deleteGateway(id)
+    + getAssetSettings()
+    + createAssetSettings(resource)
+    + updateAssetSettings(resource)
+    + deleteAssetSettings(id)
+  }
+  class AssetAssembler
+  class AssetSettingsAssembler
+  class GatewayAssembler
+  class IoTDeviceAssembler
+}
+
+package "asset-management.application" {
+  class useAssetManagementStore {
+    - assets
+    - iotDevices
+    - gateways
+    - assetSettings
+    + fetchAssetManagementData(options)
+    + createAsset(asset)
+    + updateAsset(asset)
+    + deleteAsset(asset)
+    + createIoTDevice(iotDevice)
+    + updateIoTDevice(iotDevice)
+    + deleteIoTDevice(iotDevice)
+    + createGateway(gateway)
+    + updateGateway(gateway)
+    + deleteGateway(gateway)
+    + createAssetSettings(settings)
+    + updateAssetSettings(settings)
+    + assetsForOrganization(organizationId)
+    + monitoredAssetsForOrganization(organizationId)
+    + settingsForAsset(organizationId, assetId)
+    + operationalSummaryFor(organizationId)
+  }
+}
+
+package "asset-management.presentation.views" {
+  class ColdRoomList {
+    - selectedTab
+    - formVisible
+    + submit(): Promise
+    + submitIoTDevice(): Promise
+    + submitGateway(): Promise
+    + updateAssetStatus(asset, value): Promise
+    + deleteAsset(asset): Promise
+  }
+  class SafetyRangeSettings {
+    - selectedAssetId
+    - selectedMinimumTemperature
+    - selectedMaximumTemperature
+    - selectedMaximumHumidity
+    + saveRangeSettings(): Promise
+  }
+  class OperationalParametersSettings {
+    - selectedAssetId
+    - selectedIoTDeviceId
+    - selectedFrequencyMinutes
+    + saveOperationalParameters(): Promise
+  }
+}
+
+package "asset-management.presentation" {
+  class AssetManagementRoutes {
+    + assets
+    + safetyRanges
+    + operationalParameters
+  }
+}
+
+package "monitoring.domain.model" {
+  class DashboardKpi
+  class IncidentDay
+  class "Incident" as MonitoringIncident {
+    - id: Number
+    - organizationId: Number
+    - assetId: Number
+    - type: string
+    - severity: string
+    - status: string
+    - sourceReadingId: Number
+    - escalationStatus: string
+    + isOpen
+    + isRecognized
+    + isClosed
+    + isGenerated
+    + isPendingReview
+    + isEscalated
+  }
+  class "MaintenanceSchedule" as MonitoringMaintenanceSchedule
+  class MaintenanceTask
+  class OfflineReading {
+    - id: Number
+    - assetId: Number
+    - iotDeviceId: Number
+    - temperature: Number
+    - humidity: Number
+    - syncStatus: SyncStatus
+    + isPending
+    + isSynced
+    + isFailed
+    + withSyncStatus(syncStatus)
+  }
+  class RecentAlert
+  class SensorReading {
+    - id: Number
+    - assetId: Number
+    - iotDeviceId: Number
+    - temperature: Number
+    - humidity: Number
+    - isOutOfRange: Boolean
+    - recordedAt: string
+  }
+  class StorageDistributionItem
+  class SyncStatus <<enumeration>>
+  class "TechnicalServiceRequest" as MonitoringTechnicalServiceRequest
+  class TemperaturePoint
+  class "MaintenanceScheduleStatus" as MonitoringMaintenanceScheduleStatus <<enumeration>>
+  class "TechnicalServiceStatus" as MonitoringTechnicalServiceStatus <<enumeration>>
+}
+
+package "monitoring.infrastructure" {
+  class MonitoringApi {
+    - sensorReadingsEndpoint: BaseEndpoint
+    - incidentsEndpoint: BaseEndpoint
+    - maintenanceSchedulesEndpoint: BaseEndpoint
+    - technicalServiceRequestsEndpoint: BaseEndpoint
+    + getSensorReadings()
+    + createSensorReading(resource)
+    + getIncidents()
+    + createIncident(resource)
+    + updateIncident(id, resource)
+    + getMaintenanceSchedules()
+    + getTechnicalServiceRequests()
+  }
+  class SensorReadingAssembler
+  class "IncidentAssembler" as MonitoringIncidentAssembler
+  class "MaintenanceScheduleAssembler" as MonitoringMaintenanceScheduleAssembler
+  class "TechnicalServiceRequestAssembler" as MonitoringTechnicalServiceRequestAssembler
+}
+
+package "monitoring.application" {
+  class useMonitoringStore {
+    - readings
+    - offlineReadings
+    - incidents
+    - maintenanceSchedules
+    - technicalServiceRequests
+    + fetchMonitoringData(options)
+    + createSensorReading(sensorReading)
+    + getLatestTemperatureByAsset(assetId)
+    + getLatestHumidityByAsset(assetId)
+    + getReadingsByAsset(assetId, from, to)
+    + recentReadingsForAssetIds(assetIds, limit)
+    + syncReading(id)
+    + syncAllPending()
+    + syncGeneratedIncidentsForOrganization(organizationId)
+    + updateOrganizationTelemetry(organizationId)
+    + hasCalibrationIssue(iotDevice)
+  }
+}
+
+package "monitoring.presentation.components" {
+  class StatCard
+  class TemperatureChart {
+    - points
+    + refreshChart(): void
+    + buildChart(): void
+  }
+  class TemperatureGauge
+  class StorageDistribution {
+    - items
+    + refreshChart(): void
+    + buildChart(): void
+  }
+  class IncidentsChart {
+    - days
+    + refreshChart(): void
+    + buildChart(): void
+  }
+  class RecentAlerts
+  class MaintenanceList
+  class MonitoringAssetCard
+}
+
+package "monitoring.presentation.views" {
+  class OperationalDashboard
+  class AssetMonitoringDashboard
+}
+
+package "monitoring.presentation" {
+  class MonitoringRoutes {
+    + operational
+    + assets
+  }
+}
+
+package "alerts.domain.model" {
+  class EscalationPolicy {
+    - severity: string
+    - waitingMinutes: Number
+    - level: Number
+    - targetKey: string
+    + appliesTo(incident): Boolean
+  }
+  class "Incident" as AlertsIncident {
+    - id: Number
+    - organizationId: Number
+    - assetId: Number
+    - assetName: string
+    - type: string
+    - severity: string
+    - status: string
+    - conditionStable: Boolean
+    - escalationStatus: string
+    + isOpen
+    + isRecognized
+    + isClosed
+    + isConditionStable
+    + isGenerated
+    + isPendingReview
+    + isEscalated
+  }
+  class Notification {
+    - id: Number
+    - organizationId: Number
+    - incidentId: Number
+    - assetName: string
+    - channel: NotificationChannel
+    - recipient: string
+    - status: NotificationStatus
+    + isPending
+    + isSent
+    + isFailed
+  }
+  class NotificationChannel <<enumeration>>
+  class NotificationStatus <<enumeration>>
+}
+
+package "alerts.infrastructure" {
+  class AlertsApi {
+    - incidentsEndpoint: BaseEndpoint
+    - notificationsEndpoint: BaseEndpoint
+    + getIncidents()
+    + createIncident(resource)
+    + updateIncident(resource)
+    + getNotifications()
+    + createNotification(resource)
+  }
+  class "IncidentAssembler" as AlertsIncidentAssembler
+  class NotificationAssembler
+}
+
+package "alerts.application" {
+  class useAlertsStore {
+    - incidents
+    - notifications
+    - feedback
+    + loadIncidents(options)
+    + fetchIncidentsOnly()
+    + fetchNotificationsOnly()
+    + recognizeIncident(incident, userName)
+    + closeIncident(incident, correctiveAction, evidence, userName)
+    + stabilizeIncident(incident)
+    + reviewEscalation(incident, userName)
+    + canResolveAlerts()
+    + setFeedback(feedback)
+    + clearFeedback()
+  }
+}
+
+package "alerts.presentation.views" {
+  class IncidentList {
+    - currentPage
+    - closureCard
+    + recognize(incident): void
+    + closeIncident(): void
+    + reviewEscalation(incident): void
+    + stabilizeSelectedIncident(): void
+  }
+  class NotificationList {
+    - currentPage
+    + attendNotification(notification): void
+  }
+}
+
+package "alerts.presentation" {
+  class AlertsRoutes {
+    + incidents
+    + notifications
+  }
+}
+
+package "maintenance-management.domain.model" {
+  class MaintenanceSchedule {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - assetId: Number
+    - iotDeviceId: Number
+    - scheduledDate: string
+    - period: string
+    - status: MaintenanceScheduleStatus
+  }
+  class MaintenanceScheduleStatus <<enumeration>>
+  class TechnicalServiceRequest {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - assetId: Number
+    - priority: string
+    - issueDescription: string
+    - requestedDate: string
+    - status: TechnicalServiceStatus
+  }
+  class TechnicalServiceStatus <<enumeration>>
+}
+
+package "maintenance-management.infrastructure" {
+  class MaintenanceManagementApi {
+    - maintenanceSchedulesEndpoint: BaseEndpoint
+    - technicalServiceRequestsEndpoint: BaseEndpoint
+    + getMaintenanceSchedules()
+    + createMaintenanceSchedule(resource)
+    + updateMaintenanceSchedule(resource)
+    + getTechnicalServiceRequests()
+    + createTechnicalServiceRequest(resource)
+    + updateTechnicalServiceRequest(resource)
+  }
+  class MaintenanceScheduleAssembler
+  class TechnicalServiceRequestAssembler
+}
+
+package "maintenance-management.application" {
+  class useMaintenanceManagementStore {
+    - maintenanceSchedules
+    - technicalServiceRequests
+    + fetchMaintenanceManagementData()
+    + createMaintenanceSchedule(schedule)
+    + updateMaintenanceSchedule(schedule)
+    + createTechnicalServiceRequest(request)
+    + updateTechnicalServiceRequest(request)
+    + schedulesForOrganization(organizationId)
+    + technicalServicesForOrganization(organizationId)
+  }
+}
+
+package "maintenance-management.presentation.views" {
+  class PreventiveMaintenanceScheduler
+  class TechnicalServiceTracker
+}
+
+package "maintenance-management.presentation" {
+  class MaintenanceManagementRoutes {
+    + preventive
+    + technicalService
+  }
+}
+
+package "reports.domain.model" {
+  class AuditEvidence {
+    - id: Number
+    - organizationId: Number
+    - filters
+    - items: EvidenceItem[]
+    - reports: Report[]
+    - findings: ComplianceFinding[]
+    + completeItems
+    + incompleteItems
+    + completenessRate
+    + isComplete
+    + hasEvidence
+  }
+  class ComplianceFinding {
+    - id: string
+    - organizationId: Number
+    - assetId: Number
+    - type: string
+    - severity: string
+    - status: FindingStatus
+  }
+  class ComplianceReport {
+    - id: Number
+    - organizationId: Number
+    - filters
+    - findings: ComplianceFinding[]
+    + totalFindings
+    + openFindings
+    + closedFindings
+    + affectedAssets
+    + hasFindings
+  }
+  class DailyLog {
+    - id: Number
+    - organizationId: Number
+    - date: string
+    - expectedReadings: Number
+    - entries
+    + totalReadings
+    + monitoredAssets
+    + outOfRangeReadings
+    + incompleteAssets
+    + complianceRate
+  }
+  class EvidenceItem {
+    - id: string
+    - status: string
+    - quantity: Number
+    - requiredQuantity: Number
+    + isComplete
+  }
+  class FindingStatus <<enumeration>>
+  class MonthlyReport {
+    - id: Number
+    - organizationId: Number
+    - month: string
+    - rows
+    + totalAssets
+    + totalReadings
+    + complianceRate
+    + canDownload
+  }
+  class OperationalHistory {
+    - filters
+    - events
+    + totalEvents
+    + readingsCount
+    + alertsCount
+    + incidentsCount
+  }
+  class Report {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - type: ReportType
+    - title: string
+    - periodDate: string
+  }
+  class ReportType <<enumeration>>
+  class SanitaryComplianceReport {
+    - id: Number
+    - organizationId: Number
+    - filters
+    - rows
+    + totalAssets
+    + totalReadings
+    + expectedReadings
+    + complianceRate
+    + canExport
+  }
+}
+
+package "reports.infrastructure" {
+  class ReportsApi {
+    - reportsEndpoint: BaseEndpoint
+    + getReports()
+    + createReport(resource)
+  }
+  class ReportAssembler
+}
+
+package "reports.application" {
+  class useReportsStore {
+    - reports
+    - closedComplianceFindingIds
+    + fetchReports()
+    + reportsForOrganization(organizationId)
+    + currentDate()
+    + buildDailyLog(organizationId, date)
+    + buildOperationalHistory(organizationId, filters)
+    + buildSanitaryComplianceReport(organizationId, filters)
+    + buildComplianceReport(organizationId, filters)
+    + buildAuditEvidence(organizationId, filters)
+    + buildMonthlyReport(organizationId, month)
+    + createDailyLogReport(organizationId, dailyLog)
+    + createSanitaryComplianceReport(organizationId, report)
+    + createMonthlySummaryReport(organizationId, report)
+    + closeComplianceFinding(findingId)
+    + sanitaryComplianceCsv(report)
+    + monthlyReportCsv(report)
+    + auditEvidenceCsv(evidence)
+  }
+}
+
+package "reports.presentation.views" {
+  class "DailyLog" as DailyLogView
+  class "MonthlyReport" as MonthlyReportView
+  class "OperationalHistory" as OperationalHistoryView
+  class "SanitaryCompliance" as SanitaryComplianceView
+  class "ComplianceFindings" as ComplianceFindingsView
+  class "AuditEvidence" as AuditEvidenceView
+}
+
+package "reports.presentation" {
+  class ReportsRoutes {
+    + dailyLog
+    + monthly
+    + history
+    + compliance
+    + findings
+    + auditEvidence
+  }
+}
+
+' Identity relationships
+User --> Organization : belongs to
+User --> Role : has
+Role --> Permission : contains
+Role ..> RoleName : uses
+IdentityAccessApi --|> BaseApi
+IdentityAccessApi *-- BaseEndpoint
+UserAssembler ..> User : creates
+OrganizationAssembler ..> Organization : creates
+RoleAssembler ..> Role : creates
+RoleAssembler ..> Permission : creates
+useIdentityAccessStore ..> IdentityAccessApi : uses
+useIdentityAccessStore ..> UserAssembler : uses
+useIdentityAccessStore ..> OrganizationAssembler : uses
+useIdentityAccessStore ..> RoleAssembler : uses
+useIdentityAccessStore ..> RoleName : enforces
+SignIn ..> useIdentityAccessStore : uses
+SignUp ..> useIdentityAccessStore : uses
+UserAccessList ..> useIdentityAccessStore : uses
+UserForm ..> useIdentityAccessStore : uses
+RolePermissionForm ..> useIdentityAccessStore : uses
+RolePermissionForm --> ListPagination : uses
+UserAccessList --> ListPagination : uses
+IdentityAccessRoutes --> SignIn : maps
+IdentityAccessRoutes --> SignUp : maps
+IdentityAccessRoutes --> PasswordRecovery : maps
+IdentityAccessRoutes --> ResetPassword : maps
+IdentityAccessRoutes --> UserAccessList : maps
+IdentityAccessRoutes --> UserForm : maps
+IdentityAccessRoutes --> RolePermissionForm : maps
+
+' Asset management relationships
+Asset ..> AssetStatus : uses
+Asset ..> AssetType : uses
+Asset ..> ConnectivityStatus : uses
+Asset --> Gateway : assigned gateway
+AssetSettings --> Asset : optional scope
+DefaultAssetSettings ..> AssetSettings : creates
+Gateway ..> GatewayStatus : uses
+IoTDevice --> Asset : linked asset
+IoTDevice ..> CalibrationStatus : uses
+IoTDevice ..> IoTDeviceStatus : uses
+IoTDevice ..> IOT_DEVICE_DEFINITIONS : configured by
+AssetManagementApi --|> BaseApi
+AssetManagementApi *-- BaseEndpoint
+AssetAssembler ..> Asset : creates
+AssetSettingsAssembler ..> AssetSettings : creates
+GatewayAssembler ..> Gateway : creates
+IoTDeviceAssembler ..> IoTDevice : creates
+useAssetManagementStore ..> AssetManagementApi : uses
+useAssetManagementStore ..> AssetAssembler : uses
+useAssetManagementStore ..> AssetSettingsAssembler : uses
+useAssetManagementStore ..> GatewayAssembler : uses
+useAssetManagementStore ..> IoTDeviceAssembler : uses
+ColdRoomList ..> useAssetManagementStore : uses
+ColdRoomList ..> useIdentityAccessStore : uses
+ColdRoomList --> ListPagination : uses
+SafetyRangeSettings ..> useAssetManagementStore : uses
+SafetyRangeSettings ..> useIdentityAccessStore : uses
+SafetyRangeSettings --> ListPagination : uses
+OperationalParametersSettings ..> useAssetManagementStore : uses
+OperationalParametersSettings ..> useIdentityAccessStore : uses
+OperationalParametersSettings --> ListPagination : uses
+AssetManagementRoutes --> ColdRoomList : maps
+AssetManagementRoutes --> SafetyRangeSettings : maps
+AssetManagementRoutes --> OperationalParametersSettings : maps
+
+' Monitoring relationships
+SensorReading --> Asset : reading asset
+SensorReading --> IoTDevice : source device
+OfflineReading ..> SyncStatus : uses
+MonitoringIncident --> Asset : affects
+MonitoringIncident --> SensorReading : may originate from
+MonitoringMaintenanceSchedule --> Asset : schedules
+MonitoringTechnicalServiceRequest --> Asset : services
+MonitoringApi --|> BaseApi
+MonitoringApi *-- BaseEndpoint
+SensorReadingAssembler ..> SensorReading : creates
+MonitoringIncidentAssembler ..> MonitoringIncident : creates
+MonitoringMaintenanceScheduleAssembler ..> MonitoringMaintenanceSchedule : creates
+MonitoringTechnicalServiceRequestAssembler ..> MonitoringTechnicalServiceRequest : creates
+useMonitoringStore ..> MonitoringApi : uses
+useMonitoringStore ..> SensorReadingAssembler : uses
+useMonitoringStore ..> MonitoringIncidentAssembler : uses
+useMonitoringStore ..> MonitoringMaintenanceScheduleAssembler : uses
+useMonitoringStore ..> MonitoringTechnicalServiceRequestAssembler : uses
+useMonitoringStore ..> OfflineReading : manages
+useMonitoringStore ..> Asset : reads
+useMonitoringStore ..> IoTDevice : reads
+OperationalDashboard ..> useMonitoringStore : uses
+OperationalDashboard ..> useAssetManagementStore : uses
+OperationalDashboard --> StatCard : uses
+OperationalDashboard --> TemperatureChart : uses
+OperationalDashboard --> StorageDistribution : uses
+OperationalDashboard --> IncidentsChart : uses
+OperationalDashboard --> RecentAlerts : uses
+OperationalDashboard --> MaintenanceList : uses
+AssetMonitoringDashboard ..> useMonitoringStore : uses
+AssetMonitoringDashboard ..> useAssetManagementStore : uses
+AssetMonitoringDashboard --> MonitoringAssetCard : uses
+MonitoringAssetCard --> TemperatureGauge : uses
+MonitoringAssetCard --> TemperatureChart : uses
+MonitoringRoutes --> OperationalDashboard : maps
+MonitoringRoutes --> AssetMonitoringDashboard : maps
+
+' Alerts relationships
+AlertsIncident --> Asset : affects
+AlertsIncident --> SensorReading : may originate from
+Notification --> AlertsIncident : references
+Notification ..> NotificationChannel : uses
+Notification ..> NotificationStatus : uses
+EscalationPolicy ..> AlertsIncident : evaluates
+AlertsApi --|> BaseApi
+AlertsApi *-- BaseEndpoint
+AlertsIncidentAssembler ..> AlertsIncident : creates
+NotificationAssembler ..> Notification : creates
+useAlertsStore ..> AlertsApi : uses
+useAlertsStore ..> MonitoringApi : reads readings
+useAlertsStore ..> AssetManagementApi : reads assets/settings
+useAlertsStore ..> useIdentityAccessStore : checks permissions
+useAlertsStore ..> EscalationPolicy : applies
+IncidentList ..> useAlertsStore : uses
+IncidentList ..> useIdentityAccessStore : uses
+IncidentList --> ListPagination : uses
+NotificationList ..> useAlertsStore : uses
+NotificationList --> ListPagination : uses
+AlertsRoutes --> IncidentList : maps
+AlertsRoutes --> NotificationList : maps
+
+' Maintenance relationships
+MaintenanceSchedule --> Asset : planned for
+MaintenanceSchedule --> IoTDevice : optional device
+MaintenanceSchedule ..> MaintenanceScheduleStatus : uses
+TechnicalServiceRequest --> Asset : requested for
+TechnicalServiceRequest ..> TechnicalServiceStatus : uses
+MaintenanceManagementApi --|> BaseApi
+MaintenanceManagementApi *-- BaseEndpoint
+MaintenanceScheduleAssembler ..> MaintenanceSchedule : creates
+TechnicalServiceRequestAssembler ..> TechnicalServiceRequest : creates
+useMaintenanceManagementStore ..> MaintenanceManagementApi : uses
+PreventiveMaintenanceScheduler ..> useMaintenanceManagementStore : uses
+PreventiveMaintenanceScheduler ..> useAssetManagementStore : uses
+PreventiveMaintenanceScheduler --> ListPagination : uses
+TechnicalServiceTracker ..> useMaintenanceManagementStore : uses
+TechnicalServiceTracker ..> useAssetManagementStore : uses
+TechnicalServiceTracker --> ListPagination : uses
+MaintenanceManagementRoutes --> PreventiveMaintenanceScheduler : maps
+MaintenanceManagementRoutes --> TechnicalServiceTracker : maps
+
+' Reports relationships
+AuditEvidence --> EvidenceItem : contains
+AuditEvidence --> Report : includes
+AuditEvidence --> ComplianceFinding : includes
+ComplianceReport --> ComplianceFinding : contains
+ComplianceFinding ..> FindingStatus : uses
+Report ..> ReportType : uses
+ReportsApi --|> BaseApi
+ReportsApi *-- BaseEndpoint
+ReportAssembler ..> Report : creates
+useReportsStore ..> ReportsApi : uses
+useReportsStore ..> ReportAssembler : uses
+useReportsStore ..> DailyLog : builds
+useReportsStore ..> OperationalHistory : builds
+useReportsStore ..> SanitaryComplianceReport : builds
+useReportsStore ..> ComplianceReport : builds
+useReportsStore ..> AuditEvidence : builds
+useReportsStore ..> MonthlyReport : builds
+DailyLogView ..> useReportsStore : uses
+DailyLogView ..> useIdentityAccessStore : uses
+DailyLogView ..> useAssetManagementStore : uses
+DailyLogView ..> useMonitoringStore : uses
+DailyLogView --> ListPagination : uses
+MonthlyReportView ..> useReportsStore : uses
+MonthlyReportView --> ListPagination : uses
+OperationalHistoryView ..> useReportsStore : uses
+OperationalHistoryView --> ListPagination : uses
+SanitaryComplianceView ..> useReportsStore : uses
+SanitaryComplianceView --> ListPagination : uses
+ComplianceFindingsView ..> useReportsStore : uses
+ComplianceFindingsView --> ListPagination : uses
+AuditEvidenceView ..> useReportsStore : uses
+AuditEvidenceView --> ListPagination : uses
+ReportsRoutes --> DailyLogView : maps
+ReportsRoutes --> MonthlyReportView : maps
+ReportsRoutes --> OperationalHistoryView : maps
+ReportsRoutes --> SanitaryComplianceView : maps
+ReportsRoutes --> ComplianceFindingsView : maps
+ReportsRoutes --> AuditEvidenceView : maps
+
+' Shared and root relationships
+BaseEndpoint --> BaseApi : receives
+Layout --> DashboardShell : uses
+Layout --> LanguageSwitcher : uses
+DashboardShell --> LanguageSwitcher : uses
+DashboardShell ..> useIdentityAccessStore : uses
+DashboardShell ..> useAlertsStore : uses
+DashboardShell ..> useAssetManagementStore : uses
+DashboardShell ..> useMonitoringStore : uses
+DashboardShell ..> useReportsStore : uses
+App --> Layout : uses
+Router --> IdentityAccessRoutes : uses
+Router --> AssetManagementRoutes : uses
+Router --> MonitoringRoutes : uses
+Router --> AlertsRoutes : uses
+Router --> MaintenanceManagementRoutes : uses
+Router --> ReportsRoutes : uses
+Router --> PageNotFound : fallback
+App ..> Router : installs
+App ..> Pinia : installs
+App ..> I18n : installs
+
+@enduml

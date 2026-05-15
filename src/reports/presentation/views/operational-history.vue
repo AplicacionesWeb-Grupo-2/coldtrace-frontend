@@ -64,6 +64,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
 
@@ -78,14 +83,32 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Selects asset in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectAsset(value) {
     selectedAssetId.value = Number(value);
 }
 
+/**
+ * Selects event type in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectEventType(value) {
     selectedEventType.value = value;
 }
 
+/**
+ * Updates from date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateFromDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     fromDate.value = nextDate;
@@ -95,23 +118,53 @@ function updateFromDate(value) {
     }
 }
 
+/**
+ * Updates to date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateToDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     toDate.value = nextDate < effectiveFromDate.value ? effectiveFromDate.value : nextDate;
 }
 
+/**
+ * Returns the i18n label key for event type.
+ *
+ * @param {string} type
+ * @returns {string}
+ */
 function eventTypeLabelKey(type) {
     return `reports.history.types.${type}`;
 }
 
+/**
+ * Returns the i18n label key for severity.
+ *
+ * @param {*} severity
+ * @returns {string}
+ */
 function severityLabelKey(severity) {
     return `reports.history.severity.${severity}`;
 }
 
+/**
+ * Returns the CSS class for severity.
+ *
+ * @param {*} severity
+ * @returns {string}
+ */
 function severityClass(severity) {
     return `severity-${severity}`;
 }
 
+/**
+ * Formats date time for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatDateTime(value) {
     return new Intl.DateTimeFormat('en', {
         day: '2-digit',

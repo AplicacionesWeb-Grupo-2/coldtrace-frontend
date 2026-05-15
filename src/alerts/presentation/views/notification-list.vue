@@ -36,6 +36,12 @@ onUnmounted(() => {
     clearFeedbackDismissTimeout();
 });
 
+/**
+ * Handles notification channel icon behavior in the alerts context.
+ *
+ * @param {*} notification
+ * @returns {string}
+ */
 function notificationChannelIcon(notification) {
     switch (notification.channel) {
         case 'email':
@@ -47,31 +53,73 @@ function notificationChannelIcon(notification) {
     }
 }
 
+/**
+ * Returns the i18n label key for notification channel.
+ *
+ * @param {*} notification
+ * @returns {string}
+ */
 function notificationChannelLabelKey(notification) {
     return `alerts.notification-list.channel-${notification.channel}`;
 }
 
+/**
+ * Returns the i18n label key for notification status.
+ *
+ * @param {*} notification
+ * @returns {string}
+ */
 function notificationStatusLabelKey(notification) {
     return `alerts.notification-list.status-${notification.status}`;
 }
 
+/**
+ * Handles incident for notification behavior in the alerts context.
+ *
+ * @param {*} notification
+ * @returns {*}
+ */
 function incidentForNotification(notification) {
     return alertsStore.organizationIncidents.find(incident => incident.id === notification.incidentId) ?? null;
 }
 
+/**
+ * Returns the i18n label key for escalation.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function escalationLabelKey(incident) {
     return `alerts.notification-list.escalation-${incident.escalationStatus}`;
 }
 
+/**
+ * Returns the i18n label key for severity.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function severityLabelKey(incident) {
     return `alerts.notification-list.severity-${incident.severity}`;
 }
 
+/**
+ * Determines whether attending is true.
+ *
+ * @param {*} notification
+ * @returns {boolean}
+ */
 function isAttending(notification) {
     const incident = incidentForNotification(notification);
     return Boolean(incident && alertsStore.recognizingId === incident.id);
 }
 
+/**
+ * Handles attend notification behavior in the alerts context.
+ *
+ * @param {*} notification
+ * @returns {*}
+ */
 function attendNotification(notification) {
     const incident = incidentForNotification(notification);
     if (!incident || !incident.isOpen) return;
@@ -87,6 +135,12 @@ function attendNotification(notification) {
         .catch(() => showTimedFeedback('alerts.notification-list.feedback-error'));
 }
 
+/**
+ * Formats date for display.
+ *
+ * @param {boolean} isoDate
+ * @returns {string}
+ */
 function formatDate(isoDate) {
     return new Intl.DateTimeFormat('en-GB', {
         day: '2-digit',
@@ -97,6 +151,12 @@ function formatDate(isoDate) {
     }).format(new Date(isoDate));
 }
 
+/**
+ * Handles show timed feedback behavior in the alerts context.
+ *
+ * @param {string} feedbackKey
+ * @returns {string}
+ */
 function showTimedFeedback(feedbackKey) {
     clearFeedbackDismissTimeout();
     alertsStore.setFeedback(feedbackKey);
@@ -106,6 +166,11 @@ function showTimedFeedback(feedbackKey) {
     }, feedbackDismissDelayMs);
 }
 
+/**
+ * Handles clear feedback dismiss timeout behavior in the alerts context.
+ *
+ * @returns {string}
+ */
 function clearFeedbackDismissTimeout() {
     if (feedbackDismissTimeoutId === null) return;
     window.clearTimeout(feedbackDismissTimeoutId);

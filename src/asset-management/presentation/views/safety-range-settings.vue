@@ -94,6 +94,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     identityLoading.value = true;
     feedback.value = 'idle';
@@ -113,6 +118,12 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Selects scope in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectScope(value) {
     selectedAssetId.value = Number(value);
     feedback.value = 'idle';
@@ -120,18 +131,41 @@ function selectScope(value) {
     resetRangeForm();
 }
 
+/**
+ * Updates minimum temperature preview in the asset management context.
+ *
+ * @param {string} value
+ * @returns {number}
+ */
 function updateMinimumTemperaturePreview(value) {
     selectedMinimumTemperature.value = numberFromInput(value);
 }
 
+/**
+ * Updates maximum temperature preview in the asset management context.
+ *
+ * @param {string} value
+ * @returns {number}
+ */
 function updateMaximumTemperaturePreview(value) {
     selectedMaximumTemperature.value = numberFromInput(value);
 }
 
+/**
+ * Updates maximum humidity preview in the asset management context.
+ *
+ * @param {string} value
+ * @returns {number}
+ */
 function updateMaximumHumidityPreview(value) {
     selectedMaximumHumidity.value = numberFromInput(value);
 }
 
+/**
+ * Handles save range settings behavior in the asset management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function saveRangeSettings() {
     submitted.value = true;
     feedback.value = 'idle';
@@ -184,6 +218,11 @@ async function saveRangeSettings() {
     }
 }
 
+/**
+ * Resets range form to its default state.
+ *
+ * @returns {void}
+ */
 function resetRangeForm() {
     const settings = selectedSettings.value;
     feedback.value = 'idle';
@@ -196,54 +235,115 @@ function resetRangeForm() {
     selectedMaximumHumidity.value = settings.maximumHumidity;
 }
 
+/**
+ * Determines whether range control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasRangeControlError(controlName) {
     return rangeErrors.value[controlName] && submitted.value;
 }
 
+/**
+ * Determines whether temperature range error exists.
+ *
+ * @returns {boolean}
+ */
 function hasTemperatureRangeError() {
     return submitted.value && !hasValidTemperatureRange();
 }
 
+/**
+ * Handles scope name for behavior in the asset management context.
+ *
+ * @param {*} settings
+ * @returns {string}
+ */
 function scopeNameFor(settings) {
     if (settings.assetId === null) return 'asset-management.safety-ranges.scope-default';
     const asset = organizationAssets.value.find(currentAsset => currentAsset.id === settings.assetId);
     return asset ? `${asset.uuid} - ${asset.name}` : `#${settings.assetId}`;
 }
 
+/**
+ * Handles scope location for behavior in the asset management context.
+ *
+ * @param {*} settings
+ * @returns {string}
+ */
 function scopeLocationFor(settings) {
     if (settings.assetId === null) return 'asset-management.safety-ranges.scope-default-description';
     const asset = organizationAssets.value.find(currentAsset => currentAsset.id === settings.assetId);
     return asset ? assetManagementStore.locationForAsset(asset, gateways.value) : 'N/A';
 }
 
+/**
+ * Handles setting status key behavior in the asset management context.
+ *
+ * @param {*} settings
+ * @returns {string}
+ */
 function settingStatusKey(settings) {
     return settings.assetId === null
         ? 'asset-management.safety-ranges.table.default-status'
         : 'asset-management.safety-ranges.table.asset-status';
 }
 
+/**
+ * Returns the CSS class for setting status.
+ *
+ * @param {*} settings
+ * @returns {string}
+ */
 function settingStatusClass(settings) {
     return settings.assetId === null ? 'status-compliant' : 'status-observation';
 }
 
+/**
+ * Determines whether invalid range form exists.
+ *
+ * @returns {boolean}
+ */
 function hasInvalidRangeForm() {
     return Object.values(rangeErrors.value).some(Boolean) || !hasValidTemperatureRange();
 }
 
+/**
+ * Determines whether valid temperature range exists.
+ *
+ * @returns {boolean}
+ */
 function hasValidTemperatureRange() {
     return Number(rangeForm.minimumTemperature) < Number(rangeForm.maximumTemperature);
 }
 
+/**
+ * Handles settings for selected scope behavior in the asset management context.
+ *
+ * @returns {void}
+ */
 function settingsForSelectedScope() {
     return settingsForScope(selectedAssetId.value || null);
 }
 
+/**
+ * Handles settings for scope behavior in the asset management context.
+ *
+ * @param {number|string} assetId
+ * @returns {void}
+ */
 function settingsForScope(assetId) {
     const organizationId = activeOrganizationId.value;
     if (!organizationId) return undefined;
     return organizationSettings.value.find(settings => settings.assetId === assetId);
 }
 
+/**
+ * Handles default settings for selected scope behavior in the asset management context.
+ *
+ * @returns {*}
+ */
 function defaultSettingsForSelectedScope() {
     const organizationId = activeOrganizationId.value ?? 0;
     const assetId = selectedAssetId.value || null;
@@ -257,32 +357,71 @@ function defaultSettingsForSelectedScope() {
     );
 }
 
+/**
+ * Handles next settings id behavior in the asset management context.
+ *
+ * @returns {*}
+ */
 function nextSettingsId() {
     const localMax = Math.max(...assetSettings.value.map(settings => settings.id), 0);
     const storeMax = assetManagementStore.nextAssetSettingsId() - 1;
     return Math.max(localMax, storeMax) + 1;
 }
 
+/**
+ * Generates d settings uuid for the current workflow.
+ *
+ * @param {number|string} organizationId
+ * @param {number|string} assetId
+ * @returns {number}
+ */
 function generatedSettingsUuid(organizationId, assetId) {
     const organizationPart = organizationId.toString().padStart(3, '0');
     if (!assetId) return `CFG-${organizationPart}`;
     return `CFG-${organizationPart}-A${assetId.toString().padStart(3, '0')}`;
 }
 
+/**
+ * Handles temperature range label behavior in the asset management context.
+ *
+ * @param {number|string} minimumTemperature
+ * @param {number|string} maximumTemperature
+ * @param {*} temperatureUnit
+ * @returns {string}
+ */
 function temperatureRangeLabel(minimumTemperature, maximumTemperature, temperatureUnit) {
     if (!Number.isFinite(Number(minimumTemperature)) || !Number.isFinite(Number(maximumTemperature))) return 'N/A';
     return `${minimumTemperature}${temperatureUnit} - ${maximumTemperature}${temperatureUnit}`;
 }
 
+/**
+ * Handles humidity label behavior in the asset management context.
+ *
+ * @param {number|string} maximumHumidity
+ * @param {*} humidityUnit
+ * @returns {string}
+ */
 function humidityLabel(maximumHumidity, humidityUnit) {
     return Number.isFinite(Number(maximumHumidity)) ? `${maximumHumidity}${humidityUnit}` : 'N/A';
 }
 
+/**
+ * Handles number from input behavior in the asset management context.
+ *
+ * @param {string} value
+ * @returns {number}
+ */
 function numberFromInput(value) {
     const numericValue = Number(value);
     return value.trim() && Number.isFinite(numericValue) ? numericValue : Number.NaN;
 }
 
+/**
+ * Handles translate or text behavior in the asset management context.
+ *
+ * @param {string} value
+ * @returns {*}
+ */
 function translateOrText(value) {
     return typeof value === 'string' && value.startsWith('asset-management.') ? t(value) : value;
 }

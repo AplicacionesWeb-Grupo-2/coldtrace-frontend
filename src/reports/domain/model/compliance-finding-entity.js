@@ -1,6 +1,30 @@
 import {FindingStatus} from '@/reports/domain/model/finding-status.js';
 
+/**
+ * @typedef {Object} ComplianceFindingProps
+ * @property {string} [id]
+ * @property {number|null} [organizationId]
+ * @property {number|null} [assetId]
+ * @property {string} [assetName]
+ * @property {string} [assetLocation]
+ * @property {string} [type]
+ * @property {string} [severity]
+ * @property {string} [status]
+ * @property {string} [periodFrom]
+ * @property {string} [periodTo]
+ * @property {string} [detectedAt]
+ * @property {string} [evidence]
+ * @property {string} [messageKey]
+ * @property {Object} [messageParams]
+ */
+
+/**
+ * Domain entity representing compliance finding.
+ */
 export class ComplianceFinding {
+    /**
+     * @param {ComplianceFindingProps} [props]
+     */
     constructor({
         id = '',
         organizationId = null,

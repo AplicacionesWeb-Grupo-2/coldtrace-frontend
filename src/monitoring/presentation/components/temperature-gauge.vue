@@ -2,6 +2,17 @@
 import {computed} from 'vue';
 import {useI18n} from 'vue-i18n';
 
+/**
+ * @typedef {Object} TemperatureGaugeProps
+ * @property {*} [temperature]
+ * @property {*} [humidity]
+ * @property {*} [sensorId]
+ * @property {*} [location]
+ * @property {*} [lastReadingTime]
+ * @property {*} [assetName]
+ * @property {*} [minTemp]
+ * @property {*} [maxTemp]
+ */
 const props = defineProps({
     temperature: {type: Number, default: null},
     humidity: {type: Number, default: null},

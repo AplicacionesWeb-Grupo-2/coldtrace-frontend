@@ -1,12 +1,22 @@
 <script setup>
 import {useI18n} from 'vue-i18n';
 
+/**
+ * @typedef {Object} RecentAlertsProps
+ * @property {*} [alerts]
+ */
 defineProps({
     alerts: {type: Array, default: () => []},
 });
 
 const {t} = useI18n();
 
+/**
+ * Returns the i18n label key for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusLabelKey(status) {
     return status === 'Unacknowledged'
         ? 'monitoring.operational.status-unack'

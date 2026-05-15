@@ -72,6 +72,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
     feedback.value = 'idle';
@@ -90,6 +95,12 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Updates from date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateFromDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     fromDate.value = nextDate;
@@ -101,17 +112,34 @@ function updateFromDate(value) {
     feedback.value = 'idle';
 }
 
+/**
+ * Updates to date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateToDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     toDate.value = nextDate < effectiveFromDate.value ? effectiveFromDate.value : nextDate;
     feedback.value = 'idle';
 }
 
+/**
+ * Selects asset in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectAsset(value) {
     selectedAssetId.value = Number(value);
     feedback.value = 'idle';
 }
 
+/**
+ * Exports evidence for the current selection.
+ *
+ * @returns {*}
+ */
 function exportEvidence() {
     if (!canPrepareEvidence.value) return;
 
@@ -129,36 +157,83 @@ function exportEvidence() {
     feedback.value = 'exported';
 }
 
+/**
+ * Returns the i18n label key for item.
+ *
+ * @param {*} item
+ * @returns {string}
+ */
 function itemLabelKey(item) {
     return `reports.audit.checklist.${item.id}`;
 }
 
+/**
+ * Returns the i18n label key for item status.
+ *
+ * @param {*} item
+ * @returns {string}
+ */
 function itemStatusLabelKey(item) {
     return `reports.audit.status.${item.status}`;
 }
 
+/**
+ * Returns the CSS class for item status.
+ *
+ * @param {*} item
+ * @returns {string}
+ */
 function itemStatusClass(item) {
     return `status-${item.status}`;
 }
 
+/**
+ * Returns the i18n label key for finding type.
+ *
+ * @param {*} finding
+ * @returns {string}
+ */
 function findingTypeLabelKey(finding) {
     return `reports.findings.types.${finding.type}`;
 }
 
+/**
+ * Returns the CSS class for finding status.
+ *
+ * @param {*} finding
+ * @returns {string}
+ */
 function findingStatusClass(finding) {
     return `status-${finding.status}`;
 }
 
+/**
+ * Returns the i18n label key for report type.
+ *
+ * @param {*} report
+ * @returns {string}
+ */
 function reportTypeLabelKey(report) {
     return `reports.audit.report-type.${report.type}`;
 }
 
+/**
+ * Handles default from date behavior in the reports context.
+ *
+ * @returns {string}
+ */
 function defaultFromDate() {
     const date = new Date(`${maxDate.value}T00:00:00`);
     date.setDate(date.getDate() - 6);
     return formatDateInput(date);
 }
 
+/**
+ * Formats date input for display.
+ *
+ * @param {string} date
+ * @returns {string}
+ */
 function formatDateInput(date) {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -166,6 +241,13 @@ function formatDateInput(date) {
     return `${year}-${month}-${day}`;
 }
 
+/**
+ * Downloads csv for the current selection.
+ *
+ * @param {string} csv
+ * @param {string} filename
+ * @returns {void}
+ */
 function downloadCsv(csv, filename) {
     const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -176,6 +258,12 @@ function downloadCsv(csv, filename) {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * Handles file name part behavior in the reports context.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function fileNamePart(value) {
     return value
         .normalize('NFD')

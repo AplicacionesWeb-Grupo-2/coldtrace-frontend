@@ -78,6 +78,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
     feedback.value = 'idle';
@@ -97,6 +102,11 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Handles request technical service behavior in the maintenance management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function requestTechnicalService() {
     requestSubmitted.value = true;
     feedback.value = 'idle';
@@ -150,6 +160,11 @@ async function requestTechnicalService() {
     }
 }
 
+/**
+ * Handles close technical service behavior in the maintenance management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function closeTechnicalService() {
     closureSubmitted.value = true;
     feedback.value = 'idle';
@@ -204,6 +219,11 @@ async function closeTechnicalService() {
     }
 }
 
+/**
+ * Resets request form to its default state.
+ *
+ * @returns {void}
+ */
 function resetRequestForm() {
     const firstAsset = serviceEligibleAssets.value[0];
 
@@ -213,6 +233,12 @@ function resetRequestForm() {
     serviceRequestForm.issueDescription = '';
 }
 
+/**
+ * Resets closure form to its default state.
+ *
+ * @param {number|string} requestId
+ * @returns {void}
+ */
 function resetClosureForm(requestId = 0) {
     closureSubmitted.value = false;
     closureForm.requestId = requestId || openRequests.value[0]?.id || 0;
@@ -221,6 +247,12 @@ function resetClosureForm(requestId = 0) {
     closureForm.functionalTestPassed = true;
 }
 
+/**
+ * Determines whether request control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasRequestControlError(controlName) {
     if (!requestSubmitted.value) return false;
     if (controlName === 'assetId') return Number(serviceRequestForm.assetId) <= 0;
@@ -229,6 +261,12 @@ function hasRequestControlError(controlName) {
     return false;
 }
 
+/**
+ * Determines whether closure control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasClosureControlError(controlName) {
     if (!closureSubmitted.value) return false;
     if (controlName === 'requestId') return Number(closureForm.requestId) <= 0;
@@ -237,24 +275,54 @@ function hasClosureControlError(controlName) {
     return false;
 }
 
+/**
+ * Handles asset name for behavior in the maintenance management context.
+ *
+ * @param {number|string} assetId
+ * @returns {string}
+ */
 function assetNameFor(assetId) {
     const asset = organizationAssets.value.find(currentAsset => currentAsset.id === Number(assetId));
     return asset ? `${asset.uuid} - ${asset.name}` : `#${assetId}`;
 }
 
+/**
+ * Handles asset location for behavior in the maintenance management context.
+ *
+ * @param {number|string} assetId
+ * @returns {string}
+ */
 function assetLocationFor(assetId) {
     const asset = organizationAssets.value.find(currentAsset => currentAsset.id === Number(assetId));
     return asset ? assetManagementStore.locationForAsset(asset) : 'N/A';
 }
 
+/**
+ * Handles priority key behavior in the maintenance management context.
+ *
+ * @param {*} priority
+ * @returns {string}
+ */
 function priorityKey(priority) {
     return `maintenance.technical-service.priority.${priority}`;
 }
 
+/**
+ * Handles request status key behavior in the maintenance management context.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function requestStatusKey(status) {
     return `maintenance.technical-service.status.${status}`;
 }
 
+/**
+ * Returns the CSS class for request status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function requestStatusClass(status) {
     const classByStatus = {
         [TechnicalServiceStatus.Open]: 'status-observation',
@@ -264,6 +332,12 @@ function requestStatusClass(status) {
     return classByStatus[status];
 }
 
+/**
+ * Handles result label for behavior in the maintenance management context.
+ *
+ * @param {*} request
+ * @returns {string}
+ */
 function resultLabelFor(request) {
     if (request.functionalTestPassed === null) {
         return 'maintenance.technical-service.table.pending-result';
@@ -274,22 +348,44 @@ function resultLabelFor(request) {
         : 'maintenance.technical-service.table.test-failed';
 }
 
+/**
+ * Determines whether request form invalid is true.
+ *
+ * @returns {boolean}
+ */
 function isRequestFormInvalid() {
     return Number(serviceRequestForm.assetId) <= 0 ||
         !serviceRequestForm.priority ||
         serviceRequestForm.issueDescription.trim().length < 8;
 }
 
+/**
+ * Determines whether closure form invalid is true.
+ *
+ * @returns {boolean}
+ */
 function isClosureFormInvalid() {
     return Number(closureForm.requestId) <= 0 ||
         closureForm.interventionNotes.trim().length < 8 ||
         closureForm.resultNotes.trim().length < 8;
 }
 
+/**
+ * Generates d service uuid for the current workflow.
+ *
+ * @param {number|string} requestId
+ * @returns {number}
+ */
 function generatedServiceUuid(requestId) {
     return `TS-${requestId.toString().padStart(3, '0')}`;
 }
 
+/**
+ * Handles local date value behavior in the maintenance management context.
+ *
+ * @param {string} date
+ * @returns {string}
+ */
 function localDateValue(date) {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, '0');

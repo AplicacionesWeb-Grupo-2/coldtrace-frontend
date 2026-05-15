@@ -66,6 +66,12 @@ onMounted(() => {
     Promise.all([accessRequest, assetRequest, monitoringRequest]).catch(() => undefined);
 });
 
+/**
+ * Builds monitoring item for presentation or reporting.
+ *
+ * @param {*} asset
+ * @returns {*}
+ */
 function buildMonitoringItem(asset) {
     const readings = monitoringStore.getReadingsByAsset(asset.id);
     const settings = assetStore.settingsForAsset(activeOrganizationId.value, asset.id);
@@ -85,12 +91,26 @@ function buildMonitoringItem(asset) {
     };
 }
 
+/**
+ * Handles linked device for behavior in the monitoring context.
+ *
+ * @param {*} asset
+ * @returns {*}
+ */
 function linkedDeviceFor(asset) {
     return assetStore
         .iotDevicesForOrganization(activeOrganizationId.value)
         .find(device => device.assetId === asset.id) ?? null;
 }
 
+/**
+ * Handles to temperature point behavior in the monitoring context.
+ *
+ * @param {*} reading
+ * @param {number|string} index
+ * @param {*} limits
+ * @returns {*}
+ */
 function toTemperaturePoint(reading, index, limits) {
     const temperature = reading.temperature ?? 0;
 
@@ -104,6 +124,13 @@ function toTemperaturePoint(reading, index, limits) {
     });
 }
 
+/**
+ * Handles temperature limits for behavior in the monitoring context.
+ *
+ * @param {Array<*>} readings
+ * @param {*} settings
+ * @returns {*}
+ */
 function temperatureLimitsFor(readings, settings) {
     if (settings) {
         return {min: settings.minimumTemperature, max: settings.maximumTemperature};
@@ -121,6 +148,13 @@ function temperatureLimitsFor(readings, settings) {
     return {min: Math.floor(min), max: Math.ceil(max)};
 }
 
+/**
+ * Handles matches search behavior in the monitoring context.
+ *
+ * @param {*} asset
+ * @param {*} query
+ * @returns {*}
+ */
 function matchesSearch(asset, query) {
     if (!query) return true;
     return [asset.name, asset.uuid, assetLocationFor(asset), asset.description]
@@ -129,6 +163,12 @@ function matchesSearch(asset, query) {
         .includes(query);
 }
 
+/**
+ * Handles asset location for behavior in the monitoring context.
+ *
+ * @param {*} asset
+ * @returns {string}
+ */
 function assetLocationFor(asset) {
     return assetStore.locationForAsset(asset);
 }

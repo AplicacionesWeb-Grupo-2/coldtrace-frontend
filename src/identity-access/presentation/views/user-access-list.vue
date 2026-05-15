@@ -56,10 +56,22 @@ watch(searchTerm, () => {
     currentPage.value = 1;
 });
 
+/**
+ * Handles role for behavior in the identity access context.
+ *
+ * @param {number|string} roleId
+ * @returns {*}
+ */
 function roleFor(roleId) {
     return store.roles.find(role => role.id === Number(roleId));
 }
 
+/**
+ * Handles to user access row behavior in the identity access context.
+ *
+ * @param {*} user
+ * @returns {*}
+ */
 function toUserAccessRow(user) {
     const selectedRoleId = selectedRoleByUserId.value[user.id] ?? user.roleId;
     const currentRole = roleFor(user.roleId);
@@ -74,6 +86,13 @@ function toUserAccessRow(user) {
     };
 }
 
+/**
+ * Selects role in the current view state.
+ *
+ * @param {number|string} userId
+ * @param {number|string} roleId
+ * @returns {void}
+ */
 function selectRole(userId, roleId) {
     const nextRoleId = Number(roleId);
     const user = organizationUsers.value.find(current => current.id === userId);
@@ -90,6 +109,12 @@ function selectRole(userId, roleId) {
     };
 }
 
+/**
+ * Handles save role behavior in the identity access context.
+ *
+ * @param {*} user
+ * @returns {Promise<*>}
+ */
 async function saveRole(user) {
     const nextRoleId = selectedRoleByUserId.value[user.id] ?? user.roleId;
     const selectedRole = roleFor(nextRoleId);
@@ -116,6 +141,12 @@ async function saveRole(user) {
     }
 }
 
+/**
+ * Deletes user from the identity access context.
+ *
+ * @param {*} user
+ * @returns {Promise<*>}
+ */
 async function deleteUser(user) {
     if (!store.canDeleteUser(user)) {
         feedback.value = 'delete-forbidden';
@@ -152,6 +183,11 @@ async function deleteUser(user) {
     }
 }
 
+/**
+ * Loads access data data for the current view or use case.
+ *
+ * @returns {*}
+ */
 function loadAccessData() {
     feedback.value = 'idle';
     store.fetchAccessData().catch(() => {

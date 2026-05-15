@@ -26,6 +26,11 @@ const escalationPolicies = [
     new EscalationPolicy('warning', 720, 1, 'shift-supervisor'),
 ];
 
+/**
+ * Pinia store that coordinates alerts application state and use cases.
+ *
+ * @returns {import('pinia').StoreDefinition}
+ */
 const useAlertsStore = defineStore('alerts', () => {
     const incidents = ref([]);
     const notifications = ref([]);
@@ -71,6 +76,11 @@ const useAlertsStore = defineStore('alerts', () => {
         organizationIncidents.value.filter(incident => incident.isPendingEscalationConfiguration).length,
     );
 
+    /**
+     * Loads incidents only from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchIncidentsOnly() {
         const response = await alertsApi.getIncidents();
         incidents.value = IncidentAssembler.toEntitiesFromResponse(response);
@@ -78,6 +88,11 @@ const useAlertsStore = defineStore('alerts', () => {
         return incidents.value;
     }
 
+    /**
+     * Loads notifications only from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchNotificationsOnly() {
         const response = await alertsApi.getNotifications();
         notifications.value = NotificationAssembler.toEntitiesFromResponse(response);
@@ -85,6 +100,12 @@ const useAlertsStore = defineStore('alerts', () => {
         return notifications.value;
     }
 
+    /**
+     * Loads incidents data for the current view or use case.
+     *
+     * @param {Object} options
+     * @returns {Promise<*>}
+     */
     async function loadIncidents({silent = false} = {}) {
         if (incidentsRequestInFlight) return {incidents: incidents.value, notifications: notifications.value};
 
@@ -140,6 +161,13 @@ const useAlertsStore = defineStore('alerts', () => {
         }
     }
 
+    /**
+     * Handles recognize incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {*} responsibleUserName
+     * @returns {Promise<*>}
+     */
     async function recognizeIncident(incident, responsibleUserName) {
         if (!incident.isOpen) return incident;
 
@@ -164,6 +192,15 @@ const useAlertsStore = defineStore('alerts', () => {
         }
     }
 
+    /**
+     * Handles close incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {*} correctiveAction
+     * @param {*} closureEvidence
+     * @param {*} responsibleUserName
+     * @returns {Promise<*>}
+     */
     async function closeIncident(incident, correctiveAction, closureEvidence, responsibleUserName) {
         const now = new Date().toISOString();
         const closed = incidentWith(incident, {
@@ -194,6 +231,12 @@ const useAlertsStore = defineStore('alerts', () => {
         }
     }
 
+    /**
+     * Handles stabilize incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @returns {Promise<*>}
+     */
     async function stabilizeIncident(incident) {
         stabilizingId.value = incident.id;
         feedback.value = null;
@@ -228,6 +271,13 @@ const useAlertsStore = defineStore('alerts', () => {
         }
     }
 
+    /**
+     * Handles review escalation behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {*} responsibleUserName
+     * @returns {Promise<*>}
+     */
     async function reviewEscalation(incident, responsibleUserName) {
         const reviewed = incidentWith(incident, {
             escalationStatus: 'reviewed',
@@ -250,19 +300,42 @@ const useAlertsStore = defineStore('alerts', () => {
         }
     }
 
+    /**
+     * Determines whether resolve alerts is available.
+     *
+     * @returns {boolean}
+     */
     function canResolveAlerts() {
         const role = identityStore.currentRoleFrom();
         return identityStore.permissionKeysForRole(role).includes('roles-permissions.permissions.resolve-alerts');
     }
 
+    /**
+     * Handles clear feedback behavior in the alerts context.
+     *
+     * @returns {void}
+     */
     function clearFeedback() {
         feedback.value = null;
     }
 
+    /**
+     * Handles set feedback behavior in the alerts context.
+     *
+     * @param {*} nextFeedback
+     * @returns {void}
+     */
     function setFeedback(nextFeedback) {
         feedback.value = nextFeedback;
     }
 
+    /**
+     * Handles incident with behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {*} changes
+     * @returns {*}
+     */
     function incidentWith(incident, changes) {
         return new Incident({
             id: incident.id,
@@ -296,6 +369,12 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Creates incident with retry in the alerts context.
+     *
+     * @param {*} incident
+     * @returns {Promise<*>}
+     */
     async function createIncidentWithRetry(incident) {
         return retryRequest(async () => {
             const response = await alertsApi.createIncident(IncidentAssembler.toResourceFromEntity(incident));
@@ -303,6 +382,12 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Updates incident with retry in the alerts context.
+     *
+     * @param {*} incident
+     * @returns {Promise<*>}
+     */
     async function updateIncidentWithRetry(incident) {
         return retryRequest(async () => {
             const response = await alertsApi.updateIncident(IncidentAssembler.toResourceFromEntity(incident));
@@ -310,6 +395,12 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Creates notification with retry in the alerts context.
+     *
+     * @param {*} notification
+     * @returns {Promise<*>}
+     */
     async function createNotificationWithRetry(notification) {
         return retryRequest(async () => {
             const response = await alertsApi.createNotification(NotificationAssembler.toResourceFromEntity(notification));
@@ -317,6 +408,13 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Handles retry request behavior in the alerts context.
+     *
+     * @param {*} request
+     * @param {*} attempts
+     * @returns {Promise<*>}
+     */
     async function retryRequest(request, attempts = 3) {
         let lastError = null;
         for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -330,14 +428,36 @@ const useAlertsStore = defineStore('alerts', () => {
         throw lastError;
     }
 
+    /**
+     * Handles delay behavior in the alerts context.
+     *
+     * @param {*} milliseconds
+     * @returns {*}
+     */
     function delay(milliseconds) {
         return new Promise(resolve => window.setTimeout(resolve, milliseconds));
     }
 
+    /**
+     * Determines whether notification for open incident is true.
+     *
+     * @param {*} notification
+     * @returns {boolean}
+     */
     function isNotificationForOpenIncident(notification) {
         return incidents.value.find(incident => incident.id === notification.incidentId)?.isOpen ?? false;
     }
 
+    /**
+     * Handles stable reading for incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {Array<*>} assets
+     * @param {*} iotDevices
+     * @param {*} settings
+     * @param {Array<*>} readings
+     * @returns {*}
+     */
     function stableReadingForIncident(incident, assets, iotDevices, settings, readings) {
         const asset = assets.find(currentAsset => currentAsset.id === incident.assetId);
         if (!asset) return null;
@@ -362,6 +482,13 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Handles monitoring device for incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {*} iotDevices
+     * @returns {*}
+     */
     function monitoringDeviceForIncident(incident, iotDevices) {
         const devices = iotDevices.filter(device =>
             device.assetId === incident.assetId && device.status !== IoTDeviceStatus.Offline,
@@ -372,6 +499,12 @@ const useAlertsStore = defineStore('alerts', () => {
         ) ?? devices[0] ?? null;
     }
 
+    /**
+     * Handles preferred parameter for incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @returns {*}
+     */
     function preferredParameterForIncident(incident) {
         if (incident.type === 'temperature') return 'temperature';
         if (incident.type === 'humidity') return 'humidity';
@@ -380,14 +513,32 @@ const useAlertsStore = defineStore('alerts', () => {
         return null;
     }
 
+    /**
+     * Handles stable temperature for behavior in the alerts context.
+     *
+     * @param {*} settings
+     * @returns {*}
+     */
     function stableTemperatureFor(settings) {
         return Number(((settings.minimumTemperature + settings.maximumTemperature) / 2).toFixed(1));
     }
 
+    /**
+     * Handles stable humidity for behavior in the alerts context.
+     *
+     * @param {*} settings
+     * @returns {*}
+     */
     function stableHumidityFor(settings) {
         return Math.max(0, Math.min(settings.maximumHumidity - 5, 65));
     }
 
+    /**
+     * Handles apply escalation policies behavior in the alerts context.
+     *
+     * @param {Array<*>} currentIncidents
+     * @returns {Promise<*>}
+     */
     async function applyEscalationPolicies(currentIncidents) {
         const updates = escalationUpdatesFrom(currentIncidents);
         if (!updates.length) return currentIncidents;
@@ -398,6 +549,12 @@ const useAlertsStore = defineStore('alerts', () => {
         );
     }
 
+    /**
+     * Handles escalation updates from behavior in the alerts context.
+     *
+     * @param {Array<*>} currentIncidents
+     * @returns {string}
+     */
     function escalationUpdatesFrom(currentIncidents) {
         const now = new Date();
         return currentIncidents
@@ -409,6 +566,13 @@ const useAlertsStore = defineStore('alerts', () => {
             });
     }
 
+    /**
+     * Handles incident with current escalation behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {*} now
+     * @returns {*}
+     */
     function incidentWithCurrentEscalation(incident, now) {
         if (incident.isClosed || incident.escalationStatus === 'reviewed') return null;
 
@@ -454,10 +618,24 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Handles escalation policy for behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @returns {*}
+     */
     function escalationPolicyFor(incident) {
         return escalationPolicies.find(policy => policy.appliesTo(incident));
     }
 
+    /**
+     * Determines whether exceeded escalation threshold exists.
+     *
+     * @param {*} incident
+     * @param {*} policy
+     * @param {*} now
+     * @returns {boolean}
+     */
     function hasExceededEscalationThreshold(incident, policy, now) {
         const detectedAt = new Date(incident.detectedAt);
         if (Number.isNaN(detectedAt.getTime())) return false;
@@ -466,6 +644,13 @@ const useAlertsStore = defineStore('alerts', () => {
         return elapsedMinutes >= policy.waitingMinutes;
     }
 
+    /**
+     * Determines whether escalation changes exists.
+     *
+     * @param {*} current
+     * @param {string} updated
+     * @returns {boolean}
+     */
     function hasEscalationChanges(current, updated) {
         return current.escalationStatus !== updated.escalationStatus ||
             current.escalationLevel !== updated.escalationLevel ||
@@ -476,6 +661,15 @@ const useAlertsStore = defineStore('alerts', () => {
             current.escalationReviewedAt !== updated.escalationReviewedAt;
     }
 
+    /**
+     * Generates d parameter incidents from for the current workflow.
+     *
+     * @param {Array<*>} currentIncidents
+     * @param {Array<*>} readings
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {number}
+     */
     function generatedParameterIncidentsFrom(currentIncidents, readings, assets, settings) {
         const candidates = [
             ...latestParameterCandidates(readings, assets, settings),
@@ -531,6 +725,13 @@ const useAlertsStore = defineStore('alerts', () => {
         return generatedIncidents;
     }
 
+    /**
+     * Generates d notifications from for the current workflow.
+     *
+     * @param {Array<*>} currentIncidents
+     * @param {*} currentNotifications
+     * @returns {number}
+     */
     function generatedNotificationsFrom(currentIncidents, currentNotifications) {
         let nextId = Math.max(...currentNotifications.map(notification => notification.id), 0) + 1;
         return currentIncidents
@@ -548,6 +749,14 @@ const useAlertsStore = defineStore('alerts', () => {
             );
     }
 
+    /**
+     * Handles notification for incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @param {*} channel
+     * @param {number|string} id
+     * @returns {*}
+     */
     function notificationForIncident(incident, channel, id) {
         const status = notificationStatusFor(channel);
         const createdAt = new Date(incident.detectedAt).toISOString();
@@ -568,23 +777,47 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Handles notification channels for incident behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @returns {*}
+     */
     function notificationChannelsForIncident(incident) {
         return incident.severity === 'critical'
             ? [NotificationChannel.App, NotificationChannel.Email, NotificationChannel.Sms]
             : [NotificationChannel.App];
     }
 
+    /**
+     * Handles notification message for behavior in the alerts context.
+     *
+     * @param {*} incident
+     * @returns {*}
+     */
     function notificationMessageFor(incident) {
         const severity = incident.severity === 'critical' ? 'Critical alert' : 'Warning alert';
         return `${severity}: ${incident.assetName} reported ${incident.value} and requires attention.`;
     }
 
+    /**
+     * Handles notification status for behavior in the alerts context.
+     *
+     * @param {*} channel
+     * @returns {string}
+     */
     function notificationStatusFor(channel) {
         if (channel === NotificationChannel.App) return NotificationStatus.Sent;
         if (channel === NotificationChannel.Email) return NotificationStatus.Pending;
         return NotificationStatus.Failed;
     }
 
+    /**
+     * Handles notification recipient for behavior in the alerts context.
+     *
+     * @param {*} channel
+     * @returns {*}
+     */
     function notificationRecipientFor(channel) {
         const currentUser = identityStore.currentUserFrom();
         if (channel === NotificationChannel.Email) return currentUser?.email ?? 'operations@coldtrace.local';
@@ -592,12 +825,27 @@ const useAlertsStore = defineStore('alerts', () => {
         return identityStore.currentUserNameFrom();
     }
 
+    /**
+     * Handles plus minutes behavior in the alerts context.
+     *
+     * @param {boolean} isoDate
+     * @param {*} minutes
+     * @returns {*}
+     */
     function plusMinutes(isoDate, minutes) {
         const date = new Date(isoDate);
         date.setMinutes(date.getMinutes() + minutes);
         return date.toISOString();
     }
 
+    /**
+     * Handles latest parameter candidates behavior in the alerts context.
+     *
+     * @param {Array<*>} readings
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {string}
+     */
     function latestParameterCandidates(readings, assets, settings) {
         const latestByAsset = new Map();
         readings
@@ -620,6 +868,14 @@ const useAlertsStore = defineStore('alerts', () => {
             .sort((left, right) => String(right.reading.recordedAt).localeCompare(String(left.reading.recordedAt)));
     }
 
+    /**
+     * Handles condition candidates for reading behavior in the alerts context.
+     *
+     * @param {*} reading
+     * @param {*} asset
+     * @param {Array<*>} assetSettings
+     * @returns {string}
+     */
     function conditionCandidatesForReading(reading, asset, assetSettings) {
         const candidates = [];
 
@@ -677,6 +933,14 @@ const useAlertsStore = defineStore('alerts', () => {
         return candidates;
     }
 
+    /**
+     * Handles pending review candidates behavior in the alerts context.
+     *
+     * @param {Array<*>} readings
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {string}
+     */
     function pendingReviewCandidates(readings, assets, settings) {
         const latestByAsset = new Map();
         readings
@@ -702,6 +966,15 @@ const useAlertsStore = defineStore('alerts', () => {
         }));
     }
 
+    /**
+     * Determines whether active equivalent incident exists.
+     *
+     * @param {Array<*>} currentIncidents
+     * @param {number|string} organizationId
+     * @param {number|string} assetId
+     * @param {string} type
+     * @returns {boolean}
+     */
     function hasActiveEquivalentIncident(currentIncidents, organizationId, assetId, type) {
         return currentIncidents.some(incident => {
             if (incident.isClosed || incident.organizationId !== organizationId || incident.assetId !== assetId) return false;
@@ -709,27 +982,62 @@ const useAlertsStore = defineStore('alerts', () => {
         });
     }
 
+    /**
+     * Handles settings for asset behavior in the alerts context.
+     *
+     * @param {*} asset
+     * @param {*} settings
+     * @returns {void}
+     */
     function settingsForAsset(asset, settings) {
         return settings.find(setting => setting.assetId === asset.id) ??
             settings.find(setting => setting.organizationId === asset.organizationId && setting.assetId === null);
     }
 
+    /**
+     * Handles temperature condition key behavior in the alerts context.
+     *
+     * @param {*} temperature
+     * @param {*} settings
+     * @returns {string}
+     */
     function temperatureConditionKey(temperature, settings) {
         if (temperature > settings.maximumTemperature) return 'high-temperature';
         if (temperature < settings.minimumTemperature) return 'low-temperature';
         return null;
     }
 
+    /**
+     * Handles thermal severity behavior in the alerts context.
+     *
+     * @param {*} temperature
+     * @param {*} settings
+     * @returns {*}
+     */
     function thermalSeverity(temperature, settings) {
         const upperDelta = temperature - settings.maximumTemperature;
         const lowerDelta = settings.minimumTemperature - temperature;
         return Math.max(upperDelta, lowerDelta) >= 2 ? 'critical' : 'warning';
     }
 
+    /**
+     * Handles humidity severity behavior in the alerts context.
+     *
+     * @param {*} humidity
+     * @param {*} settings
+     * @returns {*}
+     */
     function humiditySeverity(humidity, settings) {
         return humidity - settings.maximumHumidity >= 5 ? 'critical' : 'warning';
     }
 
+    /**
+     * Determines whether newer reading is true.
+     *
+     * @param {*} current
+     * @param {*} previous
+     * @returns {boolean}
+     */
     function isNewerReading(current, previous) {
         return new Date(current.recordedAt).getTime() > new Date(previous.recordedAt).getTime();
     }

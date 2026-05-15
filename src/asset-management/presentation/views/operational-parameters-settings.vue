@@ -92,6 +92,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     identityLoading.value = true;
     feedback.value = 'idle';
@@ -111,6 +116,12 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Selects asset in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectAsset(value) {
     selectedAssetId.value = Number(value);
     feedback.value = 'idle';
@@ -118,6 +129,12 @@ function selectAsset(value) {
     selectFirstDeviceForAsset();
 }
 
+/**
+ * Selects iot device in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectIoTDevice(value) {
     selectedIoTDeviceId.value = Number(value);
     feedback.value = 'idle';
@@ -125,11 +142,22 @@ function selectIoTDevice(value) {
     resetOperationalForm();
 }
 
+/**
+ * Updates reading frequency preview in the asset management context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateReadingFrequencyPreview(value) {
     const minutes = Number(value);
     selectedFrequencyMinutes.value = value.trim() && Number.isFinite(minutes) ? minutes : 0;
 }
 
+/**
+ * Handles save operational parameters behavior in the asset management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function saveOperationalParameters() {
     submitted.value = true;
     feedback.value = 'idle';
@@ -184,6 +212,11 @@ async function saveOperationalParameters() {
     }
 }
 
+/**
+ * Resets operational form to its default state.
+ *
+ * @returns {void}
+ */
 function resetOperationalForm() {
     const iotDevice = selectedIoTDevice.value;
     const currentParameters = iotDevice?.measurementParameters ?? [];
@@ -201,41 +234,93 @@ function resetOperationalForm() {
     }
 }
 
+/**
+ * Determines whether frequency error exists.
+ *
+ * @returns {boolean}
+ */
 function hasFrequencyError() {
     const frequency = Number(operationalForm.readingFrequencyMinutes);
     return submitted.value && (!Number.isFinite(frequency) || frequency < 5 || frequency > 1440);
 }
 
+/**
+ * Determines whether criteria error exists.
+ *
+ * @returns {boolean}
+ */
 function hasCriteriaError() {
     return submitted.value && !hasSelectedCriteria();
 }
 
+/**
+ * Determines whether parameter supported is true.
+ *
+ * @param {*} parameter
+ * @returns {boolean}
+ */
 function isParameterSupported(parameter) {
     return supportedParametersFor(selectedIoTDevice.value).includes(parameter);
 }
 
+/**
+ * Returns the i18n label key for parameter.
+ *
+ * @param {*} parameter
+ * @returns {string}
+ */
 function parameterLabelKey(parameter) {
     return `asset-management.iot-devices.measurement-parameters.${parameter}`;
 }
 
+/**
+ * Handles asset name for behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function assetNameFor(iotDevice) {
     const asset = organizationAssets.value.find(currentAsset => currentAsset.id === iotDevice.assetId);
     return asset ? `${asset.uuid} - ${asset.name}` : 'N/A';
 }
 
+/**
+ * Handles asset location for behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function assetLocationFor(iotDevice) {
     const asset = organizationAssets.value.find(currentAsset => currentAsset.id === iotDevice.assetId);
     return asset ? assetManagementStore.locationForAsset(asset, gateways.value) : 'N/A';
 }
 
+/**
+ * Handles frequency label for behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function frequencyLabelFor(iotDevice) {
     return `${Math.round(iotDevice.readingFrequencySeconds / 60)} min`;
 }
 
+/**
+ * Handles criteria label for behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function criteriaLabelFor(iotDevice) {
     return iotDevice.measurementParameters.map(parameter => parameter.replace('-', ' ')).join(' / ');
 }
 
+/**
+ * Handles operational status key behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function operationalStatusKey(iotDevice) {
     const asset = organizationAssets.value.find(currentAsset => currentAsset.id === iotDevice.assetId);
     const gateway = asset ? gateways.value.find(currentGateway => currentGateway.id === asset.gatewayId) : null;
@@ -257,33 +342,64 @@ function operationalStatusKey(iotDevice) {
     return 'asset-management.operational-parameters.table.status-active';
 }
 
+/**
+ * Returns the CSS class for operational status.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function operationalStatusClass(iotDevice) {
     const statusKey = operationalStatusKey(iotDevice);
     if (statusKey.endsWith('status-active')) return 'status-compliant';
     return statusKey.endsWith('status-gateway-offline') ? 'status-danger' : 'status-observation';
 }
 
+/**
+ * Selects initial scope in the current view state.
+ *
+ * @returns {void}
+ */
 function selectInitialScope() {
     const firstAsset = preferredInitialAsset();
     selectedAssetId.value = firstAsset?.id ?? 0;
     selectFirstDeviceForAsset();
 }
 
+/**
+ * Selects first device for asset in the current view state.
+ *
+ * @returns {void}
+ */
 function selectFirstDeviceForAsset() {
     const firstDevice = selectedAssetDevices.value[0];
     selectedIoTDeviceId.value = firstDevice?.id ?? 0;
     resetOperationalForm();
 }
 
+/**
+ * Determines whether selected criteria exists.
+ *
+ * @returns {boolean}
+ */
 function hasSelectedCriteria() {
     return selectedParameters.value.length > 0;
 }
 
+/**
+ * Determines whether invalid operational form exists.
+ *
+ * @returns {boolean}
+ */
 function hasInvalidOperationalForm() {
     const frequency = Number(operationalForm.readingFrequencyMinutes);
     return !Number.isFinite(frequency) || frequency < 5 || frequency > 1440 || !selectedIoTDevice.value || !hasSelectedCriteria();
 }
 
+/**
+ * Handles preferred initial asset behavior in the asset management context.
+ *
+ * @returns {*}
+ */
 function preferredInitialAsset() {
     return monitoredAssets.value.find(asset => {
         const gateway = gateways.value.find(currentGateway => currentGateway.id === asset.gatewayId);
@@ -295,6 +411,11 @@ function preferredInitialAsset() {
     }) ?? monitoredAssets.value[0];
 }
 
+/**
+ * Handles current compatibility issue key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function currentCompatibilityIssueKey() {
     const asset = selectedAsset.value;
     const iotDevice = selectedIoTDevice.value;
@@ -314,16 +435,34 @@ function currentCompatibilityIssueKey() {
     return null;
 }
 
+/**
+ * Handles supported parameters for behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {boolean}
+ */
 function supportedParametersFor(iotDevice) {
     if (!iotDevice) return [];
     return IOT_DEVICE_DEFINITIONS.find(definition => definition.type === iotDevice.deviceType)?.parameters ??
         toKnownParameters(iotDevice.measurementParameters);
 }
 
+/**
+ * Handles to known parameters behavior in the asset management context.
+ *
+ * @param {*} parameters
+ * @returns {*}
+ */
 function toKnownParameters(parameters) {
     return parameters.filter(parameter => parameterKeys.includes(parameter));
 }
 
+/**
+ * Handles measurement type label behavior in the asset management context.
+ *
+ * @param {*} parameters
+ * @returns {string}
+ */
 function measurementTypeLabel(parameters) {
     const labelByParameter = {
         temperature: 'Temperature',
@@ -336,6 +475,12 @@ function measurementTypeLabel(parameters) {
     return parameters.map(parameter => labelByParameter[parameter]).join(' / ');
 }
 
+/**
+ * Handles minutes label behavior in the asset management context.
+ *
+ * @param {*} minutes
+ * @returns {string}
+ */
 function minutesLabel(minutes) {
     return Number.isFinite(minutes) && minutes > 0 ? `${minutes} min` : 'N/A';
 }

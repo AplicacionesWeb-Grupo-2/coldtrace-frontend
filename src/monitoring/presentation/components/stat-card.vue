@@ -2,6 +2,20 @@
 import {computed} from 'vue';
 import {useI18n} from 'vue-i18n';
 
+/**
+ * @typedef {Object} StatCardProps
+ * @property {*} [title]
+ * @property {*} [value]
+ * @property {*} [valueUnit]
+ * @property {*} [trend]
+ * @property {*} [type]
+ * @property {*} [size]
+ * @property {*} [color]
+ * @property {*} [tooltip]
+ * @property {*} [chartData]
+ * @property {*} [highlightedBar]
+ * @property {*} [showAnchor]
+ */
 const props = defineProps({
     title: {type: String, default: ''},
     value: {type: String, default: ''},
@@ -27,6 +41,13 @@ const trendOpacity = computed(() => props.size === 'small' ? '0.82' : '0.6');
 const unitOpacity = computed(() => props.size === 'small' ? '0.92' : '0.8');
 const bubbleTextColor = computed(() => props.color.text.toLowerCase() === '#ffffff' ? props.color.bg : props.color.text);
 
+/**
+ * Handles bar style behavior in the monitoring context.
+ *
+ * @param {string} value
+ * @param {number|string} index
+ * @returns {*}
+ */
 function barStyle(value, index) {
     return {
         backgroundColor: props.highlightedBar === index ? '#FFFFFF' : props.color.chart,

@@ -71,6 +71,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
     feedback.value = 'idle';
@@ -89,6 +94,12 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Updates from date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateFromDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     fromDate.value = nextDate;
@@ -100,17 +111,34 @@ function updateFromDate(value) {
     feedback.value = 'idle';
 }
 
+/**
+ * Updates to date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateToDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     toDate.value = nextDate < effectiveFromDate.value ? effectiveFromDate.value : nextDate;
     feedback.value = 'idle';
 }
 
+/**
+ * Selects asset in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectAsset(value) {
     selectedAssetId.value = Number(value);
     feedback.value = 'idle';
 }
 
+/**
+ * Exports compliance report for the current selection.
+ *
+ * @returns {Promise<*>}
+ */
 async function exportComplianceReport() {
     if (!canExportReports.value) return;
 
@@ -133,28 +161,63 @@ async function exportComplianceReport() {
     }
 }
 
+/**
+ * Returns the i18n label key for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusLabelKey(status) {
     return `reports.compliance.status.${status}`;
 }
 
+/**
+ * Returns the CSS class for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusClass(status) {
     return `status-${status}`;
 }
 
+/**
+ * Formats temperature for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatTemperature(value) {
     return value === null ? 'N/A' : `${value.toFixed(1)} °C`;
 }
 
+/**
+ * Formats humidity for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatHumidity(value) {
     return value === null ? 'N/A' : `${value.toFixed(0)}%`;
 }
 
+/**
+ * Handles default from date behavior in the reports context.
+ *
+ * @returns {string}
+ */
 function defaultFromDate() {
     const date = new Date(`${maxDate.value}T00:00:00`);
     date.setDate(date.getDate() - 6);
     return formatDateInput(date);
 }
 
+/**
+ * Formats date input for display.
+ *
+ * @param {string} date
+ * @returns {string}
+ */
 function formatDateInput(date) {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -162,6 +225,13 @@ function formatDateInput(date) {
     return `${year}-${month}-${day}`;
 }
 
+/**
+ * Downloads csv for the current selection.
+ *
+ * @param {string} csv
+ * @param {string} filename
+ * @returns {void}
+ */
 function downloadCsv(csv, filename) {
     const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -172,6 +242,12 @@ function downloadCsv(csv, filename) {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * Handles file name part behavior in the reports context.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function fileNamePart(value) {
     return value
         .normalize('NFD')

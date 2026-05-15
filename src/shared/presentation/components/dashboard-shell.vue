@@ -70,26 +70,51 @@ const isAccessDropdownOpen = computed(() => accessDropdownTouched.value ? access
 const isReportsDropdownOpen = computed(() => reportsDropdownTouched.value ? reportsDropdownOpen.value : isReportsRoute.value);
 const isSettingsDropdownOpen = computed(() => settingsDropdownTouched.value ? settingsDropdownOpen.value : isSettingsRoute.value);
 
+/**
+ * Toggles access dropdown.
+ *
+ * @returns {void}
+ */
 function toggleAccessDropdown() {
     accessDropdownOpen.value = !isAccessDropdownOpen.value;
     accessDropdownTouched.value = true;
 }
 
+/**
+ * Toggles reports dropdown.
+ *
+ * @returns {void}
+ */
 function toggleReportsDropdown() {
     reportsDropdownOpen.value = !isReportsDropdownOpen.value;
     reportsDropdownTouched.value = true;
 }
 
+/**
+ * Toggles settings dropdown.
+ *
+ * @returns {void}
+ */
 function toggleSettingsDropdown() {
     settingsDropdownOpen.value = !isSettingsDropdownOpen.value;
     settingsDropdownTouched.value = true;
 }
 
+/**
+ * Handles logout behavior in the shared context.
+ *
+ * @returns {*}
+ */
 function logout() {
     store.clearCurrentUser();
     router.push('/identity-access/sign-in');
 }
 
+/**
+ * Loads shell data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadShellData() {
     try {
         await Promise.all([
@@ -104,6 +129,11 @@ async function loadShellData() {
     }
 }
 
+/**
+ * Handles start telemetry updates behavior in the shared context.
+ *
+ * @returns {string}
+ */
 function startTelemetryUpdates() {
     telemetryIntervalId = window.setInterval(() => {
         assetManagementStore.updateOrganizationTelemetry(activeOrganizationId.value);
@@ -111,6 +141,11 @@ function startTelemetryUpdates() {
     }, telemetryPollingIntervalMs);
 }
 
+/**
+ * Downloads current month report for the current selection.
+ *
+ * @returns {Promise<*>}
+ */
 async function downloadCurrentMonthReport() {
     if (!canDownloadReports.value) {
         await router.push('/reports/monthly');
@@ -139,6 +174,12 @@ async function downloadCurrentMonthReport() {
     }
 }
 
+/**
+ * Downloads monthly csv for the current selection.
+ *
+ * @param {*} monthlyReport
+ * @returns {void}
+ */
 function downloadMonthlyCsv(monthlyReport) {
     const blob = new Blob([reportsStore.monthlyReportCsv(monthlyReport)], {type: 'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -149,6 +190,12 @@ function downloadMonthlyCsv(monthlyReport) {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * Handles file name part behavior in the shared context.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function fileNamePart(value) {
     return value
         .normalize('NFD')

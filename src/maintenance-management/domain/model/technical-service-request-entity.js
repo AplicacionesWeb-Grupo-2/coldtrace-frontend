@@ -1,6 +1,28 @@
 import {TechnicalServiceStatus} from '@/maintenance-management/domain/model/technical-service-status.js';
 
+/**
+ * @typedef {Object} TechnicalServiceRequestProps
+ * @property {number|null} [id]
+ * @property {number|null} [organizationId]
+ * @property {string} [uuid]
+ * @property {number|null} [assetId]
+ * @property {string} [priority]
+ * @property {string} [issueDescription]
+ * @property {string} [requestedDate]
+ * @property {string} [status]
+ * @property {*|null} [interventionNotes]
+ * @property {*|null} [resultNotes]
+ * @property {*|null} [functionalTestPassed]
+ * @property {*|null} [closedAt]
+ */
+
+/**
+ * Domain entity representing technical service request.
+ */
 export class TechnicalServiceRequest {
+    /**
+     * @param {TechnicalServiceRequestProps} [props]
+     */
     constructor({
         id = null,
         organizationId = null,

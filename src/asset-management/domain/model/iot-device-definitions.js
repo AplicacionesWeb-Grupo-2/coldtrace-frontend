@@ -1,3 +1,8 @@
+/**
+ * Catalog of supported IoT device types and their measurement parameters.
+ *
+ * @type {Array<{type: string, modelPlaceholder: string, parameters: string[]}>}
+ */
 export const IOT_DEVICE_DEFINITIONS = [
     {
         type: 'temperature-sensor',

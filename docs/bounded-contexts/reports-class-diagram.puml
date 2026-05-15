@@ -1,0 +1,255 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "reports.domain.model" {
+  class AuditEvidence {
+    - id: Number
+    - organizationId: Number
+    - filters
+    - items: EvidenceItem[]
+    - reports: Report[]
+    - findings: ComplianceFinding[]
+    + completeItems
+    + incompleteItems
+    + completenessRate
+    + isComplete
+    + hasEvidence
+  }
+  class ComplianceFinding {
+    - id: string
+    - organizationId: Number
+    - assetId: Number
+    - assetName: string
+    - type: string
+    - severity: string
+    - status: FindingStatus
+    - evidence: string
+  }
+  class ComplianceReport {
+    - id: Number
+    - organizationId: Number
+    - filters
+    - findings: ComplianceFinding[]
+    + totalFindings
+    + openFindings
+    + closedFindings
+    + affectedAssets
+    + potentialNonCompliance
+    + limitations
+    + hasFindings
+  }
+  class DailyLog {
+    - id: Number
+    - organizationId: Number
+    - date: string
+    - expectedReadings: Number
+    - entries
+    + totalReadings
+    + monitoredAssets
+    + outOfRangeReadings
+    + incompleteAssets
+    + complianceRate
+    + hasIncompleteData
+  }
+  class EvidenceItem {
+    - id: string
+    - status: string
+    - quantity: Number
+    - requiredQuantity: Number
+    + isComplete
+  }
+  class FindingStatus <<enumeration>>
+  class MonthlyReport {
+    - id: Number
+    - organizationId: Number
+    - month: string
+    - fromDate: string
+    - toDate: string
+    - rows
+    + totalAssets
+    + totalReadings
+    + validReadings
+    + outOfRangeCount
+    + incidentCount
+    + complianceRate
+    + canDownload
+  }
+  class OperationalHistory {
+    - filters
+    - events
+    + totalEvents
+    + readingsCount
+    + alertsCount
+    + incidentsCount
+  }
+  class Report {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - type: ReportType
+    - title: string
+    - periodDate: string
+    - generatedAt: string
+  }
+  class ReportType <<enumeration>>
+  class SanitaryComplianceReport {
+    - id: Number
+    - organizationId: Number
+    - filters
+    - rows
+    + totalAssets
+    + totalReadings
+    + expectedReadings
+    + validReadings
+    + missingReadings
+    + outOfRangeCount
+    + incidentCount
+    + complianceRate
+    + canExport
+  }
+}
+
+package "reports.infrastructure" {
+  class ReportsApi {
+    - reportsEndpoint
+    + getReports()
+    + createReport(resource)
+  }
+  class ReportAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+}
+
+package "reports.application" {
+  class useReportsStore {
+    - reports
+    - closedComplianceFindingIds
+    + fetchReports()
+    + reportsForOrganization(organizationId)
+    + currentDate()
+    + buildDailyLog(organizationId, date)
+    + buildOperationalHistory(organizationId, filters)
+    + buildSanitaryComplianceReport(organizationId, filters)
+    + buildComplianceReport(organizationId, filters)
+    + buildAuditEvidence(organizationId, filters)
+    + buildMonthlyReport(organizationId, month)
+    + createDailyLogReport(organizationId, dailyLog)
+    + createSanitaryComplianceReport(organizationId, report)
+    + createMonthlySummaryReport(organizationId, report)
+    + closeComplianceFinding(findingId)
+    + sanitaryComplianceCsv(report)
+    + monthlyReportCsv(report)
+    + auditEvidenceCsv(evidence)
+  }
+}
+
+package "reports.presentation" {
+  class ReportsRoutes {
+    + dailyLog
+    + monthly
+    + history
+    + compliance
+    + findings
+    + auditEvidence
+  }
+}
+
+package "reports.presentation.views" {
+  class "DailyLog" as DailyLogView {
+    + generateDailyLog(): Promise
+  }
+  class "MonthlyReport" as MonthlyReportView {
+    + downloadMonthlyReport(): Promise
+  }
+  class "OperationalHistory" as OperationalHistoryView
+  class "SanitaryCompliance" as SanitaryComplianceView {
+    + exportComplianceReport(): Promise
+  }
+  class "ComplianceFindings" as ComplianceFindingsView {
+    + closeFinding(finding): void
+  }
+  class "AuditEvidence" as AuditEvidenceView {
+    + exportEvidence(): void
+  }
+}
+
+package "shared.infrastructure" {
+  class BaseApi
+  class BaseEndpoint
+}
+
+package "shared.presentation.components" {
+  class ListPagination
+}
+
+package "identity-access.application" {
+  class useIdentityAccessStore
+}
+
+package "asset-management.application" {
+  class useAssetManagementStore
+}
+
+package "monitoring.application" {
+  class useMonitoringStore
+}
+
+AuditEvidence --> EvidenceItem : contains
+AuditEvidence --> Report : includes
+AuditEvidence --> ComplianceFinding : includes
+ComplianceReport --> ComplianceFinding : contains
+ComplianceFinding ..> FindingStatus : uses
+Report ..> ReportType : uses
+ReportsApi --|> BaseApi
+ReportsApi *-- BaseEndpoint
+ReportAssembler ..> Report : creates
+useReportsStore ..> ReportsApi : uses
+useReportsStore ..> ReportAssembler : uses
+useReportsStore ..> DailyLog : builds
+useReportsStore ..> OperationalHistory : builds
+useReportsStore ..> SanitaryComplianceReport : builds
+useReportsStore ..> ComplianceReport : builds
+useReportsStore ..> AuditEvidence : builds
+useReportsStore ..> MonthlyReport : builds
+DailyLogView ..> useReportsStore : uses
+DailyLogView ..> useIdentityAccessStore : uses
+DailyLogView ..> useAssetManagementStore : uses
+DailyLogView ..> useMonitoringStore : uses
+DailyLogView --> ListPagination : uses
+MonthlyReportView ..> useReportsStore : uses
+MonthlyReportView ..> useIdentityAccessStore : uses
+MonthlyReportView ..> useAssetManagementStore : uses
+MonthlyReportView ..> useMonitoringStore : uses
+MonthlyReportView --> ListPagination : uses
+OperationalHistoryView ..> useReportsStore : uses
+OperationalHistoryView ..> useIdentityAccessStore : uses
+OperationalHistoryView ..> useAssetManagementStore : uses
+OperationalHistoryView ..> useMonitoringStore : uses
+OperationalHistoryView --> ListPagination : uses
+SanitaryComplianceView ..> useReportsStore : uses
+SanitaryComplianceView ..> useIdentityAccessStore : uses
+SanitaryComplianceView ..> useAssetManagementStore : uses
+SanitaryComplianceView ..> useMonitoringStore : uses
+SanitaryComplianceView --> ListPagination : uses
+ComplianceFindingsView ..> useReportsStore : uses
+ComplianceFindingsView ..> useIdentityAccessStore : uses
+ComplianceFindingsView ..> useAssetManagementStore : uses
+ComplianceFindingsView ..> useMonitoringStore : uses
+ComplianceFindingsView --> ListPagination : uses
+AuditEvidenceView ..> useReportsStore : uses
+AuditEvidenceView ..> useIdentityAccessStore : uses
+AuditEvidenceView ..> useAssetManagementStore : uses
+AuditEvidenceView ..> useMonitoringStore : uses
+AuditEvidenceView --> ListPagination : uses
+ReportsRoutes --> DailyLogView : maps
+ReportsRoutes --> MonthlyReportView : maps
+ReportsRoutes --> OperationalHistoryView : maps
+ReportsRoutes --> SanitaryComplianceView : maps
+ReportsRoutes --> ComplianceFindingsView : maps
+ReportsRoutes --> AuditEvidenceView : maps
+
+@enduml

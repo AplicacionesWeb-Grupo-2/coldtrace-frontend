@@ -3,6 +3,12 @@ import {computed, watch} from 'vue';
 import {useI18n} from 'vue-i18n';
 
 const {t} = useI18n();
+/**
+ * @typedef {Object} ListPaginationProps
+ * @property {*} [modelValue]
+ * @property {*} [total]
+ * @property {*} [pageSize]
+ */
 const props = defineProps({
     modelValue: {
         type: Number,
@@ -17,6 +23,11 @@ const props = defineProps({
         default: 10,
     },
 });
+/**
+ * Component events emitted to parent components.
+ *
+ * @type {Function}
+ */
 const emit = defineEmits(['update:modelValue']);
 
 const pageCount = computed(() => Math.max(Math.ceil(props.total / props.pageSize), 1));
@@ -46,6 +57,12 @@ watch(pageCount, () => {
     if (props.modelValue !== currentPage.value) emit('update:modelValue', currentPage.value);
 });
 
+/**
+ * Handles go to page behavior in the shared context.
+ *
+ * @param {number|string} page
+ * @returns {*}
+ */
 function goToPage(page) {
     emit('update:modelValue', Math.min(Math.max(Number(page), 1), pageCount.value));
 }

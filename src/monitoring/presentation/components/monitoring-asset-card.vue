@@ -4,6 +4,15 @@ import {useI18n} from 'vue-i18n';
 import TemperatureGauge from '@/monitoring/presentation/components/temperature-gauge.vue';
 import TemperatureChart from '@/monitoring/presentation/components/temperature-chart.vue';
 
+/**
+ * @typedef {Object} MonitoringAssetCardProps
+ * @property {*} [asset]
+ * @property {*} [device]
+ * @property {*} [location]
+ * @property {*} [latestReading]
+ * @property {*} [settings]
+ * @property {*} [chartPoints]
+ */
 const props = defineProps({
     asset: {type: Object, required: true},
     device: {type: Object, default: null},
@@ -43,6 +52,11 @@ const incidentValue = computed(() => {
     return props.asset.currentTemperature || 'N/A';
 });
 
+/**
+ * Handles incident from reading behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function incidentFromReading() {
     const reading = props.latestReading;
     if (!reading?.isOutOfRange) return null;
@@ -111,6 +125,11 @@ function incidentFromReading() {
     };
 }
 
+/**
+ * Handles parse asset temperature behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function parseAssetTemperature() {
     const value = Number.parseFloat(props.asset.currentTemperature?.replace('°C', '') ?? '');
     return Number.isFinite(value) ? value : null;

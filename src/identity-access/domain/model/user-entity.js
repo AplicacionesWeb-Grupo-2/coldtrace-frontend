@@ -1,4 +1,22 @@
+/**
+ * @typedef {Object} UserProps
+ * @property {number|null} [id]
+ * @property {string} [uuid]
+ * @property {number|null} [organizationUserId]
+ * @property {string} [firstName]
+ * @property {string} [lastName]
+ * @property {string} [email]
+ * @property {number|null} [organizationId]
+ * @property {number|null} [roleId]
+ */
+
+/**
+ * Domain entity representing user.
+ */
 export class User {
+    /**
+     * @param {UserProps} [props]
+     */
     constructor({
         id = null,
         uuid = '',
@@ -19,6 +37,11 @@ export class User {
         this.roleId = Number(roleId);
     }
 
+    /**
+     * Returns the full name value for this entity.
+     *
+     * @returns {string}
+     */
     get fullName() {
         return `${this.firstName} ${this.lastName}`.trim();
     }

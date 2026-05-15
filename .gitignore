@@ -1,37 +1,24 @@
-# Dependencies
-node_modules/
-
-# Build output
-dist/
-dist-ssr/
-
-# Local environment files
-.env
-.env.*
-!.env.example
-
 # Logs
-logs/
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Test and coverage output
-coverage/
+node_modules
+dist
+dist-ssr
+*.local
 
-# OS files
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-
-# JetBrains local state
-.idea/workspace.xml
-.idea/shelf/
-.idea/httpRequests/
-.idea/queries/
-.idea/dataSources/
-.idea/dataSources.local.xml
-.idea/material_theme_project_new.xml
-
-# VS Code local noise
-.vscode/*.log
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

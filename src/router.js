@@ -6,6 +6,11 @@ import alertsRoutes from '@/alerts/presentation/alerts-routes.js';
 import maintenanceManagementRoutes from '@/maintenance-management/presentation/maintenance-management-routes.js';
 import reportsRoutes from '@/reports/presentation/reports-routes.js';
 
+/**
+ * Lazy-loads the page not found view component.
+ *
+ * @returns {Promise<*>}
+ */
 const pageNotFound = () => import('@/shared/presentation/views/page-not-found.vue');
 
 const routes = [
@@ -27,6 +32,11 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes,
+    /**
+     * Restores the viewport position after route navigation.
+     *
+     * @returns {*}
+     */
     scrollBehavior() {
         return {top: 0};
     },

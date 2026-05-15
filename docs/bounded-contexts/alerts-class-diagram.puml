@@ -1,0 +1,174 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "alerts.domain.model" {
+  class EscalationPolicy {
+    - severity: string
+    - waitingMinutes: Number
+    - level: Number
+    - targetKey: string
+    + appliesTo(incident): Boolean
+  }
+  class Incident {
+    - id: Number
+    - organizationId: Number
+    - assetId: Number
+    - assetName: string
+    - type: string
+    - severity: string
+    - value: string
+    - status: string
+    - conditionStable: Boolean
+    - source: string
+    - sourceReadingId: Number
+    - reviewStatus: string
+    - escalationStatus: string
+    + isOpen
+    + isRecognized
+    + isClosed
+    + isConditionStable
+    + isGenerated
+    + isPendingReview
+    + isEscalated
+  }
+  class Notification {
+    - id: Number
+    - organizationId: Number
+    - incidentId: Number
+    - assetName: string
+    - channel: NotificationChannel
+    - recipient: string
+    - message: string
+    - status: NotificationStatus
+    + isPending
+    + isSent
+    + isFailed
+  }
+  class NotificationChannel <<enumeration>>
+  class NotificationStatus <<enumeration>>
+}
+
+package "alerts.infrastructure" {
+  class AlertsApi {
+    - incidentsEndpoint
+    - notificationsEndpoint
+    + getIncidents()
+    + createIncident(resource)
+    + updateIncident(resource)
+    + getNotifications()
+    + createNotification(resource)
+  }
+  class IncidentAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class NotificationAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+}
+
+package "alerts.application" {
+  class useAlertsStore {
+    - incidents
+    - notifications
+    - feedback
+    - recognizingId
+    - closingId
+    - stabilizingId
+    - reviewingEscalationId
+    + fetchIncidentsOnly()
+    + fetchNotificationsOnly()
+    + loadIncidents(options)
+    + recognizeIncident(incident, userName)
+    + closeIncident(incident, correctiveAction, evidence, userName)
+    + stabilizeIncident(incident)
+    + reviewEscalation(incident, userName)
+    + canResolveAlerts()
+    + clearFeedback()
+    + setFeedback(feedback)
+  }
+}
+
+package "alerts.presentation" {
+  class AlertsRoutes {
+    + incidents
+    + notifications
+  }
+}
+
+package "alerts.presentation.views" {
+  class IncidentList {
+    - closureCard
+    - currentPage
+    - closureSubmitted
+    + recognize(incident): void
+    + closeIncident(): void
+    + reviewEscalation(incident): void
+    + selectIncidentForClosure(incident): void
+    + stabilizeSelectedIncident(): void
+  }
+  class NotificationList {
+    - currentPage
+    + attendNotification(notification): void
+    + showTimedFeedback(feedbackKey): void
+  }
+}
+
+package "shared.infrastructure" {
+  class BaseApi
+  class BaseEndpoint
+}
+
+package "shared.presentation.components" {
+  class ListPagination
+}
+
+package "identity-access.application" {
+  class useIdentityAccessStore
+}
+
+package "monitoring.infrastructure" {
+  class MonitoringApi
+  class SensorReadingAssembler
+}
+
+package "asset-management.infrastructure" {
+  class AssetManagementApi
+  class AssetAssembler
+  class AssetSettingsAssembler
+  class IoTDeviceAssembler
+}
+
+Incident --> Notification : triggers
+Notification --> Incident : references
+Notification ..> NotificationChannel : uses
+Notification ..> NotificationStatus : uses
+EscalationPolicy ..> Incident : evaluates
+AlertsApi --|> BaseApi
+AlertsApi *-- BaseEndpoint
+IncidentAssembler ..> Incident : creates
+NotificationAssembler ..> Notification : creates
+useAlertsStore ..> AlertsApi : persists
+useAlertsStore ..> MonitoringApi : reads readings
+useAlertsStore ..> SensorReadingAssembler : creates reading entities
+useAlertsStore ..> AssetManagementApi : reads assets/settings/devices
+useAlertsStore ..> AssetAssembler : creates asset entities
+useAlertsStore ..> AssetSettingsAssembler : creates settings entities
+useAlertsStore ..> IoTDeviceAssembler : creates device entities
+useAlertsStore ..> useIdentityAccessStore : checks permissions
+useAlertsStore ..> EscalationPolicy : applies
+IncidentList ..> useAlertsStore : uses
+IncidentList ..> useIdentityAccessStore : uses
+IncidentList --> ListPagination : uses
+NotificationList ..> useAlertsStore : uses
+NotificationList ..> useIdentityAccessStore : uses
+NotificationList --> ListPagination : uses
+AlertsRoutes --> IncidentList : maps
+AlertsRoutes --> NotificationList : maps
+
+@enduml

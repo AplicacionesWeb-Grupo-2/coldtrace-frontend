@@ -1,4 +1,14 @@
+/**
+ * Lazy-loads the preventive maintenance scheduler view component.
+ *
+ * @returns {Promise<*>}
+ */
 const preventiveMaintenanceScheduler = () => import('./views/preventive-maintenance-scheduler.vue');
+/**
+ * Lazy-loads the technical service tracker view component.
+ *
+ * @returns {Promise<*>}
+ */
 const technicalServiceTracker = () => import('./views/technical-service-tracker.vue');
 
 const maintenanceManagementRoutes = [

@@ -1,10 +1,50 @@
+/**
+ * Lazy-loads the sign in view component.
+ *
+ * @returns {Promise<*>}
+ */
 const signIn = () => import('./views/sign-in.vue');
+/**
+ * Lazy-loads the sign up view component.
+ *
+ * @returns {Promise<*>}
+ */
 const signUp = () => import('./views/sign-up.vue');
+/**
+ * Lazy-loads the password recovery view component.
+ *
+ * @returns {Promise<*>}
+ */
 const passwordRecovery = () => import('./views/password-recovery.vue');
+/**
+ * Lazy-loads the reset password view component.
+ *
+ * @returns {Promise<*>}
+ */
 const resetPassword = () => import('./views/reset-password.vue');
+/**
+ * Lazy-loads the operational dashboard view component.
+ *
+ * @returns {Promise<*>}
+ */
 const operationalDashboard = () => import('@/monitoring/presentation/views/operational-dashboard.vue');
+/**
+ * Lazy-loads the user access list view component.
+ *
+ * @returns {Promise<*>}
+ */
 const userAccessList = () => import('./views/user-access-list.vue');
+/**
+ * Lazy-loads the user form view component.
+ *
+ * @returns {Promise<*>}
+ */
 const userForm = () => import('./views/user-form.vue');
+/**
+ * Lazy-loads the role permission form view component.
+ *
+ * @returns {Promise<*>}
+ */
 const rolePermissionForm = () => import('./views/role-permission-form.vue');
 
 const identityAccessRoutes = [

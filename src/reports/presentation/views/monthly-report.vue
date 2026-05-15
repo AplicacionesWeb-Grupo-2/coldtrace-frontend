@@ -61,6 +61,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
     feedback.value = 'idle';
@@ -79,11 +84,22 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Updates month in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateMonth(value) {
     selectedMonth.value = value > maxMonth.value ? maxMonth.value : value;
     feedback.value = 'idle';
 }
 
+/**
+ * Downloads monthly report for the current selection.
+ *
+ * @returns {Promise<*>}
+ */
 async function downloadMonthlyReport() {
     if (!canDownloadReports.value) return;
 
@@ -104,27 +120,63 @@ async function downloadMonthlyReport() {
     }
 }
 
+/**
+ * Returns the i18n label key for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusLabelKey(status) {
     return `reports.monthly.status.${status}`;
 }
 
+/**
+ * Returns the CSS class for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusClass(status) {
     return `status-${status}`;
 }
 
+/**
+ * Formats temperature for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatTemperature(value) {
     return value === null ? 'N/A' : `${value.toFixed(1)} °C`;
 }
 
+/**
+ * Formats humidity for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatHumidity(value) {
     return value === null ? 'N/A' : `${value.toFixed(0)}%`;
 }
 
+/**
+ * Formats time range for display.
+ *
+ * @param {*} row
+ * @returns {string}
+ */
 function formatTimeRange(row) {
     if (!row.firstRecordedAt || !row.lastRecordedAt) return 'N/A';
     return `${formatDate(row.firstRecordedAt)} - ${formatDate(row.lastRecordedAt)}`;
 }
 
+/**
+ * Formats date for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatDate(value) {
     return new Intl.DateTimeFormat('en', {
         day: '2-digit',
@@ -133,6 +185,13 @@ function formatDate(value) {
     }).format(new Date(value));
 }
 
+/**
+ * Downloads csv for the current selection.
+ *
+ * @param {string} csv
+ * @param {string} filename
+ * @returns {void}
+ */
 function downloadCsv(csv, filename) {
     const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -143,6 +202,12 @@ function downloadCsv(csv, filename) {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * Handles file name part behavior in the reports context.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function fileNamePart(value) {
     return value
         .normalize('NFD')
