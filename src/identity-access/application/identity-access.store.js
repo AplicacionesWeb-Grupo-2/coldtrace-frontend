@@ -32,6 +32,11 @@ const manageUsersPermissionKey = 'roles-permissions.permissions.manage-users';
 const manageAssetsPermissionKey = 'roles-permissions.permissions.manage-assets';
 const monitorAssetsPermissionKey = 'roles-permissions.permissions.monitor-assets';
 
+/**
+ * Pinia store that coordinates identity access application state and use cases.
+ *
+ * @returns {import('pinia').StoreDefinition}
+ */
 const useIdentityAccessStore = defineStore('identity-access', () => {
     const users = ref([]);
     const organizations = ref([]);
@@ -47,6 +52,11 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     const rolePermissionKeysByRoleId = ref({});
     const userCount = computed(() => users.value.length);
 
+    /**
+     * Loads users from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchUsers() {
         const response = await identityAccessApi.getUsers();
         users.value = UserAssembler.toEntitiesFromResponse(response);
@@ -54,6 +64,11 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return users.value;
     }
 
+    /**
+     * Loads organizations from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchOrganizations() {
         const response = await identityAccessApi.getOrganizations();
         organizations.value = OrganizationAssembler.toEntitiesFromResponse(response);
@@ -61,6 +76,11 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return organizations.value;
     }
 
+    /**
+     * Loads roles from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchRoles() {
         const response = await identityAccessApi.getRoles();
         roles.value = RoleAssembler.toEntitiesFromResponse(response);
@@ -69,6 +89,11 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return roles.value;
     }
 
+    /**
+     * Loads access data from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchAccessData() {
         loading.value = true;
         errors.value = [];
@@ -88,24 +113,51 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         }
     }
 
+    /**
+     * Handles set current context behavior in the identity access context.
+     *
+     * @param {*} user
+     * @param {*} availableRoles
+     * @param {*} availableOrganizations
+     * @returns {void}
+     */
     function setCurrentContext(user, availableRoles = roles.value, availableOrganizations = organizations.value) {
         currentUser.value = user;
         currentRole.value = availableRoles.find(role => role.id === user?.roleId) ?? null;
         currentOrganization.value = availableOrganizations.find(organization => organization.id === user?.organizationId) ?? null;
     }
 
+    /**
+     * Handles set current context from behavior in the identity access context.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @param {*} availableOrganizations
+     * @returns {void}
+     */
     function setCurrentContextFrom(availableUsers = users.value, availableRoles = roles.value, availableOrganizations = organizations.value) {
         const user = currentUserFrom(availableUsers);
         if (user) setCurrentContext(user, availableRoles, availableOrganizations);
         initializeRolePermissions(availableRoles);
     }
 
+    /**
+     * Handles clear current user behavior in the identity access context.
+     *
+     * @returns {void}
+     */
     function clearCurrentUser() {
         currentUser.value = null;
         currentRole.value = null;
         currentOrganization.value = null;
     }
 
+    /**
+     * Handles current user from behavior in the identity access context.
+     *
+     * @param {*} availableUsers
+     * @returns {*}
+     */
     function currentUserFrom(availableUsers = users.value) {
         if (currentUser.value) {
             const selected = availableUsers.find(user => user.id === currentUser.value.id);
@@ -114,29 +166,68 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return availableUsers.find(user => user.id === 1) ?? availableUsers[0] ?? null;
     }
 
+    /**
+     * Handles current organization id from behavior in the identity access context.
+     *
+     * @param {*} availableUsers
+     * @returns {*}
+     */
     function currentOrganizationIdFrom(availableUsers = users.value) {
         return currentUserFrom(availableUsers)?.organizationId ?? null;
     }
 
+    /**
+     * Handles current organization name from behavior in the identity access context.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableOrganizations
+     * @returns {string}
+     */
     function currentOrganizationNameFrom(availableUsers = users.value, availableOrganizations = organizations.value) {
         const organizationId = currentOrganizationIdFrom(availableUsers);
         const organization = availableOrganizations.find(current => current.id === organizationId);
         return organization?.commercialName || currentOrganization.value?.commercialName || 'ColdTrace';
     }
 
+    /**
+     * Handles current user name from behavior in the identity access context.
+     *
+     * @param {*} availableUsers
+     * @returns {string}
+     */
     function currentUserNameFrom(availableUsers = users.value) {
         return currentUserFrom(availableUsers)?.fullName || currentUser.value?.fullName || 'ColdTrace';
     }
 
+    /**
+     * Handles current role from behavior in the identity access context.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {*}
+     */
     function currentRoleFrom(availableUsers = users.value, availableRoles = roles.value) {
         const user = currentUserFrom(availableUsers);
         return availableRoles.find(role => role.id === user?.roleId);
     }
 
+    /**
+     * Handles current role label key from behavior in the identity access context.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {string}
+     */
     function currentRoleLabelKeyFrom(availableUsers = users.value, availableRoles = roles.value) {
         return roleLabelKey(currentRoleFrom(availableUsers, availableRoles));
     }
 
+    /**
+     * Handles initialize role permissions behavior in the identity access context.
+     *
+     * @param {*} availableRoles
+     * @returns {*}
+     */
     function initializeRolePermissions(availableRoles = roles.value) {
         rolePermissionKeysByRoleId.value = availableRoles.reduce((state, role) => ({
             ...state,
@@ -144,12 +235,24 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         }), {});
     }
 
+    /**
+     * Handles permission keys for role behavior in the identity access context.
+     *
+     * @param {*} role
+     * @returns {string}
+     */
     function permissionKeysForRole(role) {
         if (!role) return ['roles-permissions.permissions.none'];
         const permissionKeys = rolePermissionKeysByRoleId.value[role.id] ?? permissionKeysFromRole(role);
         return permissionKeys.length ? permissionKeys : ['roles-permissions.permissions.none'];
     }
 
+    /**
+     * Handles permission keys from role behavior in the identity access context.
+     *
+     * @param {*} role
+     * @returns {string}
+     */
     function permissionKeysFromRole(role) {
         const keys = (role?.permissions ?? [])
             .map(permission => permissionKeyFrom(permission))
@@ -157,6 +260,12 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return orderPermissionKeys(keys);
     }
 
+    /**
+     * Handles permission key from behavior in the identity access context.
+     *
+     * @param {*} permission
+     * @returns {string}
+     */
     function permissionKeyFrom(permission) {
         if (availablePermissionKeys.includes(permission.description)) {
             return permission.description;
@@ -166,47 +275,122 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         )?.key ?? null;
     }
 
+    /**
+     * Determines whether permission selected is true.
+     *
+     * @param {*} role
+     * @param {string} permissionKey
+     * @returns {boolean}
+     */
     function isPermissionSelected(role, permissionKey) {
         return permissionKeysForRole(role).includes(permissionKey);
     }
 
+    /**
+     * Determines whether administrator role is true.
+     *
+     * @param {*} role
+     * @returns {boolean}
+     */
     function isAdministratorRole(role) {
         return role?.name === RoleName.Administrator;
     }
 
+    /**
+     * Determines whether super administrator role is true.
+     *
+     * @param {*} role
+     * @returns {boolean}
+     */
     function isSuperAdministratorRole(role) {
         return role?.name === RoleName.SuperAdministrator;
     }
 
+    /**
+     * Determines whether operations manager role is true.
+     *
+     * @param {*} role
+     * @returns {boolean}
+     */
     function isOperationsManagerRole(role) {
         return role?.name === RoleName.OperationsManager;
     }
 
+    /**
+     * Determines whether manage role permissions is available.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canManageRolePermissions(availableUsers = users.value, availableRoles = roles.value) {
         const role = currentRoleFrom(availableUsers, availableRoles);
         return isSuperAdministratorRole(role) || isAdministratorRole(role);
     }
 
+    /**
+     * Determines whether manage access is available.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canManageAccess(availableUsers = users.value, availableRoles = roles.value) {
         return canManageRolePermissions(availableUsers, availableRoles);
     }
 
+    /**
+     * Determines whether manage users is available.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canManageUsers(availableUsers = users.value, availableRoles = roles.value) {
         return permissionKeysForRole(currentRoleFrom(availableUsers, availableRoles)).includes(manageUsersPermissionKey);
     }
 
+    /**
+     * Determines whether manage assets is available.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canManageAssets(availableUsers = users.value, availableRoles = roles.value) {
         return permissionKeysForRole(currentRoleFrom(availableUsers, availableRoles)).includes(manageAssetsPermissionKey);
     }
 
+    /**
+     * Determines whether monitor assets is available.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canMonitorAssets(availableUsers = users.value, availableRoles = roles.value) {
         return permissionKeysForRole(currentRoleFrom(availableUsers, availableRoles)).includes(monitorAssetsPermissionKey);
     }
 
+    /**
+     * Determines whether manage administrators is available.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canManageAdministrators(availableUsers = users.value, availableRoles = roles.value) {
         return isSuperAdministratorRole(currentRoleFrom(availableUsers, availableRoles));
     }
 
+    /**
+     * Determines whether delete user is available.
+     *
+     * @param {*} user
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canDeleteUser(user, availableUsers = users.value, availableRoles = roles.value) {
         if (!user || currentUserFrom(availableUsers)?.id === user.id) return false;
 
@@ -218,11 +402,26 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return !isSuperAdministratorRole(targetRole) && !isAdministratorRole(targetRole);
     }
 
+    /**
+     * Determines whether delete asset resources is available.
+     *
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canDeleteAssetResources(availableUsers = users.value, availableRoles = roles.value) {
         const role = currentRoleFrom(availableUsers, availableRoles);
         return isSuperAdministratorRole(role) || isAdministratorRole(role) || isOperationsManagerRole(role);
     }
 
+    /**
+     * Determines whether assign role is available.
+     *
+     * @param {*} role
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canAssignRole(role, availableUsers = users.value, availableRoles = roles.value) {
         if (!role || !canManageUsers(availableUsers, availableRoles) || isSuperAdministratorRole(role)) {
             return false;
@@ -233,6 +432,14 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return true;
     }
 
+    /**
+     * Determines whether manage user role is available.
+     *
+     * @param {*} user
+     * @param {*} availableUsers
+     * @param {*} availableRoles
+     * @returns {boolean}
+     */
     function canManageUserRole(user, availableUsers = users.value, availableRoles = roles.value) {
         if (!user || !canManageUsers(availableUsers, availableRoles)) {
             return false;
@@ -243,10 +450,23 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return true;
     }
 
+    /**
+     * Handles role label key behavior in the identity access context.
+     *
+     * @param {*} role
+     * @returns {string}
+     */
     function roleLabelKey(role) {
         return role ? `roles-permissions.roles.${role.name}` : 'roles-permissions.roles.unassigned';
     }
 
+    /**
+     * Determines whether permission toggle disabled is true.
+     *
+     * @param {*} role
+     * @param {string} permissionKey
+     * @returns {boolean}
+     */
     function isPermissionToggleDisabled(role, permissionKey) {
         if (isSuperAdministratorRole(role) || isAdministratorRole(role)) return true;
         if (permissionKey === manageAdministratorsPermissionKey) return true;
@@ -254,6 +474,13 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return !isPermissionSelected(role, permissionKey) && selectedKeys.length >= availablePermissionKeys.length - 1;
     }
 
+    /**
+     * Handles sign in behavior in the identity access context.
+     *
+     * @param {string} email
+     * @param {string} password
+     * @returns {Promise<*>}
+     */
     async function signIn(email, password) {
         const validPassword = 'ColdTrace123';
         const revokedAccessEmail = 'revoked@coldtrace.com';
@@ -273,6 +500,12 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return 'success';
     }
 
+    /**
+     * Creates account in the identity access context.
+     *
+     * @param {Object} options
+     * @returns {Promise<*>}
+     */
     async function createAccount({organizationName, fullName, email}) {
         const normalizedEmail = email.trim().toLowerCase();
         const accessData = await fetchAccessData();
@@ -322,6 +555,12 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return {status: 'success', user: createdUser};
     }
 
+    /**
+     * Creates organization user in the identity access context.
+     *
+     * @param {Object} options
+     * @returns {Promise<*>}
+     */
     async function createOrganizationUser({fullName, email, roleId}) {
         const organizationId = currentOrganizationIdFrom();
         const selectedRole = roles.value.find(role => role.id === Number(roleId));
@@ -359,6 +598,13 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return {status: 'success', user: createdUser};
     }
 
+    /**
+     * Updates user role in the identity access context.
+     *
+     * @param {*} user
+     * @param {number|string} roleId
+     * @returns {Promise<*>}
+     */
     async function updateUserRole(user, roleId) {
         const updatedUser = new User({...user, roleId: Number(roleId)});
         const response = await identityAccessApi.updateUser(UserAssembler.toResourceFromEntity(updatedUser));
@@ -367,6 +613,12 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         return savedUser;
     }
 
+    /**
+     * Deletes user from the identity access context.
+     *
+     * @param {*} user
+     * @returns {Promise<*>}
+     */
     async function deleteUser(user) {
         if (!canDeleteUser(user)) {
             return {status: 'forbidden'};
@@ -388,6 +640,12 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         }
     }
 
+    /**
+     * Handles user was deleted remotely behavior in the identity access context.
+     *
+     * @param {number|string} userId
+     * @returns {Promise<*>}
+     */
     async function userWasDeletedRemotely(userId) {
         try {
             const response = await identityAccessApi.getUsers();
@@ -398,6 +656,14 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         }
     }
 
+    /**
+     * Toggles role permission.
+     *
+     * @param {*} role
+     * @param {string} permissionKey
+     * @param {boolean} checked
+     * @returns {Promise<*>}
+     */
     async function toggleRolePermission(role, permissionKey, checked) {
         if (isPermissionToggleDisabled(role, permissionKey)) return role;
 
@@ -422,11 +688,24 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         }
     }
 
+    /**
+     * Handles permission definition for behavior in the identity access context.
+     *
+     * @param {string} permissionKey
+     * @returns {*}
+     */
     function permissionDefinitionFor(permissionKey) {
         return permissionDefinitions.find(definition => definition.key === permissionKey) ??
             permissionDefinitions[permissionDefinitions.length - 1];
     }
 
+    /**
+     * Handles role with permission keys behavior in the identity access context.
+     *
+     * @param {*} role
+     * @param {string} permissionKeys
+     * @returns {string}
+     */
     function roleWithPermissionKeys(role, permissionKeys) {
         return new Role({
             id: role.id,
@@ -444,10 +723,23 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         });
     }
 
+    /**
+     * Handles order permission keys behavior in the identity access context.
+     *
+     * @param {string} permissionKeys
+     * @returns {string}
+     */
     function orderPermissionKeys(permissionKeys) {
         return availablePermissionKeys.filter(permissionKey => permissionKeys.includes(permissionKey));
     }
 
+    /**
+     * Handles set permission keys for role behavior in the identity access context.
+     *
+     * @param {number|string} roleId
+     * @param {string} permissionKeys
+     * @returns {void}
+     */
     function setPermissionKeysForRole(roleId, permissionKeys) {
         rolePermissionKeysByRoleId.value = {
             ...rolePermissionKeysByRoleId.value,
@@ -455,6 +747,12 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         };
     }
 
+    /**
+     * Updates role state in the identity access context.
+     *
+     * @param {*} role
+     * @returns {void}
+     */
     function updateRoleState(role) {
         roles.value = roles.value.map(current => current.id === role.id ? role : current);
     }

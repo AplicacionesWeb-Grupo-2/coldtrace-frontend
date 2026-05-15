@@ -20,6 +20,11 @@ onMounted(() => {
     loadRoles();
 });
 
+/**
+ * Loads roles data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadRoles() {
     feedback.value = 'idle';
     try {
@@ -29,6 +34,14 @@ async function loadRoles() {
     }
 }
 
+/**
+ * Toggles role permission.
+ *
+ * @param {*} role
+ * @param {string} permissionKey
+ * @param {boolean} checked
+ * @returns {Promise<*>}
+ */
 async function toggleRolePermission(role, permissionKey, checked) {
     if (!canManageAccess.value) return;
     savingRoleId.value = role.id;

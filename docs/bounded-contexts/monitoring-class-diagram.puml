@@ -1,0 +1,234 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "monitoring.domain.model" {
+  class DashboardKpi
+  class IncidentDay
+  class Incident {
+    - id: Number
+    - organizationId: Number
+    - assetId: Number
+    - assetName: string
+    - type: string
+    - severity: string
+    - value: string
+    - status: string
+    - sourceReadingId: Number
+    - reviewStatus: string
+    - escalationStatus: string
+    + isOpen
+    + isRecognized
+    + isClosed
+    + isGenerated
+    + isPendingReview
+    + isEscalated
+  }
+  class MaintenanceSchedule {
+    - id: Number
+    - organizationId: Number
+    - assetId: Number
+    - iotDeviceId: Number
+    - scheduledDate: string
+    - period: string
+    - status: MaintenanceScheduleStatus
+  }
+  class MaintenanceScheduleStatus <<enumeration>>
+  class MaintenanceTask
+  class OfflineReading {
+    - id: Number
+    - assetId: Number
+    - iotDeviceId: Number
+    - temperature: Number
+    - humidity: Number
+    - syncStatus: SyncStatus
+    + isPending
+    + isSynced
+    + isFailed
+    + withSyncStatus(syncStatus)
+  }
+  class RecentAlert
+  class SensorReading {
+    - id: Number
+    - assetId: Number
+    - iotDeviceId: Number
+    - temperature: Number
+    - humidity: Number
+    - isOutOfRange: Boolean
+    - recordedAt: string
+    - batteryLevel: Number
+    - signalStrength: Number
+  }
+  class StorageDistributionItem
+  class SyncStatus <<enumeration>>
+  class TechnicalServiceRequest {
+    - id: Number
+    - organizationId: Number
+    - assetId: Number
+    - priority: string
+    - issueDescription: string
+    - requestedDate: string
+    - status: TechnicalServiceStatus
+  }
+  class TechnicalServiceStatus <<enumeration>>
+  class TemperaturePoint
+}
+
+package "monitoring.infrastructure" {
+  class MonitoringApi {
+    - sensorReadingsEndpoint
+    - incidentsEndpoint
+    - maintenanceSchedulesEndpoint
+    - technicalServiceRequestsEndpoint
+    + getSensorReadings()
+    + createSensorReading(resource)
+    + getIncidents()
+    + createIncident(resource)
+    + updateIncident(id, resource)
+    + getMaintenanceSchedules()
+    + getTechnicalServiceRequests()
+  }
+  class SensorReadingAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class IncidentAssembler {
+    + toEntityFromResource(resource)
+    + toResourceFromEntity(entity)
+    + toEntitiesFromResponse(response)
+  }
+  class MaintenanceScheduleAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+  }
+  class TechnicalServiceRequestAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+  }
+}
+
+package "monitoring.application" {
+  class useMonitoringStore {
+    - readings
+    - offlineReadings
+    - incidents
+    - maintenanceSchedules
+    - technicalServiceRequests
+    + fetchReadings()
+    + fetchIncidents()
+    + createIncident(incident)
+    + updateIncident(incident)
+    + fetchMaintenanceSchedules()
+    + fetchTechnicalServiceRequests()
+    + fetchMonitoringData(options)
+    + createSensorReading(sensorReading)
+    + nextSensorReadingId(offset)
+    + getLatestTemperatureByAsset(assetId)
+    + getLatestHumidityByAsset(assetId)
+    + getReadingsByAsset(assetId, from, to)
+    + readingsForAssetIds(assetIds)
+    + recentReadingsForAssetIds(assetIds, limit)
+    + outOfRangeCountForAssetIds(assetIds)
+    + thermalComplianceForAssetIds(assetIds)
+    + syncReading(id)
+    + syncAllPending()
+    + syncGeneratedIncidentsForOrganization(organizationId)
+    + updateOrganizationTelemetry(organizationId)
+    + hasCalibrationIssue(iotDevice)
+  }
+}
+
+package "monitoring.presentation" {
+  class MonitoringRoutes {
+    + operational
+    + assets
+  }
+}
+
+package "monitoring.presentation.views" {
+  class OperationalDashboard
+  class AssetMonitoringDashboard
+}
+
+package "monitoring.presentation.components" {
+  class StatCard
+  class TemperatureChart {
+    - points
+    + refreshChart(): void
+    + buildChart(): void
+  }
+  class TemperatureGauge
+  class StorageDistribution {
+    - items
+    + refreshChart(): void
+    + buildChart(): void
+  }
+  class IncidentsChart {
+    - days
+    + refreshChart(): void
+    + buildChart(): void
+  }
+  class RecentAlerts
+  class MaintenanceList
+  class MonitoringAssetCard
+}
+
+package "shared.infrastructure" {
+  class BaseApi
+  class BaseEndpoint
+}
+
+package "asset-management.domain.model" {
+  class Asset
+  class IoTDevice
+  class AssetSettings
+}
+
+package "asset-management.application" {
+  class useAssetManagementStore
+}
+
+SensorReading --> Asset : belongs to
+SensorReading --> IoTDevice : source device
+Incident --> Asset : affects
+Incident --> SensorReading : may originate from
+MaintenanceSchedule --> Asset : schedules
+MaintenanceSchedule --> IoTDevice : optional device
+MaintenanceSchedule ..> MaintenanceScheduleStatus : uses
+TechnicalServiceRequest --> Asset : services
+TechnicalServiceRequest ..> TechnicalServiceStatus : uses
+OfflineReading ..> SyncStatus : uses
+MonitoringApi --|> BaseApi
+MonitoringApi *-- BaseEndpoint
+SensorReadingAssembler ..> SensorReading : creates
+IncidentAssembler ..> Incident : creates
+MaintenanceScheduleAssembler ..> MaintenanceSchedule : creates
+TechnicalServiceRequestAssembler ..> TechnicalServiceRequest : creates
+useMonitoringStore ..> MonitoringApi : uses
+useMonitoringStore ..> SensorReadingAssembler : uses
+useMonitoringStore ..> IncidentAssembler : uses
+useMonitoringStore ..> MaintenanceScheduleAssembler : uses
+useMonitoringStore ..> TechnicalServiceRequestAssembler : uses
+useMonitoringStore ..> OfflineReading : manages
+useMonitoringStore ..> Asset : reads
+useMonitoringStore ..> IoTDevice : reads
+useMonitoringStore ..> AssetSettings : evaluates ranges
+OperationalDashboard ..> useMonitoringStore : uses
+OperationalDashboard ..> useAssetManagementStore : uses
+OperationalDashboard --> StatCard : uses
+OperationalDashboard --> TemperatureChart : uses
+OperationalDashboard --> StorageDistribution : uses
+OperationalDashboard --> IncidentsChart : uses
+OperationalDashboard --> RecentAlerts : uses
+OperationalDashboard --> MaintenanceList : uses
+AssetMonitoringDashboard ..> useMonitoringStore : uses
+AssetMonitoringDashboard ..> useAssetManagementStore : uses
+AssetMonitoringDashboard --> MonitoringAssetCard : uses
+MonitoringAssetCard --> TemperatureGauge : uses
+MonitoringAssetCard --> TemperatureChart : uses
+MonitoringRoutes --> OperationalDashboard : maps
+MonitoringRoutes --> AssetMonitoringDashboard : maps
+
+@enduml

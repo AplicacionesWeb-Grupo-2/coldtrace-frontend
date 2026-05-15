@@ -24,6 +24,11 @@ const emailInvalid = computed(() => !emailPattern.test(form.value.email.trim()))
 const passwordInvalid = computed(() => form.value.password.length < 8);
 const passwordMismatch = computed(() => form.value.password !== form.value.confirmPassword);
 
+/**
+ * Handles submit behavior in the identity access context.
+ *
+ * @returns {Promise<*>}
+ */
 async function submit() {
     submitted.value = true;
     feedback.value = 'idle';

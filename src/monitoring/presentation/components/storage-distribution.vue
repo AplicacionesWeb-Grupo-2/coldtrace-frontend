@@ -5,6 +5,10 @@ import {useI18n} from 'vue-i18n';
 
 Chart.register(...registerables);
 
+/**
+ * @typedef {Object} StorageDistributionProps
+ * @property {*} [items]
+ */
 const props = defineProps({
     items: {type: Array, default: () => []},
 });
@@ -33,6 +37,11 @@ watch(
     {deep: true},
 );
 
+/**
+ * Handles refresh chart behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function refreshChart() {
     if (!chart) return;
     if (!props.items.length) {
@@ -47,6 +56,11 @@ function refreshChart() {
     chart.update();
 }
 
+/**
+ * Builds chart for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildChart() {
     if (!canvasElement.value) return;
     chart?.destroy();

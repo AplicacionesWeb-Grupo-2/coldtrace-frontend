@@ -2,6 +2,11 @@
 import {computed} from 'vue';
 import {useI18n} from 'vue-i18n';
 
+/**
+ * @typedef {Object} MaintenanceListProps
+ * @property {*} [tasks]
+ * @property {*} [completionRate]
+ */
 const props = defineProps({
     tasks: {type: Array, default: () => []},
     completionRate: {type: Number, default: 78},

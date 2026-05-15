@@ -5,6 +5,11 @@ import {useI18n} from 'vue-i18n';
 
 Chart.register(...registerables);
 
+/**
+ * @typedef {Object} IncidentsChartProps
+ * @property {*} [days]
+ * @property {*} [timeline]
+ */
 const props = defineProps({
     days: {type: Array, default: () => []},
     timeline: {type: Array, default: () => []},
@@ -48,6 +53,11 @@ watch(
     {deep: true},
 );
 
+/**
+ * Handles refresh chart behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function refreshChart() {
     if (!chart) return;
     if (!props.days.length) {
@@ -67,11 +77,22 @@ function refreshChart() {
     chart.update();
 }
 
+/**
+ * Handles micro height behavior in the monitoring context.
+ *
+ * @param {*} day
+ * @returns {*}
+ */
 function microHeight(day) {
     const total = day.normal + day.warning + day.critical + day.offline;
     return total > 0 ? Math.max(4, Math.min(36, total)) : 0;
 }
 
+/**
+ * Builds chart for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildChart() {
     if (!canvasElement.value) return;
     chart?.destroy();

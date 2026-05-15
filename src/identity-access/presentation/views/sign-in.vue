@@ -20,6 +20,11 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const emailInvalid = computed(() => !emailPattern.test(form.value.email.trim()));
 const passwordInvalid = computed(() => !form.value.password);
 
+/**
+ * Handles submit behavior in the identity access context.
+ *
+ * @returns {Promise<*>}
+ */
 async function submit() {
     submitted.value = true;
     feedback.value = 'idle';

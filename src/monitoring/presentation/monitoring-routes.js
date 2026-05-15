@@ -1,4 +1,14 @@
+/**
+ * Lazy-loads the operational dashboard view component.
+ *
+ * @returns {Promise<*>}
+ */
 const operationalDashboard = () => import('./views/operational-dashboard.vue');
+/**
+ * Lazy-loads the asset monitoring dashboard view component.
+ *
+ * @returns {Promise<*>}
+ */
 const assetMonitoringDashboard = () => import('./views/asset-monitoring-dashboard.vue');
 
 const monitoringRoutes = [

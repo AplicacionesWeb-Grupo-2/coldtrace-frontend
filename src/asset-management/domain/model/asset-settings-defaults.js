@@ -1,5 +1,10 @@
 import {AssetSettings} from '@/asset-management/domain/model/asset-settings-entity.js';
 
+/**
+ * Default values used by the asset management context.
+ *
+ * @type {Object}
+ */
 export const DEFAULT_ASSET_SETTING_VALUES = {
     assetTypes: ['Cold room', 'Refrigerated transport'],
     iotDeviceTypes: [
@@ -18,6 +23,16 @@ export const DEFAULT_ASSET_SETTING_VALUES = {
     weightUnit: 'kg',
 };
 
+/**
+ * Builds default asset settings for presentation or reporting.
+ *
+ * @param {number|string} id
+ * @param {number|string} organizationId
+ * @param {number|string} uuid
+ * @param {number|string} assetId
+ * @param {*} fallbackSettings
+ * @returns {*}
+ */
 export function buildDefaultAssetSettings(id, organizationId, uuid, assetId = null, fallbackSettings = null) {
     return new AssetSettings({
         id,

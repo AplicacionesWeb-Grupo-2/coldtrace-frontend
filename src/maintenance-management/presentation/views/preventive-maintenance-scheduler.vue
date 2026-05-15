@@ -62,6 +62,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
     feedback.value = 'idle';
@@ -80,12 +85,22 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Selects asset in the current view state.
+ *
+ * @returns {void}
+ */
 function selectAsset() {
     maintenanceForm.iotDeviceId = 0;
     feedback.value = 'idle';
     submitted.value = false;
 }
 
+/**
+ * Handles schedule preventive maintenance behavior in the maintenance management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function schedulePreventiveMaintenance() {
     submitted.value = true;
     feedback.value = 'idle';
@@ -142,6 +157,11 @@ async function schedulePreventiveMaintenance() {
     }
 }
 
+/**
+ * Resets schedule form to its default state.
+ *
+ * @returns {void}
+ */
 function resetScheduleForm() {
     const firstActiveAsset = organizationAssets.value.find(asset => asset.status === AssetStatus.Active);
 
@@ -153,6 +173,12 @@ function resetScheduleForm() {
     maintenanceForm.observations = '';
 }
 
+/**
+ * Determines whether control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasControlError(controlName) {
     if (!submitted.value) return false;
     if (controlName === 'assetId') return Number(maintenanceForm.assetId) <= 0;
@@ -161,30 +187,65 @@ function hasControlError(controlName) {
     return false;
 }
 
+/**
+ * Determines whether date error exists.
+ *
+ * @returns {boolean}
+ */
 function hasDateError() {
     return hasControlError('scheduledDate') || (submitted.value && isPastDate());
 }
 
+/**
+ * Handles asset name for behavior in the maintenance management context.
+ *
+ * @param {*} schedule
+ * @returns {string}
+ */
 function assetNameFor(schedule) {
     const asset = assetFor(schedule.assetId);
     return asset ? `${asset.uuid} - ${asset.name}` : `#${schedule.assetId}`;
 }
 
+/**
+ * Handles device name for behavior in the maintenance management context.
+ *
+ * @param {*} schedule
+ * @returns {string}
+ */
 function deviceNameFor(schedule) {
     if (!schedule.iotDeviceId) return 'maintenance.preventive.table.asset-level';
     const iotDevice = organizationIoTDevices.value.find(currentDevice => currentDevice.id === schedule.iotDeviceId);
     return iotDevice ? `${iotDevice.uuid} - ${iotDevice.model}` : `#${schedule.iotDeviceId}`;
 }
 
+/**
+ * Handles asset location for behavior in the maintenance management context.
+ *
+ * @param {*} schedule
+ * @returns {string}
+ */
 function assetLocationFor(schedule) {
     const asset = assetFor(schedule.assetId);
     return asset ? assetManagementStore.locationForAsset(asset) : 'N/A';
 }
 
+/**
+ * Handles schedule status key behavior in the maintenance management context.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function scheduleStatusKey(status) {
     return `maintenance.preventive.status.${status}`;
 }
 
+/**
+ * Returns the CSS class for schedule status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function scheduleStatusClass(status) {
     const classByStatus = {
         [MaintenanceScheduleStatus.Scheduled]: 'status-observation',
@@ -195,32 +256,73 @@ function scheduleStatusClass(status) {
     return classByStatus[status];
 }
 
+/**
+ * Handles asset for behavior in the maintenance management context.
+ *
+ * @param {number|string} assetId
+ * @returns {*}
+ */
 function assetFor(assetId) {
     return organizationAssets.value.find(asset => asset.id === Number(assetId));
 }
 
+/**
+ * Determines whether past date is true.
+ *
+ * @returns {boolean}
+ */
 function isPastDate() {
     return maintenanceForm.scheduledDate < today;
 }
 
+/**
+ * Determines whether form invalid is true.
+ *
+ * @returns {boolean}
+ */
 function isFormInvalid() {
     return Number(maintenanceForm.assetId) <= 0 ||
         !maintenanceForm.scheduledDate ||
         maintenanceForm.observations.trim().length < 6;
 }
 
+/**
+ * Handles period for behavior in the maintenance management context.
+ *
+ * @param {string} dateValue
+ * @returns {*}
+ */
 function periodFor(dateValue) {
     return dateValue.slice(0, 7);
 }
 
+/**
+ * Determines whether open schedule for asset period exists.
+ *
+ * @param {number|string} assetId
+ * @param {*} period
+ * @returns {boolean}
+ */
 function hasOpenScheduleForAssetPeriod(assetId, period) {
     return maintenanceStore.hasOpenScheduleForAssetPeriod(activeOrganizationId.value, assetId, period);
 }
 
+/**
+ * Generates d schedule uuid for the current workflow.
+ *
+ * @param {number|string} scheduleId
+ * @returns {number}
+ */
 function generatedScheduleUuid(scheduleId) {
     return `PM-${scheduleId.toString().padStart(3, '0')}`;
 }
 
+/**
+ * Handles local date value behavior in the maintenance management context.
+ *
+ * @param {string} date
+ * @returns {string}
+ */
 function localDateValue(date) {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, '0');

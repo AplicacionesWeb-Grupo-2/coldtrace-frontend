@@ -1,6 +1,26 @@
 import {MaintenanceScheduleStatus} from '@/maintenance-management/domain/model/maintenance-schedule-status.js';
 
+/**
+ * @typedef {Object} MaintenanceScheduleProps
+ * @property {number|null} [id]
+ * @property {number|null} [organizationId]
+ * @property {string} [uuid]
+ * @property {number|null} [assetId]
+ * @property {number|null} [iotDeviceId]
+ * @property {string} [scheduledDate]
+ * @property {string} [period]
+ * @property {string} [observations]
+ * @property {string} [status]
+ * @property {string} [createdAt]
+ */
+
+/**
+ * Domain entity representing maintenance schedule.
+ */
 export class MaintenanceSchedule {
+    /**
+     * @param {MaintenanceScheduleProps} [props]
+     */
     constructor({
         id = null,
         organizationId = null,

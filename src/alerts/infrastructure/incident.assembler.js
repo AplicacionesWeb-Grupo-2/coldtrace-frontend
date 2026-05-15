@@ -1,16 +1,68 @@
 import {Incident} from '@/alerts/domain/model/incident-entity.js';
 
+/**
+ * @typedef {Object} IncidentApiResource
+ * @property {*} [id]
+ * @property {*} [organizationId]
+ * @property {*} [assetId]
+ * @property {*} [assetName]
+ * @property {*} [type]
+ * @property {*} [severity]
+ * @property {*} [value]
+ * @property {*} [detectedAt]
+ * @property {*} [status]
+ * @property {*} [recognizedBy]
+ * @property {*} [recognizedAt]
+ * @property {*} [conditionStable]
+ * @property {*} [correctiveAction]
+ * @property {*} [closureEvidence]
+ * @property {*} [closedBy]
+ * @property {*} [closedAt]
+ * @property {*} [conditionKey]
+ * @property {*} [source]
+ * @property {*} [sourceReadingId]
+ * @property {*} [reviewStatus]
+ * @property {*} [escalationStatus]
+ * @property {*} [escalationLevel]
+ * @property {*} [escalationPolicyMinutes]
+ * @property {*} [escalatedAt]
+ * @property {*} [escalatedTo]
+ * @property {*} [escalationReviewedBy]
+ * @property {*} [escalationReviewedAt]
+ */
+
+/**
+ * Maps incident resources between API payloads and domain entities.
+ */
 export class IncidentAssembler {
+    /**
+     * Maps an API resource into a domain entity.
+     *
+     * @param {IncidentApiResource} resource
+     * @returns {Incident}
+     */
     static toEntityFromResource(resource) {
         return new Incident({...resource});
     }
 
+    /**
+     * Maps an API response into a list of domain entities.
+     *
+     * @param {import('axios').AxiosResponse<IncidentApiResource[]|Object>} response
+     * @returns {Incident[]}
+     */
     static toEntitiesFromResponse(response) {
         if (response.status !== 200) return [];
         const resources = response.data instanceof Array ? response.data : response.data.incidents;
         return (resources ?? []).map(resource => this.toEntityFromResource(resource));
     }
 
+    /**
+     * Maps a domain entity into the API resource contract.
+     *
+     * @param {Incident} entity
+     * @returns {IncidentApiResource}
+     */
     static toResourceFromEntity(entity) {
         return {
             id: entity.id,

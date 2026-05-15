@@ -21,6 +21,11 @@ const escalationPolicies = [
     {severity: 'warning', waitingMinutes: 720, level: 1, targetKey: 'shift-supervisor'},
 ];
 
+/**
+ * Pinia store that coordinates monitoring application state and use cases.
+ *
+ * @returns {import('pinia').StoreDefinition}
+ */
 const useMonitoringStore = defineStore('monitoring', () => {
     const readings = ref([]);
     const offlineReadings = ref([]);
@@ -41,6 +46,11 @@ const useMonitoringStore = defineStore('monitoring', () => {
     const failedCount = computed(() => offlineReadings.value.filter(reading => reading.isFailed).length);
     const seededOrganizationIds = new Set();
 
+    /**
+     * Loads readings from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchReadings() {
         const response = await monitoringApi.getSensorReadings();
         readings.value = SensorReadingAssembler.toEntitiesFromResponse(response);
@@ -49,6 +59,11 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return readings.value;
     }
 
+    /**
+     * Loads incidents from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchIncidents() {
         const response = await monitoringApi.getIncidents();
         incidents.value = IncidentAssembler.toEntitiesFromResponse(response);
@@ -56,6 +71,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return incidents.value;
     }
 
+    /**
+     * Creates incident in the monitoring context.
+     *
+     * @param {*} incident
+     * @returns {Promise<*>}
+     */
     async function createIncident(incident) {
         const response = await monitoringApi.createIncident(IncidentAssembler.toResourceFromEntity(incident));
         const createdIncident = IncidentAssembler.toEntityFromResource(response.data);
@@ -63,6 +84,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return createdIncident;
     }
 
+    /**
+     * Updates incident in the monitoring context.
+     *
+     * @param {*} incident
+     * @returns {Promise<*>}
+     */
     async function updateIncident(incident) {
         const response = await monitoringApi.updateIncident(incident.id, IncidentAssembler.toResourceFromEntity(incident));
         const updatedIncident = IncidentAssembler.toEntityFromResource(response.data);
@@ -70,6 +97,11 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return updatedIncident;
     }
 
+    /**
+     * Loads maintenance schedules from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchMaintenanceSchedules() {
         const response = await monitoringApi.getMaintenanceSchedules();
         maintenanceSchedules.value = MaintenanceScheduleAssembler.toEntitiesFromResponse(response);
@@ -77,6 +109,11 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return maintenanceSchedules.value;
     }
 
+    /**
+     * Loads technical service requests from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchTechnicalServiceRequests() {
         const response = await monitoringApi.getTechnicalServiceRequests();
         technicalServiceRequests.value = TechnicalServiceRequestAssembler.toEntitiesFromResponse(response);
@@ -84,6 +121,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return technicalServiceRequests.value;
     }
 
+    /**
+     * Loads monitoring data from the API and updates application state.
+     *
+     * @param {Object} options
+     * @returns {Promise<*>}
+     */
     async function fetchMonitoringData({includeDependencies = true} = {}) {
         loading.value = true;
         errors.value = [];
@@ -108,6 +151,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
         }
     }
 
+    /**
+     * Creates sensor reading in the monitoring context.
+     *
+     * @param {*} sensorReading
+     * @returns {Promise<*>}
+     */
     async function createSensorReading(sensorReading) {
         const response = await monitoringApi.createSensorReading(SensorReadingAssembler.toResourceFromEntity(sensorReading));
         const createdReading = SensorReadingAssembler.toEntityFromResource(response.data);
@@ -115,10 +164,22 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return createdReading;
     }
 
+    /**
+     * Handles next sensor reading id behavior in the monitoring context.
+     *
+     * @param {*} offset
+     * @returns {*}
+     */
     function nextSensorReadingId(offset = 0) {
         return Math.max(...readings.value.map(reading => reading.id ?? 0), 0) + 1 + offset;
     }
 
+    /**
+     * Handles get latest temperature by asset behavior in the monitoring context.
+     *
+     * @param {number|string} assetId
+     * @returns {*}
+     */
     function getLatestTemperatureByAsset(assetId) {
         const sorted = readings.value
             .filter(reading => reading.assetId === Number(assetId) && reading.temperature !== null)
@@ -126,6 +187,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return sorted.length > 0 ? sorted[0].temperature : null;
     }
 
+    /**
+     * Handles get latest humidity by asset behavior in the monitoring context.
+     *
+     * @param {number|string} assetId
+     * @returns {*}
+     */
     function getLatestHumidityByAsset(assetId) {
         const sorted = readings.value
             .filter(reading => reading.assetId === Number(assetId) && reading.humidity !== null)
@@ -133,6 +200,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return sorted.length > 0 ? sorted[0].humidity : null;
     }
 
+    /**
+     * Handles get readings by asset behavior in the monitoring context.
+     *
+     * @param {number|string} assetId
+     * @param {*} from
+     * @param {*} to
+     * @returns {*}
+     */
     function getReadingsByAsset(assetId, from = null, to = null) {
         return readings.value
             .filter(reading => {
@@ -145,6 +220,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
             .sort((left, right) => new Date(right.recordedAt).getTime() - new Date(left.recordedAt).getTime());
     }
 
+    /**
+     * Handles readings for asset ids behavior in the monitoring context.
+     *
+     * @param {*} assetIds
+     * @returns {*}
+     */
     function readingsForAssetIds(assetIds) {
         const assetIdSet = new Set(assetIds.map(id => Number(id)));
 
@@ -153,10 +234,24 @@ const useMonitoringStore = defineStore('monitoring', () => {
             .sort((left, right) => new Date(right.recordedAt).getTime() - new Date(left.recordedAt).getTime());
     }
 
+    /**
+     * Handles recent readings for asset ids behavior in the monitoring context.
+     *
+     * @param {*} assetIds
+     * @param {*} limit
+     * @returns {*}
+     */
     function recentReadingsForAssetIds(assetIds, limit = 6) {
         return readingsForAssetIds(assetIds).slice(0, limit);
     }
 
+    /**
+     * Handles readings for asset ids since behavior in the monitoring context.
+     *
+     * @param {*} assetIds
+     * @param {*} since
+     * @returns {*}
+     */
     function readingsForAssetIdsSince(assetIds, since) {
         const sinceTime = since.getTime();
         const nowTime = Date.now();
@@ -167,10 +262,22 @@ const useMonitoringStore = defineStore('monitoring', () => {
         });
     }
 
+    /**
+     * Handles out of range count for asset ids behavior in the monitoring context.
+     *
+     * @param {*} assetIds
+     * @returns {number}
+     */
     function outOfRangeCountForAssetIds(assetIds) {
         return readingsForAssetIds(assetIds).filter(reading => reading.isOutOfRange).length;
     }
 
+    /**
+     * Handles thermal compliance for asset ids behavior in the monitoring context.
+     *
+     * @param {*} assetIds
+     * @returns {*}
+     */
     function thermalComplianceForAssetIds(assetIds) {
         const assetReadings = readingsForAssetIds(assetIds);
 
@@ -180,33 +287,68 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return Math.round((inRangeReadings / assetReadings.length) * 100);
     }
 
+    /**
+     * Handles sync reading behavior in the monitoring context.
+     *
+     * @param {number|string} id
+     * @returns {*}
+     */
     function syncReading(id) {
         offlineReadings.value = offlineReadings.value.map(reading =>
             reading.id === Number(id) ? reading.withSyncStatus(SyncStatus.Synced) : reading,
         );
     }
 
+    /**
+     * Handles sync all pending behavior in the monitoring context.
+     *
+     * @returns {*}
+     */
     function syncAllPending() {
         offlineReadings.value = offlineReadings.value.map(reading =>
             reading.isPending ? reading.withSyncStatus(SyncStatus.Synced) : reading,
         );
     }
 
+    /**
+     * Handles schedules for organization behavior in the monitoring context.
+     *
+     * @param {number|string} organizationId
+     * @returns {*}
+     */
     function schedulesForOrganization(organizationId) {
         if (!organizationId) return [];
         return maintenanceSchedules.value.filter(schedule => schedule.organizationId === Number(organizationId));
     }
 
+    /**
+     * Handles technical services for organization behavior in the monitoring context.
+     *
+     * @param {number|string} organizationId
+     * @returns {*}
+     */
     function technicalServicesForOrganization(organizationId) {
         if (!organizationId) return [];
         return technicalServiceRequests.value.filter(request => request.organizationId === Number(organizationId));
     }
 
+    /**
+     * Handles incidents for organization behavior in the monitoring context.
+     *
+     * @param {number|string} organizationId
+     * @returns {*}
+     */
     function incidentsForOrganization(organizationId) {
         if (!organizationId) return [];
         return incidents.value.filter(incident => incident.organizationId === Number(organizationId));
     }
 
+    /**
+     * Handles sync generated incidents for organization behavior in the monitoring context.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
     async function syncGeneratedIncidentsForOrganization(organizationId) {
         if (!organizationId) return [];
 
@@ -229,6 +371,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return createdIncidents;
     }
 
+    /**
+     * Updates organization telemetry in the monitoring context.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
     async function updateOrganizationTelemetry(organizationId) {
         if (!organizationId) return;
 
@@ -255,6 +403,17 @@ const useMonitoringStore = defineStore('monitoring', () => {
         }
     }
 
+    /**
+     * Builds sensor reading for presentation or reporting.
+     *
+     * @param {*} asset
+     * @param {*} iotDevice
+     * @param {*} settings
+     * @param {*} connectivity
+     * @param {*} offset
+     * @param {*} recordedAt
+     * @returns {*}
+     */
     function buildSensorReading(asset, iotDevice, settings, connectivity, offset = 0, recordedAt = new Date()) {
         if (!iotDevice || connectivity === ConnectivityStatus.Offline) return null;
 
@@ -292,6 +451,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
         });
     }
 
+    /**
+     * Handles ensure recent readings for organization behavior in the monitoring context.
+     *
+     * @param {number|string} organizationId
+     * @param {Array<*>} assets
+     * @param {*} iotDevices
+     * @returns {Promise<*>}
+     */
     async function ensureRecentReadingsForOrganization(organizationId, assets, iotDevices) {
         if (seededOrganizationIds.has(organizationId)) return;
 
@@ -324,6 +491,13 @@ const useMonitoringStore = defineStore('monitoring', () => {
         seededOrganizationIds.add(organizationId);
     }
 
+    /**
+     * Handles random connectivity behavior in the monitoring context.
+     *
+     * @param {*} gateway
+     * @param {*} iotDevice
+     * @returns {*}
+     */
     function randomConnectivity(gateway, iotDevice) {
         if (!iotDevice || gateway?.status === GatewayStatus.Offline || iotDevice.status === IoTDeviceStatus.Offline) {
             return ConnectivityStatus.Offline;
@@ -339,6 +513,13 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return ConnectivityStatus.Offline;
     }
 
+    /**
+     * Handles random temperature reading behavior in the monitoring context.
+     *
+     * @param {number|string} minimumTemperature
+     * @param {number|string} maximumTemperature
+     * @returns {*}
+     */
     function randomTemperatureReading(minimumTemperature, maximumTemperature) {
         const anomalyRoll = Math.random();
 
@@ -347,31 +528,66 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return Number(randomNumber(maximumTemperature + 0.2, maximumTemperature + 3).toFixed(1));
     }
 
+    /**
+     * Handles random humidity reading behavior in the monitoring context.
+     *
+     * @param {number|string} maximumHumidity
+     * @returns {*}
+     */
     function randomHumidityReading(maximumHumidity) {
         const normalMinimum = Math.max(0, maximumHumidity - 30);
         if (Math.random() < 0.94) return Math.round(randomNumber(normalMinimum, maximumHumidity));
         return Math.round(randomNumber(maximumHumidity + 1, maximumHumidity + 8));
     }
 
+    /**
+     * Handles random battery level behavior in the monitoring context.
+     *
+     * @returns {*}
+     */
     function randomBatteryLevel() {
         if (Math.random() < 0.96) return Math.round(randomNumber(20, 100));
         return Math.round(randomNumber(8, 14));
     }
 
+    /**
+     * Handles random signal strength behavior in the monitoring context.
+     *
+     * @returns {*}
+     */
     function randomSignalStrength() {
         if (Math.random() < 0.96) return Math.round(randomNumber(40, 100));
         return Math.round(randomNumber(28, 34));
     }
 
+    /**
+     * Handles random number behavior in the monitoring context.
+     *
+     * @param {number|string} minimum
+     * @param {number|string} maximum
+     * @returns {number}
+     */
     function randomNumber(minimum, maximum) {
         return minimum + Math.random() * (maximum - minimum);
     }
 
+    /**
+     * Handles sample one behavior in the monitoring context.
+     *
+     * @param {Array<*>} items
+     * @returns {*}
+     */
     function sampleOne(items) {
         if (!items.length) return null;
         return items[Math.floor(Math.random() * items.length)];
     }
 
+    /**
+     * Handles init offline readings behavior in the monitoring context.
+     *
+     * @param {Array<*>} availableReadings
+     * @returns {*}
+     */
     function initOfflineReadings(availableReadings) {
         if (offlineReadings.value.length > 0) return;
         const sorted = [...availableReadings].sort(
@@ -391,6 +607,15 @@ const useMonitoringStore = defineStore('monitoring', () => {
             }));
     }
 
+    /**
+     * Generates d parameter incidents from for the current workflow.
+     *
+     * @param {Array<*>} currentIncidents
+     * @param {Array<*>} currentReadings
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {number}
+     */
     function generatedParameterIncidentsFrom(currentIncidents, currentReadings, assets, settings) {
         const candidates = [
             ...latestParameterCandidates(currentReadings, assets, settings),
@@ -447,6 +672,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return generatedIncidents;
     }
 
+    /**
+     * Handles latest parameter candidates behavior in the monitoring context.
+     *
+     * @param {Array<*>} currentReadings
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {string}
+     */
     function latestParameterCandidates(currentReadings, assets, settings) {
         const latestByAsset = new Map();
 
@@ -470,6 +703,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
             .sort((left, right) => String(right.reading.recordedAt).localeCompare(String(left.reading.recordedAt)));
     }
 
+    /**
+     * Handles condition candidates for reading behavior in the monitoring context.
+     *
+     * @param {*} reading
+     * @param {*} asset
+     * @param {Array<*>} assetSettings
+     * @returns {string}
+     */
     function conditionCandidatesForReading(reading, asset, assetSettings) {
         const candidates = [];
 
@@ -528,6 +769,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return candidates;
     }
 
+    /**
+     * Handles pending review candidates behavior in the monitoring context.
+     *
+     * @param {Array<*>} currentReadings
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {string}
+     */
     function pendingReviewCandidates(currentReadings, assets, settings) {
         const latestByAsset = new Map();
 
@@ -555,6 +804,12 @@ const useMonitoringStore = defineStore('monitoring', () => {
         }));
     }
 
+    /**
+     * Handles escalation updates from behavior in the monitoring context.
+     *
+     * @param {Array<*>} currentIncidents
+     * @returns {string}
+     */
     function escalationUpdatesFrom(currentIncidents) {
         const now = new Date();
         const updates = [];
@@ -567,6 +822,13 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return updates;
     }
 
+    /**
+     * Handles incident with current escalation behavior in the monitoring context.
+     *
+     * @param {*} incident
+     * @param {*} now
+     * @returns {*}
+     */
     function incidentWithCurrentEscalation(incident, now) {
         if (incident.isClosed || incident.escalationStatus === 'reviewed') return null;
 
@@ -613,6 +875,13 @@ const useMonitoringStore = defineStore('monitoring', () => {
         });
     }
 
+    /**
+     * Handles incident with behavior in the monitoring context.
+     *
+     * @param {*} incident
+     * @param {*} changes
+     * @returns {*}
+     */
     function incidentWith(incident, changes) {
         return new Incident({
             id: incident.id,
@@ -646,10 +915,24 @@ const useMonitoringStore = defineStore('monitoring', () => {
         });
     }
 
+    /**
+     * Handles escalation policy for behavior in the monitoring context.
+     *
+     * @param {*} incident
+     * @returns {*}
+     */
     function escalationPolicyFor(incident) {
         return escalationPolicies.find(policy => policy.severity === incident.severity);
     }
 
+    /**
+     * Determines whether exceeded escalation threshold exists.
+     *
+     * @param {*} incident
+     * @param {*} policy
+     * @param {*} now
+     * @returns {boolean}
+     */
     function hasExceededEscalationThreshold(incident, policy, now) {
         const detectedAt = new Date(incident.detectedAt);
         if (Number.isNaN(detectedAt.getTime())) return false;
@@ -658,6 +941,13 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return elapsedMinutes >= policy.waitingMinutes;
     }
 
+    /**
+     * Determines whether escalation changes exists.
+     *
+     * @param {*} current
+     * @param {string} updated
+     * @returns {boolean}
+     */
     function hasEscalationChanges(current, updated) {
         return current.escalationStatus !== updated.escalationStatus ||
             current.escalationLevel !== updated.escalationLevel ||
@@ -668,6 +958,15 @@ const useMonitoringStore = defineStore('monitoring', () => {
             current.escalationReviewedAt !== updated.escalationReviewedAt;
     }
 
+    /**
+     * Determines whether active equivalent incident exists.
+     *
+     * @param {Array<*>} currentIncidents
+     * @param {number|string} organizationId
+     * @param {number|string} assetId
+     * @param {string} type
+     * @returns {boolean}
+     */
     function hasActiveEquivalentIncident(currentIncidents, organizationId, assetId, type) {
         return currentIncidents.some(incident => {
             if (incident.isClosed || incident.organizationId !== organizationId || incident.assetId !== assetId) return false;
@@ -675,17 +974,38 @@ const useMonitoringStore = defineStore('monitoring', () => {
         });
     }
 
+    /**
+     * Handles settings for asset behavior in the monitoring context.
+     *
+     * @param {*} asset
+     * @param {*} settings
+     * @returns {void}
+     */
     function settingsForAsset(asset, settings) {
         return settings.find(setting => setting.assetId === asset.id) ??
             settings.find(setting => setting.organizationId === asset.organizationId && setting.assetId === null);
     }
 
+    /**
+     * Handles temperature condition key behavior in the monitoring context.
+     *
+     * @param {*} temperature
+     * @param {*} settings
+     * @returns {string}
+     */
     function temperatureConditionKey(temperature, settings) {
         if (temperature > settings.maximumTemperature) return 'high-temperature';
         if (temperature < settings.minimumTemperature) return 'low-temperature';
         return null;
     }
 
+    /**
+     * Handles thermal severity behavior in the monitoring context.
+     *
+     * @param {*} temperature
+     * @param {*} settings
+     * @returns {*}
+     */
     function thermalSeverity(temperature, settings) {
         const upperDelta = temperature - settings.maximumTemperature;
         const lowerDelta = settings.minimumTemperature - temperature;
@@ -693,14 +1013,34 @@ const useMonitoringStore = defineStore('monitoring', () => {
         return deviation >= 2 ? 'critical' : 'warning';
     }
 
+    /**
+     * Handles humidity severity behavior in the monitoring context.
+     *
+     * @param {*} humidity
+     * @param {*} settings
+     * @returns {*}
+     */
     function humiditySeverity(humidity, settings) {
         return humidity - settings.maximumHumidity >= 5 ? 'critical' : 'warning';
     }
 
+    /**
+     * Determines whether newer reading is true.
+     *
+     * @param {*} current
+     * @param {*} previous
+     * @returns {boolean}
+     */
     function isNewerReading(current, previous) {
         return new Date(current.recordedAt).getTime() > new Date(previous.recordedAt).getTime();
     }
 
+    /**
+     * Determines whether calibration issue exists.
+     *
+     * @param {*} iotDevice
+     * @returns {boolean}
+     */
     function hasCalibrationIssue(iotDevice) {
         return iotDevice.calibrationStatus && iotDevice.calibrationStatus !== CalibrationStatus.Compliant;
     }

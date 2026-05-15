@@ -1,4 +1,14 @@
+/**
+ * Lazy-loads the incident list view component.
+ *
+ * @returns {Promise<*>}
+ */
 const incidentList = () => import('./views/incident-list.vue');
+/**
+ * Lazy-loads the notification list view component.
+ *
+ * @returns {Promise<*>}
+ */
 const notificationList = () => import('./views/notification-list.vue');
 
 const alertsRoutes = [

@@ -1,0 +1,141 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "maintenance-management.domain.model" {
+  class MaintenanceSchedule {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - assetId: Number
+    - iotDeviceId: Number
+    - scheduledDate: string
+    - period: string
+    - observations: string
+    - status: MaintenanceScheduleStatus
+    - createdAt: string
+  }
+  class MaintenanceScheduleStatus <<enumeration>> {
+    Scheduled
+    Pending
+    Completed
+    Canceled
+  }
+  class TechnicalServiceRequest {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - assetId: Number
+    - priority: string
+    - issueDescription: string
+    - requestedDate: string
+    - status: TechnicalServiceStatus
+    - interventionNotes: string
+    - resultNotes: string
+    - functionalTestPassed: Boolean
+    - closedAt: string
+  }
+  class TechnicalServiceStatus <<enumeration>> {
+    Open
+    PendingReview
+    Closed
+  }
+}
+
+package "maintenance-management.infrastructure" {
+  class MaintenanceManagementApi {
+    - maintenanceSchedulesEndpoint
+    - technicalServiceRequestsEndpoint
+    + getMaintenanceSchedules()
+    + createMaintenanceSchedule(resource)
+    + updateMaintenanceSchedule(resource)
+    + getTechnicalServiceRequests()
+    + createTechnicalServiceRequest(resource)
+    + updateTechnicalServiceRequest(resource)
+  }
+  class MaintenanceScheduleAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class TechnicalServiceRequestAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+}
+
+package "maintenance-management.application" {
+  class useMaintenanceManagementStore {
+    - maintenanceSchedules
+    - technicalServiceRequests
+    + fetchMaintenanceSchedules()
+    + fetchTechnicalServiceRequests()
+    + fetchMaintenanceManagementData()
+    + createMaintenanceSchedule(schedule)
+    + updateMaintenanceSchedule(schedule)
+    + createTechnicalServiceRequest(request)
+    + updateTechnicalServiceRequest(request)
+    + schedulesForOrganization(organizationId)
+    + technicalServicesForOrganization(organizationId)
+    + nextScheduleId()
+    + nextTechnicalServiceRequestId()
+    + hasOpenScheduleForAssetPeriod(organizationId, assetId, period)
+    + isOpenSchedule(schedule)
+    + isOpenTechnicalService(request)
+  }
+}
+
+package "maintenance-management.presentation" {
+  class MaintenanceManagementRoutes {
+    + preventive
+    + technicalService
+  }
+}
+
+package "maintenance-management.presentation.views" {
+  class PreventiveMaintenanceScheduler
+  class TechnicalServiceTracker
+}
+
+package "shared.infrastructure" {
+  class BaseApi
+  class BaseEndpoint
+}
+
+package "shared.presentation.components" {
+  class ListPagination
+}
+
+package "asset-management.domain.model" {
+  class Asset
+  class IoTDevice
+}
+
+package "asset-management.application" {
+  class useAssetManagementStore
+}
+
+MaintenanceSchedule --> Asset : schedules
+MaintenanceSchedule --> IoTDevice : optional device
+MaintenanceSchedule ..> MaintenanceScheduleStatus : uses
+TechnicalServiceRequest --> Asset : requested for
+TechnicalServiceRequest ..> TechnicalServiceStatus : uses
+MaintenanceManagementApi --|> BaseApi
+MaintenanceManagementApi *-- BaseEndpoint
+MaintenanceScheduleAssembler ..> MaintenanceSchedule : creates
+TechnicalServiceRequestAssembler ..> TechnicalServiceRequest : creates
+useMaintenanceManagementStore ..> MaintenanceManagementApi : uses
+useMaintenanceManagementStore ..> MaintenanceScheduleAssembler : uses
+useMaintenanceManagementStore ..> TechnicalServiceRequestAssembler : uses
+PreventiveMaintenanceScheduler ..> useMaintenanceManagementStore : uses
+PreventiveMaintenanceScheduler ..> useAssetManagementStore : reads assets/devices
+PreventiveMaintenanceScheduler --> ListPagination : uses
+TechnicalServiceTracker ..> useMaintenanceManagementStore : uses
+TechnicalServiceTracker ..> useAssetManagementStore : reads assets
+TechnicalServiceTracker --> ListPagination : uses
+MaintenanceManagementRoutes --> PreventiveMaintenanceScheduler : maps
+MaintenanceManagementRoutes --> TechnicalServiceTracker : maps
+
+@enduml

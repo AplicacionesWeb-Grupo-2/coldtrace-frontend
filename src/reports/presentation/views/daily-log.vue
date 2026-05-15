@@ -60,6 +60,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
     feedback.value = 'idle';
@@ -78,15 +83,32 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Updates date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateDate(value) {
     selectedDate.value = value > maxDate.value ? maxDate.value : value;
     feedback.value = 'idle';
 }
 
+/**
+ * Selects asset in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectAsset(value) {
     selectedAssetId.value = Number(value);
 }
 
+/**
+ * Generates daily log for the current workflow.
+ *
+ * @returns {Promise<*>}
+ */
 async function generateDailyLog() {
     if (!hasReadings.value) {
         feedback.value = 'server-error';
@@ -101,27 +123,63 @@ async function generateDailyLog() {
     }
 }
 
+/**
+ * Returns the i18n label key for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusLabelKey(status) {
     return `reports.daily-log.status.${status}`;
 }
 
+/**
+ * Returns the CSS class for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusClass(status) {
     return `status-${status}`;
 }
 
+/**
+ * Formats temperature for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatTemperature(value) {
     return value === null ? 'N/A' : `${value.toFixed(1)} °C`;
 }
 
+/**
+ * Formats humidity for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatHumidity(value) {
     return value === null ? 'N/A' : `${value.toFixed(0)}%`;
 }
 
+/**
+ * Formats time range for display.
+ *
+ * @param {*} entry
+ * @returns {string}
+ */
 function formatTimeRange(entry) {
     if (!entry.firstRecordedAt || !entry.lastRecordedAt) return 'N/A';
     return `${formatTime(entry.firstRecordedAt)} - ${formatTime(entry.lastRecordedAt)}`;
 }
 
+/**
+ * Formats time for display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
 function formatTime(value) {
     return new Intl.DateTimeFormat('en', {
         hour: '2-digit',

@@ -44,11 +44,22 @@ onMounted(() => {
     alertsStore.loadIncidents().catch(() => undefined);
 });
 
+/**
+ * Handles recognize behavior in the alerts context.
+ *
+ * @param {*} incident
+ * @returns {*}
+ */
 function recognize(incident) {
     if (!incident.isOpen || alertsStore.recognizingId === incident.id) return;
     alertsStore.recognizeIncident(incident, profileUserName.value).catch(() => undefined);
 }
 
+/**
+ * Handles close incident behavior in the alerts context.
+ *
+ * @returns {*}
+ */
 function closeIncident() {
     closureSubmitted.value = true;
     alertsStore.clearFeedback();
@@ -87,6 +98,12 @@ function closeIncident() {
     }).catch(() => undefined);
 }
 
+/**
+ * Handles review escalation behavior in the alerts context.
+ *
+ * @param {*} incident
+ * @returns {*}
+ */
 function reviewEscalation(incident) {
     if (
         alertsStore.reviewingEscalationId === incident.id ||
@@ -98,6 +115,12 @@ function reviewEscalation(incident) {
     alertsStore.reviewEscalation(incident, profileUserName.value).catch(() => undefined);
 }
 
+/**
+ * Selects incident for closure in the current view state.
+ *
+ * @param {*} incident
+ * @returns {void}
+ */
 function selectIncidentForClosure(incident) {
     if (!incident.isRecognized) return;
     closureForm.incidentId = incident.id;
@@ -105,40 +128,80 @@ function selectIncidentForClosure(incident) {
     queueMicrotask(() => closureCard.value?.scrollIntoView({behavior: 'smooth', block: 'start'}));
 }
 
+/**
+ * Handles stabilize selected incident behavior in the alerts context.
+ *
+ * @returns {*}
+ */
 function stabilizeSelectedIncident() {
     const incident = selectedClosureIncident.value;
     if (!incident || incident.isConditionStable || alertsStore.stabilizingId === incident.id) return;
     alertsStore.stabilizeIncident(incident).catch(() => undefined);
 }
 
+/**
+ * Determines whether closure form valid is true.
+ *
+ * @returns {boolean}
+ */
 function isClosureFormValid() {
     return Number(closureForm.incidentId) > 0 &&
         closureForm.correctiveAction.trim().length >= 8 &&
         closureForm.closureEvidence.trim().length >= 8;
 }
 
+/**
+ * Determines whether closure control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasClosureControlError(controlName) {
     if (!closureSubmitted.value) return false;
     if (controlName === 'incidentId') return Number(closureForm.incidentId) <= 0;
     return String(closureForm[controlName] ?? '').trim().length < 8;
 }
 
+/**
+ * Returns the i18n label key for status.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function statusLabelKey(incident) {
     if (incident.status === 'recognized') return 'alerts.incident-list.status-recognized';
     if (incident.status === 'closed') return 'alerts.incident-list.status-closed';
     return 'alerts.incident-list.status-open';
 }
 
+/**
+ * Returns the i18n label key for escalation.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function escalationLabelKey(incident) {
     return `alerts.incident-list.escalation-${incident.escalationStatus}`;
 }
 
+/**
+ * Returns the i18n label key for escalation target.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function escalationTargetLabelKey(incident) {
     return incident.escalatedTo
         ? `alerts.incident-list.escalation-target-${incident.escalatedTo}`
         : 'alerts.incident-list.escalation-target-none';
 }
 
+/**
+ * Determines whether success feedback is true.
+ *
+ * @param {*} feedback
+ * @returns {boolean}
+ */
 function isSuccessFeedback(feedback) {
     return [
         'alerts.incident-list.feedback-recognized',
@@ -147,26 +210,56 @@ function isSuccessFeedback(feedback) {
     ].includes(feedback);
 }
 
+/**
+ * Handles severity icon behavior in the alerts context.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function severityIcon(incident) {
     return incident.severity === 'critical' ? 'error' : 'warning';
 }
 
+/**
+ * Returns the i18n label key for condition.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function conditionLabelKey(incident) {
     return incident.isConditionStable
         ? 'alerts.incident-list.condition-stable'
         : 'alerts.incident-list.condition-active';
 }
 
+/**
+ * Returns the i18n label key for source.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function sourceLabelKey(incident) {
     if (incident.isPendingReview) return 'alerts.incident-list.source-pending-review';
     if (incident.isGenerated) return 'alerts.incident-list.source-generated';
     return 'alerts.incident-list.source-initial';
 }
 
+/**
+ * Returns the i18n label key for type.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function typeLabelKey(incident) {
     return `alerts.incident-list.type-${incident.type}`;
 }
 
+/**
+ * Formats date for display.
+ *
+ * @param {boolean} isoDate
+ * @returns {string}
+ */
 function formatDate(isoDate) {
     return new Intl.DateTimeFormat('en-GB', {
         day: '2-digit',

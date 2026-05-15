@@ -20,6 +20,11 @@ import {AuditEvidence} from '@/reports/domain/model/audit-evidence-entity.js';
 
 const reportsApi = new ReportsApi();
 
+/**
+ * Pinia store that coordinates reports application state and use cases.
+ *
+ * @returns {import('pinia').StoreDefinition}
+ */
 const useReportsStore = defineStore('reports', () => {
     const reports = ref([]);
     const loading = ref(false);
@@ -31,6 +36,11 @@ const useReportsStore = defineStore('reports', () => {
     const assetManagementStore = useAssetManagementStore();
     const monitoringStore = useMonitoringStore();
 
+    /**
+     * Loads reports from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchReports() {
         loading.value = true;
         errors.value = [];
@@ -49,15 +59,33 @@ const useReportsStore = defineStore('reports', () => {
         }
     }
 
+    /**
+     * Handles reports for organization behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @returns {*}
+     */
     function reportsForOrganization(organizationId) {
         if (!organizationId) return [];
         return reports.value.filter(report => report.organizationId === Number(organizationId));
     }
 
+    /**
+     * Handles current date behavior in the reports context.
+     *
+     * @returns {string}
+     */
     function currentDate() {
         return today();
     }
 
+    /**
+     * Builds daily log for presentation or reporting.
+     *
+     * @param {number|string} organizationId
+     * @param {string} date
+     * @returns {*}
+     */
     function buildDailyLog(organizationId, date) {
         const safeOrganizationId = organizationId ?? 0;
         const assets = assetManagementStore.assetsForOrganization(organizationId);
@@ -83,6 +111,13 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Builds operational history for presentation or reporting.
+     *
+     * @param {number|string} organizationId
+     * @param {Object} filters
+     * @returns {*}
+     */
     function buildOperationalHistory(organizationId, filters) {
         const assets = assetManagementStore.assetsForOrganization(organizationId);
         const assetIds = assets.map(asset => asset.id);
@@ -110,6 +145,13 @@ const useReportsStore = defineStore('reports', () => {
         return new OperationalHistory({filters, events});
     }
 
+    /**
+     * Builds sanitary compliance report for presentation or reporting.
+     *
+     * @param {number|string} organizationId
+     * @param {Object} filters
+     * @returns {*}
+     */
     function buildSanitaryComplianceReport(organizationId, filters) {
         const safeOrganizationId = organizationId ?? 0;
         const assets = assetManagementStore.assetsForOrganization(organizationId);
@@ -147,6 +189,13 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Builds compliance report for presentation or reporting.
+     *
+     * @param {number|string} organizationId
+     * @param {Object} filters
+     * @returns {*}
+     */
     function buildComplianceReport(organizationId, filters) {
         const safeOrganizationId = organizationId ?? 0;
         const assets = assetManagementStore.assetsForOrganization(organizationId);
@@ -182,6 +231,13 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Builds audit evidence for presentation or reporting.
+     *
+     * @param {number|string} organizationId
+     * @param {Object} filters
+     * @returns {*}
+     */
     function buildAuditEvidence(organizationId, filters) {
         const safeOrganizationId = organizationId ?? 0;
         const assets = assetManagementStore.assetsForOrganization(organizationId);
@@ -273,6 +329,13 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Builds monthly report for presentation or reporting.
+     *
+     * @param {number|string} organizationId
+     * @param {*} month
+     * @returns {*}
+     */
     function buildMonthlyReport(organizationId, month) {
         const safeOrganizationId = organizationId ?? 0;
         const range = monthDateRange(month);
@@ -303,6 +366,13 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Creates daily log report in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} dailyLog
+     * @returns {Promise<*>}
+     */
     async function createDailyLogReport(organizationId, dailyLog) {
         if (!organizationId) return reportFromDailyLog(0, dailyLog);
         const existingReport = reports.value.find(report =>
@@ -314,6 +384,13 @@ const useReportsStore = defineStore('reports', () => {
         return createReport(reportFromDailyLog(organizationId, dailyLog));
     }
 
+    /**
+     * Creates sanitary compliance report in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} complianceReport
+     * @returns {Promise<*>}
+     */
     async function createSanitaryComplianceReport(organizationId, complianceReport) {
         if (!organizationId) return reportFromSanitaryCompliance(0, complianceReport);
         const uuid = sanitaryComplianceUuid(organizationId, complianceReport.filters);
@@ -326,6 +403,13 @@ const useReportsStore = defineStore('reports', () => {
         return createReport(reportFromSanitaryCompliance(organizationId, complianceReport));
     }
 
+    /**
+     * Creates monthly summary report in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} monthlyReport
+     * @returns {Promise<*>}
+     */
     async function createMonthlySummaryReport(organizationId, monthlyReport) {
         if (!organizationId) return reportFromMonthlyReport(0, monthlyReport);
         const uuid = monthlyReportUuid(organizationId, monthlyReport.month);
@@ -338,6 +422,12 @@ const useReportsStore = defineStore('reports', () => {
         return createReport(reportFromMonthlyReport(organizationId, monthlyReport));
     }
 
+    /**
+     * Creates report in the reports context.
+     *
+     * @param {*} report
+     * @returns {Promise<*>}
+     */
     async function createReport(report) {
         const response = await reportsApi.createReport(ReportAssembler.toResourceFromEntity(report));
         const createdReport = ReportAssembler.toEntityFromResource(response.data);
@@ -345,12 +435,24 @@ const useReportsStore = defineStore('reports', () => {
         return createdReport;
     }
 
+    /**
+     * Handles close compliance finding behavior in the reports context.
+     *
+     * @param {number|string} findingId
+     * @returns {*}
+     */
     function closeComplianceFinding(findingId) {
         const nextFindingIds = new Set(closedComplianceFindingIds.value);
         nextFindingIds.add(findingId);
         closedComplianceFindingIds.value = nextFindingIds;
     }
 
+    /**
+     * Handles sanitary compliance csv behavior in the reports context.
+     *
+     * @param {*} complianceReport
+     * @returns {*}
+     */
     function sanitaryComplianceCsv(complianceReport) {
         const headers = ['From', 'To', 'Asset', 'Location', 'Readings', 'Expected', 'Valid', 'Out of range', 'Missing', 'Incidents', 'Average temperature', 'Average humidity', 'Compliance', 'Status'];
         const rows = complianceReport.rows.map(row => [
@@ -372,6 +474,12 @@ const useReportsStore = defineStore('reports', () => {
         return rowsToCsv([headers, ...rows]);
     }
 
+    /**
+     * Handles monthly report csv behavior in the reports context.
+     *
+     * @param {*} monthlyReport
+     * @returns {*}
+     */
     function monthlyReportCsv(monthlyReport) {
         const headers = ['Month', 'From', 'To', 'Asset', 'Location', 'Readings', 'Valid', 'Out of range', 'Incidents', 'Average temperature', 'Average humidity', 'Compliance', 'First reading', 'Last reading', 'Status'];
         const rows = monthlyReport.rows.map(row => [
@@ -394,6 +502,12 @@ const useReportsStore = defineStore('reports', () => {
         return rowsToCsv([headers, ...rows]);
     }
 
+    /**
+     * Handles audit evidence csv behavior in the reports context.
+     *
+     * @param {*} auditEvidence
+     * @returns {*}
+     */
     function auditEvidenceCsv(auditEvidence) {
         const checklistHeaders = ['Section', 'Status', 'Quantity', 'Required', 'Notes'];
         const checklistRows = auditEvidence.items.map(item => [item.id, item.status, item.quantity, item.requiredQuantity, item.messageKey]);
@@ -415,6 +529,18 @@ const useReportsStore = defineStore('reports', () => {
         ]);
     }
 
+    /**
+     * Builds compliance findings for presentation or reporting.
+     *
+     * @param {number|string} organizationId
+     * @param {*} asset
+     * @param {Array<*>} readings
+     * @param {*} iotDevices
+     * @param {*} settings
+     * @param {Object} filters
+     * @param {number|string} daysCount
+     * @returns {*}
+     */
     function buildComplianceFindings(organizationId, asset, readings, iotDevices, settings, filters, daysCount) {
         const assetReadings = readings.filter(reading => reading.assetId === asset.id);
         const assetDevices = iotDevices.filter(device => device.assetId === asset.id);
@@ -506,6 +632,20 @@ const useReportsStore = defineStore('reports', () => {
         return findings;
     }
 
+    /**
+     * Handles compliance finding behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} asset
+     * @param {Object} filters
+     * @param {string} type
+     * @param {*} severity
+     * @param {string} messageKey
+     * @param {*} evidence
+     * @param {*} messageParams
+     * @param {*} idSuffix
+     * @returns {*}
+     */
     function complianceFinding(organizationId, asset, filters, type, severity, messageKey, evidence, messageParams = {}, idSuffix = '') {
         const id = [organizationId, asset.id, filters.fromDate, filters.toDate, type, idSuffix]
             .filter(value => value !== '')
@@ -529,6 +669,14 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Builds daily log entry for presentation or reporting.
+     *
+     * @param {*} asset
+     * @param {Array<*>} readings
+     * @param {*} iotDevices
+     * @returns {*}
+     */
     function buildDailyLogEntry(asset, readings, iotDevices) {
         const assetDevices = iotDevices.filter(device => device.assetId === asset.id);
         const assetReadings = readings
@@ -555,6 +703,16 @@ const useReportsStore = defineStore('reports', () => {
         };
     }
 
+    /**
+     * Builds sanitary compliance row for presentation or reporting.
+     *
+     * @param {*} asset
+     * @param {Array<*>} readings
+     * @param {*} iotDevices
+     * @param {*} settings
+     * @param {number|string} daysCount
+     * @returns {*}
+     */
     function buildSanitaryComplianceRow(asset, readings, iotDevices, settings, daysCount) {
         const assetDevices = iotDevices.filter(device => device.assetId === asset.id);
         const assetReadings = readings.filter(reading => reading.assetId === asset.id);
@@ -587,6 +745,13 @@ const useReportsStore = defineStore('reports', () => {
         };
     }
 
+    /**
+     * Builds monthly report row for presentation or reporting.
+     *
+     * @param {*} asset
+     * @param {Array<*>} readings
+     * @returns {*}
+     */
     function buildMonthlyReportRow(asset, readings) {
         const assetReadings = readings
             .filter(reading => reading.assetId === asset.id)
@@ -615,16 +780,40 @@ const useReportsStore = defineStore('reports', () => {
         };
     }
 
+    /**
+     * Handles entry status behavior in the reports context.
+     *
+     * @param {Array<*>} totalReadings
+     * @param {Array<*>} missingReadings
+     * @returns {string}
+     */
     function entryStatus(totalReadings, missingReadings) {
         if (!totalReadings) return 'no-data';
         return missingReadings > 0 ? 'incomplete' : 'complete';
     }
 
+    /**
+     * Handles compliance status behavior in the reports context.
+     *
+     * @param {Array<*>} totalReadings
+     * @param {Array<*>} expectedReadings
+     * @param {number|string} outOfRangeCount
+     * @param {Array<*>} missingReadings
+     * @param {number|string} incidentCount
+     * @param {*} settings
+     * @returns {string}
+     */
     function complianceStatus(totalReadings, expectedReadings, outOfRangeCount, missingReadings, incidentCount, settings) {
         if (!settings || !totalReadings || !expectedReadings) return 'insufficient';
         return outOfRangeCount || missingReadings || incidentCount ? 'observation' : 'compliant';
     }
 
+    /**
+     * Handles compliance incident count behavior in the reports context.
+     *
+     * @param {*} asset
+     * @returns {number}
+     */
     function complianceIncidentCount(asset) {
         const currentIncident = normalizeIncident(asset.lastIncident);
         const incidentCount = currentIncident === 'none' ? 0 : 1;
@@ -632,36 +821,82 @@ const useReportsStore = defineStore('reports', () => {
         return incidentCount + connectivityIncident;
     }
 
+    /**
+     * Handles monthly status behavior in the reports context.
+     *
+     * @param {Array<*>} totalReadings
+     * @param {number|string} incidentCount
+     * @returns {string}
+     */
     function monthlyStatus(totalReadings, incidentCount) {
         if (!totalReadings) return 'insufficient';
         return incidentCount ? 'attention' : 'complete';
     }
 
+    /**
+     * Handles severity weight behavior in the reports context.
+     *
+     * @param {*} severity
+     * @returns {number}
+     */
     function severityWeight(severity) {
         if (severity === 'potential-non-compliance') return 3;
         return severity === 'observation' ? 2 : 1;
     }
 
+    /**
+     * Handles expected daily readings for behavior in the reports context.
+     *
+     * @param {*} iotDevices
+     * @param {Array<*>} fallbackReadings
+     * @returns {*}
+     */
     function expectedDailyReadingsFor(iotDevices, fallbackReadings) {
         if (!iotDevices.length) return fallbackReadings;
         return iotDevices.reduce((total, device) => total + expectedReadingsForFrequency(device.readingFrequencySeconds), 0);
     }
 
+    /**
+     * Handles expected readings for frequency behavior in the reports context.
+     *
+     * @param {*} readingFrequencySeconds
+     * @returns {*}
+     */
     function expectedReadingsForFrequency(readingFrequencySeconds) {
         const safeFrequency = readingFrequencySeconds > 0 ? readingFrequencySeconds : 3600;
         return Math.ceil(86400 / safeFrequency);
     }
 
+    /**
+     * Handles average behavior in the reports context.
+     *
+     * @param {string} values
+     * @returns {number}
+     */
     function average(values) {
         if (!values.length) return null;
         const total = values.reduce((sum, value) => sum + value, 0);
         return Number((total / values.length).toFixed(1));
     }
 
+    /**
+     * Handles asset location for behavior in the reports context.
+     *
+     * @param {*} asset
+     * @returns {string}
+     */
     function assetLocationFor(asset) {
         return asset ? assetManagementStore.locationForAsset(asset) : 'N/A';
     }
 
+    /**
+     * Handles history reading event behavior in the reports context.
+     *
+     * @param {*} reading
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {*}
+     */
     function historyReadingEvent(reading, assets, settings) {
         const asset = assetForReading(reading, assets);
         return {
@@ -681,6 +916,14 @@ const useReportsStore = defineStore('reports', () => {
         };
     }
 
+    /**
+     * Handles history alert event behavior in the reports context.
+     *
+     * @param {*} reading
+     * @param {Array<*>} assets
+     * @param {*} settings
+     * @returns {*}
+     */
     function historyAlertEvent(reading, assets, settings) {
         const asset = assetForReading(reading, assets);
         const severity = readingSeverity(reading, settings);
@@ -699,6 +942,14 @@ const useReportsStore = defineStore('reports', () => {
         };
     }
 
+    /**
+     * Handles history incident events behavior in the reports context.
+     *
+     * @param {*} asset
+     * @param {Object} filters
+     * @param {Array<*>} readings
+     * @returns {*}
+     */
     function historyIncidentEvents(asset, filters, readings) {
         const occurredAt = incidentOccurredAt(asset, filters, readings);
         if (!isInDateRange(occurredAt, filters.fromDate, filters.toDate)) return [];
@@ -740,10 +991,24 @@ const useReportsStore = defineStore('reports', () => {
         return incidents;
     }
 
+    /**
+     * Handles asset for reading behavior in the reports context.
+     *
+     * @param {*} reading
+     * @param {Array<*>} assets
+     * @returns {*}
+     */
     function assetForReading(reading, assets) {
         return assets.find(asset => asset.id === reading.assetId);
     }
 
+    /**
+     * Handles reading severity behavior in the reports context.
+     *
+     * @param {*} reading
+     * @param {*} settings
+     * @returns {*}
+     */
     function readingSeverity(reading, settings) {
         if (
             settings &&
@@ -764,6 +1029,13 @@ const useReportsStore = defineStore('reports', () => {
         return reading.isOutOfRange ? 'warning' : 'normal';
     }
 
+    /**
+     * Handles alert icon behavior in the reports context.
+     *
+     * @param {*} reading
+     * @param {*} settings
+     * @returns {string}
+     */
     function alertIcon(reading, settings) {
         if (settings && reading.humidity !== null && reading.humidity > settings.maximumHumidity) return 'water_drop';
         if (reading.batteryLevel !== null && reading.batteryLevel < 15) return 'battery_alert';
@@ -773,6 +1045,13 @@ const useReportsStore = defineStore('reports', () => {
             : 'device_thermostat';
     }
 
+    /**
+     * Handles alert message key behavior in the reports context.
+     *
+     * @param {*} reading
+     * @param {*} settings
+     * @returns {string}
+     */
     function alertMessageKey(reading, settings) {
         if (settings && reading.humidity !== null && reading.humidity > settings.maximumHumidity) return 'reports.history.messages.high-humidity';
         if (reading.batteryLevel !== null && reading.batteryLevel < 15) return 'reports.history.messages.low-battery';
@@ -782,6 +1061,12 @@ const useReportsStore = defineStore('reports', () => {
             : 'reports.history.messages.low-temperature';
     }
 
+    /**
+     * Handles reading value label behavior in the reports context.
+     *
+     * @param {*} reading
+     * @returns {string}
+     */
     function readingValueLabel(reading) {
         const values = [
             reading.temperature !== null ? `${reading.temperature.toFixed(1)} °C` : null,
@@ -792,6 +1077,14 @@ const useReportsStore = defineStore('reports', () => {
         return values.join(' / ') || 'N/A';
     }
 
+    /**
+     * Handles incident occurred at behavior in the reports context.
+     *
+     * @param {*} asset
+     * @param {Object} filters
+     * @param {Array<*>} readings
+     * @returns {*}
+     */
     function incidentOccurredAt(asset, filters, readings) {
         const latestReading = readings
             .filter(reading => reading.assetId === asset.id)
@@ -799,21 +1092,48 @@ const useReportsStore = defineStore('reports', () => {
         return latestReading?.recordedAt ?? `${filters.toDate}T23:59:00`;
     }
 
+    /**
+     * Handles normalize incident behavior in the reports context.
+     *
+     * @param {*} lastIncident
+     * @returns {*}
+     */
     function normalizeIncident(lastIncident) {
         const prefix = 'asset-management.incidents.';
         return lastIncident?.startsWith(prefix) ? lastIncident.replace(prefix, '') : lastIncident || 'none';
     }
 
+    /**
+     * Handles temperature range label behavior in the reports context.
+     *
+     * @param {*} settings
+     * @returns {string}
+     */
     function temperatureRangeLabel(settings) {
         if (!settings) return 'N/A';
         return `${settings.minimumTemperature} °C - ${settings.maximumTemperature} °C`;
     }
 
+    /**
+     * Determines whether in date range is true.
+     *
+     * @param {string} value
+     * @param {string} fromDate
+     * @param {string} toDate
+     * @returns {boolean}
+     */
     function isInDateRange(value, fromDate, toDate) {
         const dateKey = dateKeyFor(value);
         return dateKey >= fromDate && dateKey <= toDate;
     }
 
+    /**
+     * Handles report overlaps period behavior in the reports context.
+     *
+     * @param {*} report
+     * @param {Object} filters
+     * @returns {*}
+     */
     function reportOverlapsPeriod(report, filters) {
         const periodDate = report.periodDate;
         if (periodDate.includes(' - ')) {
@@ -830,6 +1150,13 @@ const useReportsStore = defineStore('reports', () => {
         return dateKey >= filters.fromDate && dateKey <= filters.toDate;
     }
 
+    /**
+     * Handles report from daily log behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} dailyLog
+     * @returns {*}
+     */
     function reportFromDailyLog(organizationId, dailyLog) {
         return new Report({
             id: nextReportId(),
@@ -842,6 +1169,13 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Handles report from sanitary compliance behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} complianceReport
+     * @returns {*}
+     */
     function reportFromSanitaryCompliance(organizationId, complianceReport) {
         return new Report({
             id: nextReportId(),
@@ -854,6 +1188,13 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Handles report from monthly report behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} monthlyReport
+     * @returns {*}
+     */
     function reportFromMonthlyReport(organizationId, monthlyReport) {
         return new Report({
             id: nextReportId(),
@@ -866,33 +1207,77 @@ const useReportsStore = defineStore('reports', () => {
         });
     }
 
+    /**
+     * Handles next report id behavior in the reports context.
+     *
+     * @returns {*}
+     */
     function nextReportId() {
         return Math.max(...reports.value.map(report => report.id), 0) + 1;
     }
 
+    /**
+     * Handles daily log uuid behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {string} date
+     * @returns {string}
+     */
     function dailyLogUuid(organizationId, date) {
         return `RPT-DL-${date.replaceAll('-', '')}-${organizationId.toString().padStart(3, '0')}`;
     }
 
+    /**
+     * Handles sanitary compliance uuid behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {Object} filters
+     * @returns {string}
+     */
     function sanitaryComplianceUuid(organizationId, filters) {
         const assetKey = filters.assetId ? filters.assetId.toString().padStart(3, '0') : 'ALL';
         return `RPT-SC-${filters.fromDate.replaceAll('-', '')}-${filters.toDate.replaceAll('-', '')}-${assetKey}-${organizationId.toString().padStart(3, '0')}`;
     }
 
+    /**
+     * Handles monthly report uuid behavior in the reports context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} month
+     * @returns {string}
+     */
     function monthlyReportUuid(organizationId, month) {
         return `RPT-MS-${month.replace('-', '')}-${organizationId.toString().padStart(3, '0')}`;
     }
 
+    /**
+     * Handles today behavior in the reports context.
+     *
+     * @returns {*}
+     */
     function today() {
         return formatDateKey(new Date());
     }
 
+    /**
+     * Handles date key for behavior in the reports context.
+     *
+     * @param {string} value
+     * @returns {string}
+     */
     function dateKeyFor(value) {
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
         return formatDateKey(date);
     }
 
+    /**
+     * Handles days in range behavior in the reports context.
+     *
+     * @param {string} fromDate
+     * @param {string} toDate
+     * @returns {*}
+     */
     function daysInRange(fromDate, toDate) {
         const from = new Date(`${fromDate}T00:00:00`);
         const to = new Date(`${toDate}T00:00:00`);
@@ -900,6 +1285,12 @@ const useReportsStore = defineStore('reports', () => {
         return Math.floor((to.getTime() - from.getTime()) / 86400000) + 1;
     }
 
+    /**
+     * Handles month date range behavior in the reports context.
+     *
+     * @param {*} month
+     * @returns {string}
+     */
     function monthDateRange(month) {
         const currentDate = today();
         const currentMonth = currentDate.slice(0, 7);
@@ -911,15 +1302,33 @@ const useReportsStore = defineStore('reports', () => {
         return {fromDate: firstDay, toDate: `${safeMonth}-${lastDay}`};
     }
 
+    /**
+     * Handles rows to csv behavior in the reports context.
+     *
+     * @param {Array<*>} rows
+     * @returns {*}
+     */
     function rowsToCsv(rows) {
         return rows.map(row => row.map(cell => csvCell(cell)).join(',')).join('\n');
     }
 
+    /**
+     * Handles csv cell behavior in the reports context.
+     *
+     * @param {string} value
+     * @returns {*}
+     */
     function csvCell(value) {
         const text = String(value).replaceAll('"', '""');
         return `"${text}"`;
     }
 
+    /**
+     * Formats date key for display.
+     *
+     * @param {string} date
+     * @returns {string}
+     */
     function formatDateKey(date) {
         const year = date.getFullYear();
         const month = `${date.getMonth() + 1}`.padStart(2, '0');

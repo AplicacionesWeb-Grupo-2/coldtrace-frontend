@@ -74,6 +74,11 @@ onMounted(() => {
     loadPageData();
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     pageLoading.value = true;
     feedback.value = 'idle';
@@ -91,6 +96,12 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Updates from date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateFromDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     fromDate.value = nextDate;
@@ -102,22 +113,46 @@ function updateFromDate(value) {
     feedback.value = 'idle';
 }
 
+/**
+ * Updates to date in the reports context.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function updateToDate(value) {
     const nextDate = value > maxDate.value ? maxDate.value : value;
     toDate.value = nextDate < effectiveFromDate.value ? effectiveFromDate.value : nextDate;
     feedback.value = 'idle';
 }
 
+/**
+ * Selects asset in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectAsset(value) {
     selectedAssetId.value = Number(value);
     feedback.value = 'idle';
 }
 
+/**
+ * Selects status in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
 function selectStatus(value) {
     selectedStatus.value = Object.values(FindingStatus).includes(value) ? value : 'all';
     feedback.value = 'idle';
 }
 
+/**
+ * Handles close finding behavior in the reports context.
+ *
+ * @param {*} finding
+ * @returns {*}
+ */
 function closeFinding(finding) {
     if (finding.status === FindingStatus.Closed) return;
 
@@ -130,32 +165,73 @@ function closeFinding(finding) {
     feedback.value = 'closed';
 }
 
+/**
+ * Returns the i18n label key for type.
+ *
+ * @param {string} type
+ * @returns {string}
+ */
 function typeLabelKey(type) {
     return `reports.findings.types.${type}`;
 }
 
+/**
+ * Returns the i18n label key for severity.
+ *
+ * @param {*} severity
+ * @returns {string}
+ */
 function severityLabelKey(severity) {
     return `reports.findings.severity.${severity}`;
 }
 
+/**
+ * Returns the i18n label key for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusLabelKey(status) {
     return `reports.findings.status.${status}`;
 }
 
+/**
+ * Returns the CSS class for severity.
+ *
+ * @param {*} severity
+ * @returns {string}
+ */
 function severityClass(severity) {
     return `severity-${severity}`;
 }
 
+/**
+ * Returns the CSS class for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusClass(status) {
     return `status-${status}`;
 }
 
+/**
+ * Handles default from date behavior in the reports context.
+ *
+ * @returns {string}
+ */
 function defaultFromDate() {
     const date = new Date(`${maxDate.value}T00:00:00`);
     date.setDate(date.getDate() - 6);
     return formatDateInput(date);
 }
 
+/**
+ * Formats date input for display.
+ *
+ * @param {string} date
+ * @returns {string}
+ */
 function formatDateInput(date) {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, '0');

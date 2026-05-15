@@ -1,0 +1,112 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "root" {
+  class App
+  class Router {
+    + routes
+    + beforeEach()
+  }
+  class I18n {
+    + en
+    + es
+  }
+  class Pinia
+}
+
+package "shared.infrastructure" {
+  class BaseApi {
+    - http
+    + http
+  }
+  class BaseEndpoint {
+    - http
+    - endpointPath
+    + getAll()
+    + getById(id)
+    + create(resource)
+    + update(id, resource)
+    + delete(id)
+    + requestItem(method, id, data)
+    + collectionFallbackResponse(response)
+    + shouldUseCollectionFallback(response, fallbackResponse)
+    + fallbackBaseURL()
+    + requestCollectionWrite(method, data)
+  }
+}
+
+package "shared.presentation.components" {
+  class DashboardShell {
+    - accessDropdownOpen: Boolean
+    - reportsDropdownOpen: Boolean
+    - settingsDropdownOpen: Boolean
+    + toggleAccessDropdown(): void
+    + toggleReportsDropdown(): void
+    + toggleSettingsDropdown(): void
+    + logout(): void
+    + loadShellData(): Promise
+    + startTelemetryUpdates(): void
+    + downloadCurrentMonthReport(): Promise
+  }
+  class LanguageSwitcher {
+    - options
+    + setLanguage(value): void
+  }
+  class Layout {
+    - dashboardRoutePaths
+    - showDashboardShell: Boolean
+    - showLanguageSwitcher: Boolean
+  }
+  class ListPagination {
+    - total: Number
+    - pageSize: Number
+    - modelValue: Number
+    + update:modelValue(): void <<event>>
+    + goToPage(page): void
+  }
+}
+
+package "shared.presentation.views" {
+  class PageNotFound
+}
+
+package "identity-access.application" {
+  class useIdentityAccessStore
+}
+
+package "asset-management.application" {
+  class useAssetManagementStore
+}
+
+package "monitoring.application" {
+  class useMonitoringStore
+}
+
+package "alerts.application" {
+  class useAlertsStore
+}
+
+package "reports.application" {
+  class useReportsStore
+}
+
+BaseEndpoint --> BaseApi : receives
+Layout --> DashboardShell : uses
+Layout --> LanguageSwitcher : uses
+DashboardShell --> LanguageSwitcher : uses
+DashboardShell ..> useIdentityAccessStore : profile/access
+DashboardShell ..> useAlertsStore : alert counters
+DashboardShell ..> useAssetManagementStore : asset issue counters
+DashboardShell ..> useMonitoringStore : telemetry refresh
+DashboardShell ..> useReportsStore : monthly export
+ListPagination ..> I18n : labels
+PageNotFound ..> I18n : labels
+App --> Layout : uses
+App ..> Router : installs
+App ..> Pinia : installs
+App ..> I18n : installs
+Router --> PageNotFound : fallback
+
+@enduml

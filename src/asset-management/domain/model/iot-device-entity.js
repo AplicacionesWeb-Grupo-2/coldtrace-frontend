@@ -1,7 +1,30 @@
 import {CalibrationStatus} from '@/asset-management/domain/model/calibration-status.js';
 import {IoTDeviceStatus} from '@/asset-management/domain/model/iot-device-status.js';
 
+/**
+ * @typedef {Object} IoTDeviceProps
+ * @property {number|null} [id]
+ * @property {number|null} [organizationId]
+ * @property {string} [uuid]
+ * @property {string} [deviceType]
+ * @property {string} [model]
+ * @property {string} [measurementType]
+ * @property {number|null} [assetId]
+ * @property {string} [status]
+ * @property {string} [calibrationStatus]
+ * @property {string} [lastCalibrationDate]
+ * @property {string} [nextCalibrationDate]
+ * @property {Array<*>} [measurementParameters]
+ * @property {number} [readingFrequencySeconds]
+ */
+
+/**
+ * Domain entity representing iot device.
+ */
 export class IoTDevice {
+    /**
+     * @param {IoTDeviceProps} [props]
+     */
     constructor({
         id = null,
         organizationId = null,

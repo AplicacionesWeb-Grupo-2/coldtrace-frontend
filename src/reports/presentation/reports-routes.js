@@ -1,8 +1,38 @@
+/**
+ * Lazy-loads the daily log view component.
+ *
+ * @returns {Promise<*>}
+ */
 const dailyLog = () => import('./views/daily-log.vue');
+/**
+ * Lazy-loads the monthly report view component.
+ *
+ * @returns {Promise<*>}
+ */
 const monthlyReport = () => import('./views/monthly-report.vue');
+/**
+ * Lazy-loads the operational history view component.
+ *
+ * @returns {Promise<*>}
+ */
 const operationalHistory = () => import('./views/operational-history.vue');
+/**
+ * Lazy-loads the sanitary compliance view component.
+ *
+ * @returns {Promise<*>}
+ */
 const sanitaryCompliance = () => import('./views/sanitary-compliance.vue');
+/**
+ * Lazy-loads the compliance findings view component.
+ *
+ * @returns {Promise<*>}
+ */
 const complianceFindings = () => import('./views/compliance-findings.vue');
+/**
+ * Lazy-loads the audit evidence view component.
+ *
+ * @returns {Promise<*>}
+ */
 const auditEvidence = () => import('./views/audit-evidence.vue');
 
 const reportsRoutes = [

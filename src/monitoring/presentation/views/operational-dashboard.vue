@@ -108,6 +108,11 @@ onUnmounted(() => {
     if (telemetryIntervalId) window.clearInterval(telemetryIntervalId);
 });
 
+/**
+ * Builds monitored assets kpi for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildMonitoredAssetsKpi() {
     const summary = assetSummary.value;
     return kpi({
@@ -132,6 +137,11 @@ function buildMonitoredAssetsKpi() {
     });
 }
 
+/**
+ * Builds critical alerts kpi for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildCriticalAlertsKpi() {
     return kpi({
         id: 2,
@@ -149,6 +159,11 @@ function buildCriticalAlertsKpi() {
     });
 }
 
+/**
+ * Builds active sensors kpi for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildActiveSensorsKpi() {
     const summary = assetSummary.value;
     const linkedDevices = organizationIoTDevices.value.filter(iotDevice => iotDevice.status === IoTDeviceStatus.Linked).length;
@@ -170,6 +185,11 @@ function buildActiveSensorsKpi() {
     });
 }
 
+/**
+ * Builds incidents kpi for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildIncidentsKpi() {
     const count = activeIncidents.value.length;
     const openCount = activeIncidents.value.filter(incident => incident.isOpen).length;
@@ -192,6 +212,11 @@ function buildIncidentsKpi() {
     });
 }
 
+/**
+ * Builds thermal compliance kpi for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildThermalComplianceKpi() {
     const thermalReadings = organizationReadings.value.filter(reading => reading.temperature !== null);
     const compliance = thermalComplianceFor(thermalReadings);
@@ -211,6 +236,11 @@ function buildThermalComplianceKpi() {
     });
 }
 
+/**
+ * Builds temperature points for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildTemperaturePoints() {
     const {max: maxLimit, min: minLimit} = currentTemperatureLimits();
     const readings = organizationReadings.value.filter(reading => reading.temperature !== null);
@@ -251,6 +281,11 @@ function buildTemperaturePoints() {
     });
 }
 
+/**
+ * Builds storage distribution for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildStorageDistribution() {
     const assets = organizationAssets.value;
     const total = assets.length;
@@ -307,6 +342,11 @@ function buildStorageDistribution() {
     }));
 }
 
+/**
+ * Builds maintenance tasks for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildMaintenanceTasks() {
     const technicalServiceTasks = organizationTechnicalServices.value
         .filter(request => request.status !== TechnicalServiceStatus.Closed)
@@ -337,6 +377,11 @@ function buildMaintenanceTasks() {
     return tasks.length ? tasks.slice(0, 5) : buildOperationalMaintenanceFallbackTasks();
 }
 
+/**
+ * Builds operational maintenance fallback tasks for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildOperationalMaintenanceFallbackTasks() {
     const calibrationTasks = organizationIoTDevices.value
         .filter(iotDevice => iotDevice.calibrationStatus !== CalibrationStatus.Compliant)
@@ -369,6 +414,11 @@ function buildOperationalMaintenanceFallbackTasks() {
     return [...calibrationTasks, ...gatewayTasks, ...assetTasks].slice(0, 5);
 }
 
+/**
+ * Builds recent alerts for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildRecentAlerts() {
     return [...activeIncidents.value]
         .sort((left, right) => new Date(right.detectedAt).getTime() - new Date(left.detectedAt).getTime())
@@ -385,6 +435,11 @@ function buildRecentAlerts() {
         }));
 }
 
+/**
+ * Builds incident days for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildIncidentDays() {
     const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     const days = dayLabels.map((label, index) => ({id: index + 1, label, normal: 0, warning: 0, critical: 0, offline: 0}));
@@ -395,6 +450,11 @@ function buildIncidentDays() {
     return days.map(day => new IncidentDay(day));
 }
 
+/**
+ * Builds timeline for presentation or reporting.
+ *
+ * @returns {string}
+ */
 function buildTimeline() {
     const hours = Array.from({length: 24}, (_item, index) => ({
         id: index + 1,
@@ -411,6 +471,14 @@ function buildTimeline() {
     return hours.map(hour => new IncidentDay(hour));
 }
 
+/**
+ * Handles apply incident records behavior in the monitoring context.
+ *
+ * @param {*} buckets
+ * @param {Array<*>} incidents
+ * @param {number|string} indexFor
+ * @returns {*}
+ */
 function applyIncidentRecords(buckets, incidents, indexFor) {
     incidents.forEach(incident => {
         const bucket = buckets[indexFor(incident)];
@@ -423,6 +491,12 @@ function applyIncidentRecords(buckets, incidents, indexFor) {
     });
 }
 
+/**
+ * Handles incidents since behavior in the monitoring context.
+ *
+ * @param {*} since
+ * @returns {*}
+ */
 function incidentsSince(since) {
     const sinceTime = since.getTime();
     return organizationIncidents.value.filter(incident => {
@@ -431,6 +505,11 @@ function incidentsSince(since) {
     });
 }
 
+/**
+ * Handles start of current week behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function startOfCurrentWeek() {
     const date = new Date();
     const day = date.getDay();
@@ -440,6 +519,12 @@ function startOfCurrentWeek() {
     return date;
 }
 
+/**
+ * Handles incident type key behavior in the monitoring context.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function incidentTypeKey(incident) {
     switch (incident.conditionKey) {
         case 'high-temperature':
@@ -464,6 +549,12 @@ function incidentTypeKey(incident) {
     return 'monitoring.operational.type-other';
 }
 
+/**
+ * Handles incident icon behavior in the monitoring context.
+ *
+ * @param {*} incident
+ * @returns {string}
+ */
 function incidentIcon(incident) {
     switch (incident.conditionKey) {
         case 'low-temperature':
@@ -486,18 +577,37 @@ function incidentIcon(incident) {
     return 'report_problem';
 }
 
+/**
+ * Handles thermal compliance for behavior in the monitoring context.
+ *
+ * @param {Array<*>} readings
+ * @returns {*}
+ */
 function thermalComplianceFor(readings) {
     if (!readings.length) return 0;
     const compliantReadings = readings.filter(reading => isThermalReadingInRange(reading)).length;
     return Math.round((compliantReadings / readings.length) * 100);
 }
 
+/**
+ * Determines whether thermal reading in range is true.
+ *
+ * @param {*} reading
+ * @returns {boolean}
+ */
 function isThermalReadingInRange(reading) {
     const settings = assetStore.settingsForAsset(activeOrganizationId.value, reading.assetId);
     if (!settings || reading.temperature === null) return false;
     return reading.temperature >= settings.minimumTemperature && reading.temperature <= settings.maximumTemperature;
 }
 
+/**
+ * Builds summary bars for presentation or reporting.
+ *
+ * @param {string} values
+ * @param {*} size
+ * @returns {*}
+ */
 function buildSummaryBars(values, size) {
     const baseValues = values.filter(value => value > 0);
     if (!baseValues.length) return [];
@@ -509,6 +619,12 @@ function buildSummaryBars(values, size) {
     });
 }
 
+/**
+ * Builds status bars for presentation or reporting.
+ *
+ * @param {string} values
+ * @returns {string}
+ */
 function buildStatusBars(values) {
     const baseValues = values.length ? values : [0];
     const max = Math.max(...baseValues, 1);
@@ -518,10 +634,21 @@ function buildStatusBars(values) {
     });
 }
 
+/**
+ * Handles hour label behavior in the monitoring context.
+ *
+ * @param {string} date
+ * @returns {string}
+ */
 function hourLabel(date) {
     return `${new Date(date).getHours().toString().padStart(2, '0')}:00`;
 }
 
+/**
+ * Handles current temperature limits behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function currentTemperatureLimits() {
     const settings = currentSettings.value;
     if (settings) return {min: settings.minimumTemperature, max: settings.maximumTemperature};
@@ -532,12 +659,24 @@ function currentTemperatureLimits() {
     ]);
 }
 
+/**
+ * Handles maximum temperature for asset behavior in the monitoring context.
+ *
+ * @param {*} asset
+ * @returns {number}
+ */
 function maximumTemperatureForAsset(asset) {
     return assetStore.settingsForAsset(activeOrganizationId.value, asset.id)?.maximumTemperature ??
         currentSettings.value?.maximumTemperature ??
         null;
 }
 
+/**
+ * Handles temperature limits from values behavior in the monitoring context.
+ *
+ * @param {string} values
+ * @returns {*}
+ */
 function temperatureLimitsFromValues(values) {
     const temperatures = values.filter(temperature => temperature !== null && Number.isFinite(temperature));
     if (!temperatures.length) return {min: 0, max: 1};
@@ -548,15 +687,34 @@ function temperatureLimitsFromValues(values) {
     return {min: Math.floor(min), max: Math.ceil(max)};
 }
 
+/**
+ * Handles average behavior in the monitoring context.
+ *
+ * @param {string} values
+ * @returns {number}
+ */
 function average(values) {
     return values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
 }
 
+/**
+ * Handles temperature from asset behavior in the monitoring context.
+ *
+ * @param {*} currentTemperature
+ * @returns {*}
+ */
 function temperatureFromAsset(currentTemperature) {
     const temperature = Number(String(currentTemperature).replace('°C', '').trim());
     return Number.isFinite(temperature) ? temperature : null;
 }
 
+/**
+ * Handles maintenance schedule label behavior in the monitoring context.
+ *
+ * @param {number|string} assetId
+ * @param {number|string} iotDeviceId
+ * @returns {string}
+ */
 function maintenanceScheduleLabel(assetId, iotDeviceId) {
     const iotDevice = iotDeviceId
         ? organizationIoTDevices.value.find(device => device.id === iotDeviceId)
@@ -567,35 +725,77 @@ function maintenanceScheduleLabel(assetId, iotDeviceId) {
     return asset ? `${asset.uuid} · ${asset.name}` : `Asset #${assetId}`;
 }
 
+/**
+ * Handles asset name for behavior in the monitoring context.
+ *
+ * @param {number|string} assetId
+ * @returns {string}
+ */
 function assetNameFor(assetId) {
     return organizationAssets.value.find(asset => asset.id === assetId)?.name ?? `Asset #${assetId}`;
 }
 
+/**
+ * Handles maintenance task status behavior in the monitoring context.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function maintenanceTaskStatus(status) {
     if (status === MaintenanceScheduleStatus.Completed) return 'done';
     return status === MaintenanceScheduleStatus.Pending ? 'doing' : 'to-do';
 }
 
+/**
+ * Handles maintenance status weight behavior in the monitoring context.
+ *
+ * @param {string} status
+ * @returns {number}
+ */
 function maintenanceStatusWeight(status) {
     if (status === MaintenanceScheduleStatus.Pending) return 0;
     if (status === MaintenanceScheduleStatus.Scheduled) return 1;
     return 2;
 }
 
+/**
+ * Handles priority for request behavior in the monitoring context.
+ *
+ * @param {*} priority
+ * @returns {*}
+ */
 function priorityForRequest(priority) {
     const weights = {critical: 4, high: 3, medium: 2, low: 1};
     return weights[priority] ?? 0;
 }
 
+/**
+ * Handles icon for technical service behavior in the monitoring context.
+ *
+ * @param {*} priority
+ * @returns {string}
+ */
 function iconForTechnicalService(priority) {
     return priority === 'critical' || priority === 'high' ? 'build_circle' : 'construction';
 }
 
+/**
+ * Formats date for display.
+ *
+ * @param {string} date
+ * @returns {string}
+ */
 function formatDate(date) {
     const formatterLocale = locale.value === 'es' ? 'es-PE' : 'en-GB';
     return new Intl.DateTimeFormat(formatterLocale, {day: '2-digit', month: 'short', year: 'numeric'}).format(new Date(date));
 }
 
+/**
+ * Handles kpi behavior in the monitoring context.
+ *
+ * @param {Object} config
+ * @returns {*}
+ */
 function kpi(config) {
     return new DashboardKpi(config);
 }

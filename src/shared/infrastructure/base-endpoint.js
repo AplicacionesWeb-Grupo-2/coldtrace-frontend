@@ -1,30 +1,77 @@
+/**
+ * Shared endpoint helper that wraps common CRUD HTTP operations.
+ */
 export class BaseEndpoint {
+    /**
+     * Creates an endpoint helper for a specific API collection path.
+     *
+     * @param {*} baseApi
+     * @param {*} endpointPath
+     */
     constructor(baseApi, endpointPath) {
         this.http = baseApi.http;
         this.endpointPath = endpointPath;
     }
 
+    /**
+     * Requests all from the API.
+     *
+     * @returns {Promise<*>}
+     */
     async getAll() {
         const response = await this.http.get(this.endpointPath);
         return this.collectionFallbackResponse(response);
     }
 
+    /**
+     * Requests by id from the API.
+     *
+     * @param {number|string} id
+     * @returns {Promise<*>}
+     */
     getById(id) {
         return this.requestItem('get', id);
     }
 
+    /**
+     * Creates a resource in the shared context.
+     *
+     * @param {*} resource
+     * @returns {Promise<*>}
+     */
     create(resource) {
         return this.requestCollectionWrite('post', resource);
     }
 
+    /**
+     * Updates the selected resource in the shared context.
+     *
+     * @param {number|string} id
+     * @param {*} resource
+     * @returns {Promise<*>}
+     */
     update(id, resource) {
         return this.requestItem('put', id, resource);
     }
 
+    /**
+     * Deletes the selected resource from the shared context.
+     *
+     * @param {number|string} id
+     * @returns {Promise<*>}
+     */
     delete(id) {
         return this.requestItem('delete', id);
     }
 
+    /**
+     * Handles request item behavior in the shared context.
+     *
+     * @param {*} method
+     * @param {number|string} id
+     * @param {*} data
+     * @returns {Promise<*>}
+     */
     async requestItem(method, id, data = undefined) {
         const url = `${this.endpointPath}/${id}`;
         const fallbackBaseURL = this.fallbackBaseURL();
@@ -52,6 +99,12 @@ export class BaseEndpoint {
         }
     }
 
+    /**
+     * Handles collection fallback response behavior in the shared context.
+     *
+     * @param {*} response
+     * @returns {Promise<*>}
+     */
     async collectionFallbackResponse(response) {
         const fallbackBaseURL = this.fallbackBaseURL();
         if (!fallbackBaseURL || fallbackBaseURL === this.http.defaults.baseURL) return response;
@@ -69,6 +122,13 @@ export class BaseEndpoint {
         }
     }
 
+    /**
+     * Handles should use collection fallback behavior in the shared context.
+     *
+     * @param {*} response
+     * @param {*} fallbackResponse
+     * @returns {*}
+     */
     shouldUseCollectionFallback(response, fallbackResponse) {
         const responseItems = Array.isArray(response.data) ? response.data : null;
         const fallbackItems = Array.isArray(fallbackResponse.data) ? fallbackResponse.data : null;
@@ -77,10 +137,22 @@ export class BaseEndpoint {
         return responseItems.some(item => item?.apiId === 'v1') || fallbackItems.length > responseItems.length;
     }
 
+    /**
+     * Handles fallback base url behavior in the shared context.
+     *
+     * @returns {*}
+     */
     fallbackBaseURL() {
         return this.http.defaults.baseURL?.replace(/\/api\/v1\/?$/, '');
     }
 
+    /**
+     * Handles request collection write behavior in the shared context.
+     *
+     * @param {*} method
+     * @param {*} data
+     * @returns {Promise<*>}
+     */
     async requestCollectionWrite(method, data) {
         const fallbackBaseURL = this.fallbackBaseURL();
 

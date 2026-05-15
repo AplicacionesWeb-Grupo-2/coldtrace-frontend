@@ -5,6 +5,13 @@ import {useI18n} from 'vue-i18n';
 
 Chart.register(...registerables);
 
+/**
+ * @typedef {Object} TemperatureChartProps
+ * @property {*} [title]
+ * @property {*} [subtitle]
+ * @property {*} [points]
+ * @property {*} [hideHeader]
+ */
 const props = defineProps({
     title: {type: String, default: 'monitoring.operational.chart-temp-title'},
     subtitle: {type: String, default: 'monitoring.operational.chart-temp-subtitle'},
@@ -39,6 +46,11 @@ watch(
     {deep: true},
 );
 
+/**
+ * Handles refresh chart behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function refreshChart() {
     if (!chart) return;
     if (!props.points.length) {
@@ -68,6 +80,14 @@ function refreshChart() {
     chart.update();
 }
 
+/**
+ * Handles compute y range behavior in the monitoring context.
+ *
+ * @param {*} temperatures
+ * @param {*} maxLimit
+ * @param {*} minLimit
+ * @returns {*}
+ */
 function computeYRange(temperatures, maxLimit, minLimit) {
     const allValues = [...temperatures, maxLimit, minLimit];
     const dataMin = Math.min(...allValues);
@@ -81,6 +101,11 @@ function computeYRange(temperatures, maxLimit, minLimit) {
     };
 }
 
+/**
+ * Builds chart for presentation or reporting.
+ *
+ * @returns {*}
+ */
 function buildChart() {
     if (!canvasElement.value) return;
     chart?.destroy();
@@ -254,6 +279,11 @@ function buildChart() {
     });
 }
 
+/**
+ * Handles limit for points behavior in the monitoring context.
+ *
+ * @returns {*}
+ */
 function limitForPoints() {
     const configuredLimits = props.points[0];
 

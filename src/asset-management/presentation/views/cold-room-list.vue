@@ -153,6 +153,11 @@ watch([searchTerm, selectedTab], () => {
     gatewayPage.value = 1;
 });
 
+/**
+ * Loads page data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadPageData() {
     identityLoading.value = true;
     feedback.value = 'idle';
@@ -172,6 +177,12 @@ async function loadPageData() {
     }
 }
 
+/**
+ * Selects asset type in the current view state.
+ *
+ * @param {*} tab
+ * @returns {void}
+ */
 function selectAssetType(tab) {
     if (selectedTab.value === tab) return;
     selectedTab.value = tab;
@@ -185,6 +196,11 @@ function selectAssetType(tab) {
     resetForms();
 }
 
+/**
+ * Toggles form.
+ *
+ * @returns {void}
+ */
 function toggleForm() {
     feedback.value = 'idle';
     submitted.value = false;
@@ -192,15 +208,33 @@ function toggleForm() {
     resetForms();
 }
 
+/**
+ * Handles paginate behavior in the asset management context.
+ *
+ * @param {Array<*>} items
+ * @param {number|string} page
+ * @returns {*}
+ */
 function paginate(items, page) {
     const startIndex = (page - 1) * pageSize;
     return items.slice(startIndex, startIndex + pageSize);
 }
 
+/**
+ * Handles last page for behavior in the asset management context.
+ *
+ * @param {Array<*>} items
+ * @returns {*}
+ */
 function lastPageFor(items) {
     return Math.max(Math.ceil(items.length / pageSize), 1);
 }
 
+/**
+ * Handles submit behavior in the asset management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function submit() {
     submitted.value = true;
     feedback.value = 'idle';
@@ -255,6 +289,11 @@ async function submit() {
     }
 }
 
+/**
+ * Handles submit iot device behavior in the asset management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function submitIoTDevice() {
     submitted.value = true;
     feedback.value = 'idle';
@@ -307,6 +346,11 @@ async function submitIoTDevice() {
     }
 }
 
+/**
+ * Handles submit gateway behavior in the asset management context.
+ *
+ * @returns {Promise<*>}
+ */
 async function submitGateway() {
     submitted.value = true;
     feedback.value = 'idle';
@@ -352,6 +396,13 @@ async function submitGateway() {
     }
 }
 
+/**
+ * Updates asset status in the asset management context.
+ *
+ * @param {*} asset
+ * @param {string} value
+ * @returns {Promise<*>}
+ */
 async function updateAssetStatus(asset, value) {
     feedback.value = 'idle';
     const nextStatus = assetStatuses.find(status => status === value);
@@ -373,6 +424,12 @@ async function updateAssetStatus(asset, value) {
     }
 }
 
+/**
+ * Deletes asset from the asset management context.
+ *
+ * @param {*} asset
+ * @returns {Promise<*>}
+ */
 async function deleteAsset(asset) {
     if (!canDeleteAssetResources.value) return;
     if (!window.confirm(t('asset-management.delete-confirm', {name: asset.name}))) return;
@@ -390,6 +447,12 @@ async function deleteAsset(asset) {
     }
 }
 
+/**
+ * Deletes iot device from the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {Promise<*>}
+ */
 async function deleteIoTDevice(iotDevice) {
     if (!canDeleteAssetResources.value) return;
     if (!window.confirm(t('asset-management.delete-confirm', {name: iotDevice.uuid}))) return;
@@ -407,6 +470,12 @@ async function deleteIoTDevice(iotDevice) {
     }
 }
 
+/**
+ * Deletes gateway from the asset management context.
+ *
+ * @param {*} gateway
+ * @returns {Promise<*>}
+ */
 async function deleteGateway(gateway) {
     if (!canDeleteAssetResources.value) return;
     if (!window.confirm(t('asset-management.delete-confirm', {name: gateway.name}))) return;
@@ -424,6 +493,12 @@ async function deleteGateway(gateway) {
     }
 }
 
+/**
+ * Selects iot device type in the current view state.
+ *
+ * @param {string} deviceType
+ * @returns {void}
+ */
 function selectIoTDeviceType(deviceType) {
     const parameters = measurementParametersForDeviceType(deviceType);
     iotDeviceForm.measurementType = measurementTypeLabel(parameters);
@@ -432,44 +507,104 @@ function selectIoTDeviceType(deviceType) {
     }
 }
 
+/**
+ * Determines whether control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasControlError(controlName) {
     return assetFormErrors.value[controlName] && submitted.value;
 }
 
+/**
+ * Determines whether iot device control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasIoTDeviceControlError(controlName) {
     return iotDeviceFormErrors.value[controlName] && submitted.value;
 }
 
+/**
+ * Determines whether gateway control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
 function hasGatewayControlError(controlName) {
     return gatewayFormErrors.value[controlName] && submitted.value;
 }
 
+/**
+ * Determines whether form invalid is true.
+ *
+ * @param {*} errorsByField
+ * @returns {boolean}
+ */
 function isFormInvalid(errorsByField) {
     return Object.values(errorsByField).some(Boolean);
 }
 
+/**
+ * Handles asset name for iot device behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function assetNameForIoTDevice(iotDevice) {
     const asset = assets.value.find(currentAsset => currentAsset.id === iotDevice.assetId);
     return asset ? `${asset.uuid} - ${asset.name}` : 'asset-management.iot-devices.unassigned';
 }
 
+/**
+ * Handles displayed asset status behavior in the asset management context.
+ *
+ * @param {*} asset
+ * @returns {string}
+ */
 function displayedAssetStatus(asset) {
     return pendingAssetStatuses.value[asset.id] ?? asset.status;
 }
 
+/**
+ * Handles gateway name for asset behavior in the asset management context.
+ *
+ * @param {*} asset
+ * @returns {string}
+ */
 function gatewayNameForAsset(asset) {
     return gatewayNameById(asset.gatewayId);
 }
 
+/**
+ * Handles gateway name for iot device behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {string}
+ */
 function gatewayNameForIoTDevice(iotDevice) {
     const asset = assets.value.find(currentAsset => currentAsset.id === iotDevice.assetId);
     return asset ? gatewayNameById(asset.gatewayId) : 'asset-management.iot-devices.unassigned';
 }
 
+/**
+ * Handles gateway asset count behavior in the asset management context.
+ *
+ * @param {*} gateway
+ * @returns {number}
+ */
 function gatewayAssetCount(gateway) {
     return organizationAssets.value.filter(asset => asset.gatewayId === gateway.id).length;
 }
 
+/**
+ * Handles gateway device count behavior in the asset management context.
+ *
+ * @param {*} gateway
+ * @returns {number}
+ */
 function gatewayDeviceCount(gateway) {
     const assetIds = organizationAssets.value
         .filter(asset => asset.gatewayId === gateway.id)
@@ -477,34 +612,75 @@ function gatewayDeviceCount(gateway) {
     return organizationIoTDevices.value.filter(iotDevice => iotDevice.assetId && assetIds.includes(iotDevice.assetId)).length;
 }
 
+/**
+ * Returns the i18n label key for asset type.
+ *
+ * @param {string} assetType
+ * @returns {string}
+ */
 function assetTypeLabelKey(assetType) {
     return `asset-management.tabs.${assetType}`;
 }
 
+/**
+ * Handles page title key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function pageTitleKey() {
     return `asset-management.sections.${selectedAssetType.value}.title`;
 }
 
+/**
+ * Handles page subtitle key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function pageSubtitleKey() {
     return `asset-management.sections.${selectedAssetType.value}.subtitle`;
 }
 
+/**
+ * Handles form title key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function formTitleKey() {
     return `asset-management.sections.${selectedAssetType.value}.form-title`;
 }
 
+/**
+ * Handles form subtitle key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function formSubtitleKey() {
     return `asset-management.sections.${selectedAssetType.value}.form-subtitle`;
 }
 
+/**
+ * Handles form open key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function formOpenKey() {
     return `asset-management.sections.${selectedAssetType.value}.form-open`;
 }
 
+/**
+ * Handles form create key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function formCreateKey() {
     return `asset-management.sections.${selectedAssetType.value}.form-create`;
 }
 
+/**
+ * Creates button key in the asset management context.
+ *
+ * @returns {string}
+ */
 function createButtonKey() {
     if (formVisible.value) return 'asset-management.form.close';
     if (selectedTab.value === 'iot-device') return 'asset-management.iot-devices.form-open';
@@ -512,6 +688,11 @@ function createButtonKey() {
     return formOpenKey();
 }
 
+/**
+ * Handles form created key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function formCreatedKey() {
     if (feedback.value === 'updated') return 'asset-management.update.feedback-updated';
     if (feedback.value === 'asset-deleted') return 'asset-management.feedback-deleted';
@@ -522,58 +703,132 @@ function formCreatedKey() {
     return `asset-management.sections.${selectedAssetType.value}.feedback-created`;
 }
 
+/**
+ * Handles form duplicate key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function formDuplicateKey() {
     if (selectedTab.value === 'iot-device') return 'asset-management.iot-devices.feedback-duplicate';
     if (selectedTab.value === 'gateway') return 'asset-management.gateways.feedback-duplicate';
     return `asset-management.sections.${selectedAssetType.value}.feedback-duplicate`;
 }
 
+/**
+ * Handles internal id placeholder behavior in the asset management context.
+ *
+ * @returns {*}
+ */
 function internalIdPlaceholder() {
     return selectedAssetType.value === AssetType.Transport ? 'TR-10001' : 'CR-42312';
 }
 
+/**
+ * Handles name placeholder key behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function namePlaceholderKey() {
     return `asset-management.sections.${selectedAssetType.value}.name-placeholder`;
 }
 
+/**
+ * Returns the i18n label key for status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function statusLabelKey(status) {
     return `asset-management.status.${status}`;
 }
 
+/**
+ * Handles asset status label behavior in the asset management context.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function assetStatusLabel(status) {
     return t(statusLabelKey(status));
 }
 
+/**
+ * Returns the i18n label key for connectivity.
+ *
+ * @param {*} connectivity
+ * @returns {string}
+ */
 function connectivityLabelKey(connectivity) {
     return `asset-management.connectivity.${connectivity}`;
 }
 
+/**
+ * Returns the i18n label key for calibration.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function calibrationLabelKey(status) {
     return `asset-management.iot-devices.calibration-status.${status}`;
 }
 
+/**
+ * Returns the i18n label key for device type.
+ *
+ * @param {string} deviceType
+ * @returns {string}
+ */
 function deviceTypeLabelKey(deviceType) {
     return `asset-management.iot-devices.device-types.${deviceType}`;
 }
 
+/**
+ * Returns the i18n label key for measurement parameter.
+ *
+ * @param {*} parameter
+ * @returns {string}
+ */
 function measurementParameterLabelKey(parameter) {
     return `asset-management.iot-devices.measurement-parameters.${parameter}`;
 }
 
+/**
+ * Handles measurement parameters for behavior in the asset management context.
+ *
+ * @param {*} iotDevice
+ * @returns {*}
+ */
 function measurementParametersFor(iotDevice) {
     return iotDevice.measurementParameters.length
         ? iotDevice.measurementParameters
         : measurementParametersForDeviceType(iotDevice.deviceType);
 }
 
+/**
+ * Selects ed iot device parameters in the current view state.
+ *
+ * @returns {void}
+ */
 function selectedIoTDeviceParameters() {
     return measurementParametersForDeviceType(iotDeviceForm.deviceType);
 }
 
+/**
+ * Returns the i18n label key for gateway status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function gatewayStatusLabelKey(status) {
     return `asset-management.gateways.status.${status}`;
 }
 
+/**
+ * Returns the CSS class for asset status tone.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function assetStatusToneClass(status) {
     return {
         [AssetStatus.Active]: 'tone-success',
@@ -582,6 +837,12 @@ function assetStatusToneClass(status) {
     }[status];
 }
 
+/**
+ * Returns the CSS class for iot device status tone.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function iotDeviceStatusToneClass(status) {
     return {
         [IoTDeviceStatus.Linked]: 'tone-success',
@@ -590,6 +851,12 @@ function iotDeviceStatusToneClass(status) {
     }[status];
 }
 
+/**
+ * Returns the CSS class for calibration tone.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function calibrationToneClass(status) {
     return {
         [CalibrationStatus.Compliant]: 'tone-success',
@@ -599,6 +866,12 @@ function calibrationToneClass(status) {
     }[status];
 }
 
+/**
+ * Returns the CSS class for gateway status tone.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
 function gatewayStatusToneClass(status) {
     return {
         [GatewayStatus.Active]: 'tone-success',
@@ -607,19 +880,42 @@ function gatewayStatusToneClass(status) {
     }[status];
 }
 
+/**
+ * Selects ed gateway for form in the current view state.
+ *
+ * @returns {void}
+ */
 function selectedGatewayForForm() {
     const gatewayId = Number(coldRoomForm.gatewayId);
     return organizationGateways.value.find(gateway => gateway.id === gatewayId) ?? null;
 }
 
+/**
+ * Handles asset location for behavior in the asset management context.
+ *
+ * @param {*} asset
+ * @returns {string}
+ */
 function assetLocationFor(asset) {
     return assetManagementStore.locationForAsset(asset, organizationGateways.value);
 }
 
+/**
+ * Returns the i18n label key for incident.
+ *
+ * @param {*} lastIncident
+ * @returns {string}
+ */
 function incidentLabelKey(lastIncident) {
     return `asset-management.incidents.${normalizeIncident(lastIncident)}`;
 }
 
+/**
+ * Handles incident icon name behavior in the asset management context.
+ *
+ * @param {*} lastIncident
+ * @returns {string}
+ */
 function incidentIconName(lastIncident) {
     return {
         'high-temperature': 'warning',
@@ -630,6 +926,12 @@ function incidentIconName(lastIncident) {
     }[normalizeIncident(lastIncident)] ?? 'info';
 }
 
+/**
+ * Returns the CSS class for incident severity.
+ *
+ * @param {*} lastIncident
+ * @returns {string}
+ */
 function incidentSeverityClass(lastIncident) {
     return {
         'high-temperature': 'danger',
@@ -640,11 +942,22 @@ function incidentSeverityClass(lastIncident) {
     }[normalizeIncident(lastIncident)] ?? 'stable';
 }
 
+/**
+ * Handles normalize incident behavior in the asset management context.
+ *
+ * @param {*} lastIncident
+ * @returns {*}
+ */
 function normalizeIncident(lastIncident) {
     const prefix = 'asset-management.incidents.';
     return lastIncident.startsWith(prefix) ? lastIncident.slice(prefix.length) : lastIncident;
 }
 
+/**
+ * Handles entry date behavior in the asset management context.
+ *
+ * @returns {string}
+ */
 function entryDate() {
     return new Intl.DateTimeFormat('en-GB', {
         day: '2-digit',
@@ -653,16 +966,32 @@ function entryDate() {
     }).format(new Date());
 }
 
+/**
+ * Handles calibration count behavior in the asset management context.
+ *
+ * @param {string} status
+ * @returns {number}
+ */
 function calibrationCount(status) {
     return organizationIoTDevices.value.filter(iotDevice => iotDevice.calibrationStatus === status).length;
 }
 
+/**
+ * Resets forms to its default state.
+ *
+ * @returns {void}
+ */
 function resetForms() {
     resetForm();
     resetIoTDeviceForm();
     resetGatewayForm();
 }
 
+/**
+ * Resets form to its default state.
+ *
+ * @returns {void}
+ */
 function resetForm() {
     coldRoomForm.internalId = generatedAssetUuid(selectedAssetType.value);
     coldRoomForm.name = '';
@@ -671,6 +1000,11 @@ function resetForm() {
     coldRoomForm.description = '';
 }
 
+/**
+ * Resets iot device form to its default state.
+ *
+ * @returns {void}
+ */
 function resetIoTDeviceForm() {
     iotDeviceForm.internalId = generatedIoTDeviceUuid();
     iotDeviceForm.deviceType = '';
@@ -680,6 +1014,11 @@ function resetIoTDeviceForm() {
     iotDeviceForm.nextCalibrationDate = '';
 }
 
+/**
+ * Resets gateway form to its default state.
+ *
+ * @returns {void}
+ */
 function resetGatewayForm() {
     gatewayForm.internalId = generatedGatewayUuid();
     gatewayForm.name = '';
@@ -688,29 +1027,66 @@ function resetGatewayForm() {
     gatewayForm.status = GatewayStatus.Active;
 }
 
+/**
+ * Handles measurement parameters for device type behavior in the asset management context.
+ *
+ * @param {string} deviceType
+ * @returns {string}
+ */
 function measurementParametersForDeviceType(deviceType) {
     return iotDeviceDefinitions.find(definition => definition.type === deviceType)?.parameters ?? [];
 }
 
+/**
+ * Handles measurement type label behavior in the asset management context.
+ *
+ * @param {*} parameters
+ * @returns {string}
+ */
 function measurementTypeLabel(parameters) {
     return parameters.map(parameter => t(measurementParameterLabelKey(parameter))).join(' / ');
 }
 
+/**
+ * Handles clear pending asset status behavior in the asset management context.
+ *
+ * @param {number|string} assetId
+ * @returns {string}
+ */
 function clearPendingAssetStatus(assetId) {
     const nextStatuses = {...pendingAssetStatuses.value};
     delete nextStatuses[assetId];
     pendingAssetStatuses.value = nextStatuses;
 }
 
+/**
+ * Handles gateway name by id behavior in the asset management context.
+ *
+ * @param {number|string} gatewayId
+ * @returns {string}
+ */
 function gatewayNameById(gatewayId) {
     const gateway = gateways.value.find(currentGateway => currentGateway.id === gatewayId);
     return gateway ? `${gateway.uuid} - ${gateway.location}` : 'asset-management.gateways.unassigned';
 }
 
+/**
+ * Handles resource key behavior in the asset management context.
+ *
+ * @param {string} resourceType
+ * @param {number|string} resourceId
+ * @returns {string}
+ */
 function resourceKey(resourceType, resourceId) {
     return `${resourceType}-${resourceId}`;
 }
 
+/**
+ * Generates d asset uuid for the current workflow.
+ *
+ * @param {string} assetType
+ * @returns {number}
+ */
 function generatedAssetUuid(assetType) {
     const organizationId = activeOrganizationId.value;
     const currentUuids = assets.value
@@ -722,6 +1098,11 @@ function generatedAssetUuid(assetType) {
     return generatedUuid('CR', currentUuids, currentUuids.length + 1, 5);
 }
 
+/**
+ * Generates d iot device uuid for the current workflow.
+ *
+ * @returns {number}
+ */
 function generatedIoTDeviceUuid() {
     const organizationId = activeOrganizationId.value;
     const currentUuids = iotDevices.value
@@ -730,6 +1111,11 @@ function generatedIoTDeviceUuid() {
     return generatedUuid('SN', currentUuids, currentUuids.length + 1, 3);
 }
 
+/**
+ * Generates d gateway uuid for the current workflow.
+ *
+ * @returns {number}
+ */
 function generatedGatewayUuid() {
     const organizationId = activeOrganizationId.value;
     const currentUuids = gateways.value
@@ -738,6 +1124,15 @@ function generatedGatewayUuid() {
     return generatedUuid('GW', currentUuids, currentUuids.length + 1, 3);
 }
 
+/**
+ * Generates d uuid for the current workflow.
+ *
+ * @param {*} prefix
+ * @param {string} currentUuids
+ * @param {number|string} firstNumber
+ * @param {*} width
+ * @returns {number}
+ */
 function generatedUuid(prefix, currentUuids, firstNumber, width) {
     const normalizedUuids = new Set(currentUuids.map(uuid => uuid.toLowerCase()));
     let nextNumber = firstNumber;
@@ -749,6 +1144,12 @@ function generatedUuid(prefix, currentUuids, firstNumber, width) {
     return candidate;
 }
 
+/**
+ * Handles translate or text behavior in the asset management context.
+ *
+ * @param {string} value
+ * @returns {*}
+ */
 function translateOrText(value) {
     return typeof value === 'string' && value.startsWith('asset-management.') ? t(value) : value;
 }

@@ -24,6 +24,11 @@ onMounted(async () => {
     await loadFormData();
 });
 
+/**
+ * Loads form data data for the current view or use case.
+ *
+ * @returns {Promise<*>}
+ */
 async function loadFormData() {
     feedback.value = 'idle';
     try {
@@ -34,11 +39,21 @@ async function loadFormData() {
     }
 }
 
+/**
+ * Selects default role in the current view state.
+ *
+ * @returns {void}
+ */
 function selectDefaultRole() {
     const currentRole = assignableRoles.value.find(role => role.id === Number(form.value.roleId));
     if (!currentRole) form.value.roleId = assignableRoles.value[0]?.id ?? 0;
 }
 
+/**
+ * Handles submit behavior in the identity access context.
+ *
+ * @returns {Promise<*>}
+ */
 async function submit() {
     submitted.value = true;
     feedback.value = 'idle';

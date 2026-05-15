@@ -8,6 +8,11 @@ import {TechnicalServiceStatus} from '@/maintenance-management/domain/model/tech
 
 const maintenanceManagementApi = new MaintenanceManagementApi();
 
+/**
+ * Pinia store that coordinates maintenance management application state and use cases.
+ *
+ * @returns {import('pinia').StoreDefinition}
+ */
 const useMaintenanceManagementStore = defineStore('maintenance-management', () => {
     const maintenanceSchedules = ref([]);
     const technicalServiceRequests = ref([]);
@@ -23,6 +28,11 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         technicalServiceRequests.value.filter(request => isOpenTechnicalService(request)).length,
     );
 
+    /**
+     * Loads maintenance schedules from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchMaintenanceSchedules() {
         const response = await maintenanceManagementApi.getMaintenanceSchedules();
         maintenanceSchedules.value = MaintenanceScheduleAssembler.toEntitiesFromResponse(response);
@@ -30,6 +40,11 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         return maintenanceSchedules.value;
     }
 
+    /**
+     * Loads technical service requests from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchTechnicalServiceRequests() {
         const response = await maintenanceManagementApi.getTechnicalServiceRequests();
         technicalServiceRequests.value = TechnicalServiceRequestAssembler.toEntitiesFromResponse(response);
@@ -37,6 +52,11 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         return technicalServiceRequests.value;
     }
 
+    /**
+     * Loads maintenance management data from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
     async function fetchMaintenanceManagementData() {
         loading.value = true;
         errors.value = [];
@@ -58,6 +78,12 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         }
     }
 
+    /**
+     * Creates maintenance schedule in the maintenance management context.
+     *
+     * @param {*} maintenanceSchedule
+     * @returns {Promise<*>}
+     */
     async function createMaintenanceSchedule(maintenanceSchedule) {
         const response = await maintenanceManagementApi.createMaintenanceSchedule(
             MaintenanceScheduleAssembler.toResourceFromEntity(maintenanceSchedule),
@@ -67,6 +93,12 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         return createdSchedule;
     }
 
+    /**
+     * Updates maintenance schedule in the maintenance management context.
+     *
+     * @param {*} maintenanceSchedule
+     * @returns {Promise<*>}
+     */
     async function updateMaintenanceSchedule(maintenanceSchedule) {
         const response = await maintenanceManagementApi.updateMaintenanceSchedule(
             MaintenanceScheduleAssembler.toResourceFromEntity(maintenanceSchedule),
@@ -78,6 +110,12 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         return updatedSchedule;
     }
 
+    /**
+     * Creates technical service request in the maintenance management context.
+     *
+     * @param {*} technicalServiceRequest
+     * @returns {Promise<*>}
+     */
     async function createTechnicalServiceRequest(technicalServiceRequest) {
         const response = await maintenanceManagementApi.createTechnicalServiceRequest(
             TechnicalServiceRequestAssembler.toResourceFromEntity(technicalServiceRequest),
@@ -87,6 +125,12 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         return createdRequest;
     }
 
+    /**
+     * Updates technical service request in the maintenance management context.
+     *
+     * @param {*} technicalServiceRequest
+     * @returns {Promise<*>}
+     */
     async function updateTechnicalServiceRequest(technicalServiceRequest) {
         const response = await maintenanceManagementApi.updateTechnicalServiceRequest(
             TechnicalServiceRequestAssembler.toResourceFromEntity(technicalServiceRequest),
@@ -98,24 +142,56 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         return updatedRequest;
     }
 
+    /**
+     * Handles schedules for organization behavior in the maintenance management context.
+     *
+     * @param {number|string} organizationId
+     * @param {Array<*>} availableSchedules
+     * @returns {*}
+     */
     function schedulesForOrganization(organizationId, availableSchedules = maintenanceSchedules.value) {
         if (!organizationId) return [];
         return availableSchedules.filter(schedule => schedule.organizationId === Number(organizationId));
     }
 
+    /**
+     * Handles technical services for organization behavior in the maintenance management context.
+     *
+     * @param {number|string} organizationId
+     * @param {Array<*>} availableRequests
+     * @returns {*}
+     */
     function technicalServicesForOrganization(organizationId, availableRequests = technicalServiceRequests.value) {
         if (!organizationId) return [];
         return availableRequests.filter(request => request.organizationId === Number(organizationId));
     }
 
+    /**
+     * Handles next schedule id behavior in the maintenance management context.
+     *
+     * @returns {*}
+     */
     function nextScheduleId() {
         return Math.max(...maintenanceSchedules.value.map(schedule => schedule.id), 0) + 1;
     }
 
+    /**
+     * Handles next technical service request id behavior in the maintenance management context.
+     *
+     * @returns {*}
+     */
     function nextTechnicalServiceRequestId() {
         return Math.max(...technicalServiceRequests.value.map(request => request.id), 0) + 1;
     }
 
+    /**
+     * Determines whether open schedule for asset period exists.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} assetId
+     * @param {*} period
+     * @returns {boolean}
+     */
     function hasOpenScheduleForAssetPeriod(organizationId, assetId, period) {
         return schedulesForOrganization(organizationId).some(schedule =>
             schedule.assetId === Number(assetId) &&
@@ -124,11 +200,23 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
         );
     }
 
+    /**
+     * Determines whether open schedule is true.
+     *
+     * @param {*} schedule
+     * @returns {boolean}
+     */
     function isOpenSchedule(schedule) {
         return schedule.status === MaintenanceScheduleStatus.Scheduled ||
             schedule.status === MaintenanceScheduleStatus.Pending;
     }
 
+    /**
+     * Determines whether open technical service is true.
+     *
+     * @param {*} request
+     * @returns {boolean}
+     */
     function isOpenTechnicalService(request) {
         return request.status === TechnicalServiceStatus.Open ||
             request.status === TechnicalServiceStatus.PendingReview;

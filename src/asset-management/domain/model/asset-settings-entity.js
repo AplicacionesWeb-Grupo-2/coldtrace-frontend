@@ -1,4 +1,27 @@
+/**
+ * @typedef {Object} AssetSettingsProps
+ * @property {number|null} [id]
+ * @property {number|null} [organizationId]
+ * @property {string} [uuid]
+ * @property {Array<*>} [assetTypes]
+ * @property {Array<*>} [iotDeviceTypes]
+ * @property {number} [minimumTemperature]
+ * @property {number} [maximumTemperature]
+ * @property {number} [maximumHumidity]
+ * @property {number} [calibrationFrequencyDays]
+ * @property {string} [temperatureUnit]
+ * @property {string} [humidityUnit]
+ * @property {string} [weightUnit]
+ * @property {number|null} [assetId]
+ */
+
+/**
+ * Domain entity representing asset settings.
+ */
 export class AssetSettings {
+    /**
+     * @param {AssetSettingsProps} [props]
+     */
     constructor({
         id = null,
         organizationId = null,

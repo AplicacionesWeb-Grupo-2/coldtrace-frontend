@@ -1,6 +1,23 @@
 import {ReportType} from '@/reports/domain/model/report-type.js';
 
+/**
+ * @typedef {Object} ReportProps
+ * @property {number|null} [id]
+ * @property {number|null} [organizationId]
+ * @property {string} [uuid]
+ * @property {*} [type]
+ * @property {string} [title]
+ * @property {string} [periodDate]
+ * @property {string} [generatedAt]
+ */
+
+/**
+ * Domain entity representing report.
+ */
 export class Report {
+    /**
+     * @param {ReportProps} [props]
+     */
     constructor({
         id = null,
         organizationId = null,

@@ -1,4 +1,25 @@
+/**
+ * @typedef {Object} SensorReadingProps
+ * @property {number|null} [id]
+ * @property {number|null} [assetId]
+ * @property {number|null} [iotDeviceId]
+ * @property {*|null} [temperature]
+ * @property {*|null} [humidity]
+ * @property {boolean} [isOutOfRange]
+ * @property {string} [recordedAt]
+ * @property {*|null} [motionDetected]
+ * @property {*|null} [imageCaptured]
+ * @property {*|null} [batteryLevel]
+ * @property {*|null} [signalStrength]
+ */
+
+/**
+ * Domain entity representing sensor reading.
+ */
 export class SensorReading {
+    /**
+     * @param {SensorReadingProps} [props]
+     */
     constructor({
         id = null,
         assetId = null,

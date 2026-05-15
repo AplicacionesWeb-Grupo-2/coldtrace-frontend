@@ -1,0 +1,239 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "asset-management.domain.model" {
+  class Asset {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - type: AssetType
+    - gatewayId: Number
+    - name: string
+    - location: string
+    - capacity: Number
+    - status: AssetStatus
+    - lastIncident: string
+    - currentTemperature: string
+    - connectivity: ConnectivityStatus
+  }
+  class AssetSettings {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - assetTypes: string[]
+    - iotDeviceTypes: string[]
+    - minimumTemperature: Number
+    - maximumTemperature: Number
+    - maximumHumidity: Number
+    - calibrationFrequencyDays: Number
+    - temperatureUnit: string
+    - humidityUnit: string
+    - weightUnit: string
+    - assetId: Number
+  }
+  class DefaultAssetSettings <<utility>> {
+    + DEFAULT_ASSET_SETTING_VALUES
+    + buildDefaultAssetSettings(id, organizationId, uuid, assetId, fallbackSettings)
+  }
+  class Gateway {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - name: string
+    - location: string
+    - network: string
+    - status: GatewayStatus
+  }
+  class IoTDevice {
+    - id: Number
+    - organizationId: Number
+    - uuid: string
+    - deviceType: string
+    - model: string
+    - measurementType: string
+    - assetId: Number
+    - status: IoTDeviceStatus
+    - calibrationStatus: CalibrationStatus
+    - lastCalibrationDate: string
+    - nextCalibrationDate: string
+    - measurementParameters: string[]
+    - readingFrequencySeconds: Number
+  }
+  class AssetStatus <<enumeration>>
+  class AssetType <<enumeration>>
+  class CalibrationStatus <<enumeration>>
+  class ConnectivityStatus <<enumeration>>
+  class GatewayStatus <<enumeration>>
+  class IoTDeviceStatus <<enumeration>>
+  class IOT_DEVICE_DEFINITIONS <<constant>>
+}
+
+package "asset-management.infrastructure" {
+  class AssetManagementApi {
+    - assetsEndpoint
+    - iotDevicesEndpoint
+    - gatewaysEndpoint
+    - assetSettingsEndpoint
+    + getAssets()
+    + createAsset(resource)
+    + updateAsset(resource)
+    + deleteAsset(id)
+    + getIoTDevices()
+    + createIoTDevice(resource)
+    + updateIoTDevice(resource)
+    + deleteIoTDevice(id)
+    + getGateways()
+    + createGateway(resource)
+    + updateGateway(resource)
+    + deleteGateway(id)
+    + getAssetSettings()
+    + createAssetSettings(resource)
+    + updateAssetSettings(resource)
+    + deleteAssetSettings(id)
+  }
+  class AssetAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class AssetSettingsAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class GatewayAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class IoTDeviceAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+}
+
+package "asset-management.application" {
+  class useAssetManagementStore {
+    - assets
+    - iotDevices
+    - gateways
+    - assetSettings
+    + fetchAssetManagementData(options)
+    + createAsset(asset)
+    + updateAsset(asset)
+    + deleteAsset(asset)
+    + createIoTDevice(iotDevice)
+    + updateIoTDevice(iotDevice)
+    + deleteIoTDevice(iotDevice)
+    + createGateway(gateway)
+    + updateGateway(gateway)
+    + deleteGateway(gateway)
+    + createAssetSettings(settings)
+    + updateAssetSettings(settings)
+    + assetIssueCountFor(organizationId)
+    + assetsForOrganization(organizationId)
+    + iotDevicesForOrganization(organizationId)
+    + gatewaysForOrganization(organizationId)
+    + assetSettingsForOrganization(organizationId)
+    + monitoredAssetsForOrganization(organizationId)
+    + iotDevicesForAsset(assetId)
+    + settingsForAsset(organizationId, assetId)
+    + operationalSummaryFor(organizationId)
+    + updateOrganizationTelemetry(organizationId)
+  }
+}
+
+package "asset-management.presentation" {
+  class AssetManagementRoutes {
+    + assets
+    + safetyRanges
+    + operationalParameters
+  }
+}
+
+package "asset-management.presentation.views" {
+  class ColdRoomList {
+    - selectedTab
+    - formVisible
+    - searchTerm
+    + loadPageData(): Promise
+    + submit(): Promise
+    + submitIoTDevice(): Promise
+    + submitGateway(): Promise
+    + updateAssetStatus(asset, value): Promise
+    + deleteAsset(asset): Promise
+    + deleteIoTDevice(iotDevice): Promise
+    + deleteGateway(gateway): Promise
+  }
+  class SafetyRangeSettings {
+    - selectedAssetId
+    - selectedMinimumTemperature
+    - selectedMaximumTemperature
+    - selectedMaximumHumidity
+    + loadPageData(): Promise
+    + selectScope(value): void
+    + saveRangeSettings(): Promise
+  }
+  class OperationalParametersSettings {
+    - selectedAssetId
+    - selectedIoTDeviceId
+    - selectedFrequencyMinutes
+    + loadPageData(): Promise
+    + selectAsset(value): void
+    + selectIoTDevice(value): void
+    + saveOperationalParameters(): Promise
+  }
+}
+
+package "shared.infrastructure" {
+  class BaseApi
+  class BaseEndpoint
+}
+
+package "shared.presentation.components" {
+  class ListPagination
+}
+
+package "identity-access.application" {
+  class useIdentityAccessStore
+}
+
+Asset ..> AssetStatus : uses
+Asset ..> AssetType : uses
+Asset ..> ConnectivityStatus : uses
+Asset --> Gateway : assigned gateway
+AssetSettings --> Asset : optional scope
+DefaultAssetSettings ..> AssetSettings : creates
+Gateway ..> GatewayStatus : uses
+IoTDevice --> Asset : linked asset
+IoTDevice ..> CalibrationStatus : uses
+IoTDevice ..> IoTDeviceStatus : uses
+IoTDevice ..> IOT_DEVICE_DEFINITIONS : configured by
+AssetManagementApi --|> BaseApi
+AssetManagementApi *-- BaseEndpoint
+AssetAssembler ..> Asset : creates
+AssetSettingsAssembler ..> AssetSettings : creates
+GatewayAssembler ..> Gateway : creates
+IoTDeviceAssembler ..> IoTDevice : creates
+useAssetManagementStore ..> AssetManagementApi : uses
+useAssetManagementStore ..> AssetAssembler : uses
+useAssetManagementStore ..> AssetSettingsAssembler : uses
+useAssetManagementStore ..> GatewayAssembler : uses
+useAssetManagementStore ..> IoTDeviceAssembler : uses
+ColdRoomList ..> useAssetManagementStore : uses
+ColdRoomList ..> useIdentityAccessStore : checks permissions
+ColdRoomList --> ListPagination : uses
+SafetyRangeSettings ..> useAssetManagementStore : uses
+SafetyRangeSettings ..> useIdentityAccessStore : checks permissions
+SafetyRangeSettings --> ListPagination : uses
+OperationalParametersSettings ..> useAssetManagementStore : uses
+OperationalParametersSettings ..> useIdentityAccessStore : checks permissions
+OperationalParametersSettings --> ListPagination : uses
+AssetManagementRoutes --> ColdRoomList : maps
+AssetManagementRoutes --> SafetyRangeSettings : maps
+AssetManagementRoutes --> OperationalParametersSettings : maps
+
+@enduml

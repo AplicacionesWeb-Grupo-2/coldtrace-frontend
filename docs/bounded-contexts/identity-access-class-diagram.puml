@@ -1,0 +1,195 @@
+@startuml
+
+skinparam packageStyle rectangle
+hide empty members
+
+package "identity-access.domain.model" {
+  class Organization {
+    - id: Number
+    - legalName: string
+    - commercialName: string
+    - taxId: string
+    - contactEmail: string
+  }
+  class Permission {
+    - id: Number
+    - resource: string
+    - action: string
+    - description: string
+  }
+  class Role {
+    - id: Number
+    - name: string
+    - label: string
+    - permissions: Permission[]
+  }
+  class RoleName <<enumeration>> {
+    SuperAdministrator
+    Administrator
+    OperationsManager
+    Operator
+    Auditor
+  }
+  class User {
+    - id: Number
+    - uuid: string
+    - organizationUserId: Number
+    - firstName: string
+    - lastName: string
+    - email: string
+    - organizationId: Number
+    - roleId: Number
+    + fullName
+  }
+}
+
+package "identity-access.infrastructure" {
+  class IdentityAccessApi {
+    - usersEndpoint
+    - organizationsEndpoint
+    - rolesEndpoint
+    + getUsers()
+    + createUser(resource)
+    + updateUser(resource)
+    + deleteUser(id)
+    + getOrganizations()
+    + createOrganization(resource)
+    + getRoles()
+    + updateRole(resource)
+  }
+  class UserAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class OrganizationAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+  class RoleAssembler {
+    + toEntityFromResource(resource)
+    + toEntitiesFromResponse(response)
+    + toResourceFromEntity(entity)
+  }
+}
+
+package "identity-access.application" {
+  class useIdentityAccessStore {
+    - users
+    - organizations
+    - roles
+    - currentUser
+    - currentOrganization
+    - currentRole
+    - rolePermissionKeysByRoleId
+    + fetchUsers()
+    + fetchOrganizations()
+    + fetchRoles()
+    + fetchAccessData()
+    + setCurrentContext(user)
+    + clearCurrentUser()
+    + signIn(email, password)
+    + createAccount(payload)
+    + createOrganizationUser(payload)
+    + updateUserRole(user, roleId)
+    + deleteUser(user)
+    + userWasDeletedRemotely(userId)
+    + toggleRolePermission(role, permissionKey, checked)
+    + canManageRolePermissions()
+    + canManageAccess()
+    + canManageUsers()
+    + canManageAssets()
+    + canMonitorAssets()
+    + canManageAdministrators()
+  }
+}
+
+package "identity-access.presentation" {
+  class IdentityAccessRoutes {
+    + dashboard
+    + passwordRecovery
+    + resetPassword
+    + rolePermissions
+    + userNew
+    + rolesPermissions
+    + signIn
+    + signUp
+  }
+}
+
+package "identity-access.presentation.views" {
+  class SignIn {
+    - form
+    - submitted
+    - feedback
+    + submit(): Promise
+  }
+  class SignUp {
+    - form
+    - submitted
+    - feedback
+    + submit(): Promise
+  }
+  class PasswordRecovery
+  class ResetPassword
+  class UserAccessList {
+    - searchTerm
+    - currentPage
+    - selectedRoleByUserId
+    + updateUserRole(user): Promise
+    + deleteUser(user): Promise
+  }
+  class UserForm {
+    - form
+    - submitted
+    + submit(): Promise
+  }
+  class RolePermissionForm {
+    - savingRoleId
+    - currentPage
+    + loadRoles(): Promise
+    + toggleRolePermission(role, permissionKey, checked): Promise
+  }
+}
+
+package "shared.infrastructure" {
+  class BaseApi
+  class BaseEndpoint
+}
+
+package "shared.presentation.components" {
+  class ListPagination
+}
+
+User --> Organization : belongs to
+User --> Role : has
+Role --> Permission : contains
+Role ..> RoleName : uses
+IdentityAccessApi --|> BaseApi
+IdentityAccessApi *-- BaseEndpoint
+UserAssembler ..> User : creates
+OrganizationAssembler ..> Organization : creates
+RoleAssembler ..> Role : creates
+RoleAssembler ..> Permission : creates
+useIdentityAccessStore ..> IdentityAccessApi : uses
+useIdentityAccessStore ..> UserAssembler : uses
+useIdentityAccessStore ..> OrganizationAssembler : uses
+useIdentityAccessStore ..> RoleAssembler : uses
+useIdentityAccessStore ..> RoleName : enforces
+SignIn ..> useIdentityAccessStore : uses
+SignUp ..> useIdentityAccessStore : uses
+UserAccessList ..> useIdentityAccessStore : uses
+UserAccessList --> ListPagination : uses
+UserForm ..> useIdentityAccessStore : uses
+RolePermissionForm ..> useIdentityAccessStore : uses
+RolePermissionForm --> ListPagination : uses
+IdentityAccessRoutes --> SignIn : maps
+IdentityAccessRoutes --> SignUp : maps
+IdentityAccessRoutes --> PasswordRecovery : maps
+IdentityAccessRoutes --> ResetPassword : maps
+IdentityAccessRoutes --> UserAccessList : maps
+IdentityAccessRoutes --> UserForm : maps
+IdentityAccessRoutes --> RolePermissionForm : maps
+
+@enduml
