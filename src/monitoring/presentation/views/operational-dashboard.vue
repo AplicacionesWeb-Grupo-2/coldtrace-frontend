@@ -85,17 +85,7 @@ const hasOperationalData = computed(() =>
 );
 
 onMounted(() => {
-    const accessRequest = identityStore.usersLoaded && identityStore.rolesLoaded && identityStore.organizationsLoaded
-        ? Promise.resolve()
-        : identityStore.fetchAccessData();
-    const assetRequest = assetStore.assetsLoaded && assetStore.iotDevicesLoaded && assetStore.gatewaysLoaded && assetStore.assetSettingsLoaded
-        ? Promise.resolve()
-        : assetStore.fetchAssetManagementData();
-    const monitoringRequest = monitoringStore.readingsLoaded && monitoringStore.incidentsLoaded && monitoringStore.maintenanceSchedulesLoaded && monitoringStore.technicalServiceRequestsLoaded
-        ? Promise.resolve()
-        : monitoringStore.fetchMonitoringData();
-
-    Promise.all([accessRequest, assetRequest, monitoringRequest]).then(async () => {
+    loadOperationalDashboardData().then(async () => {
         await monitoringStore.syncGeneratedIncidentsForOrganization(activeOrganizationId.value).catch(() => undefined);
     }).catch(() => undefined);
 
@@ -103,6 +93,23 @@ onMounted(() => {
         monitoringStore.updateOrganizationTelemetry(activeOrganizationId.value).catch(() => undefined);
     }, TELEMETRY_POLLING_INTERVAL_MS);
 });
+
+/**
+ * Loads operational dashboard data for the active organization.
+ *
+ * @returns {Promise<void>}
+ */
+async function loadOperationalDashboardData() {
+    if (!identityStore.usersLoaded || !identityStore.rolesLoaded || !identityStore.organizationsLoaded) {
+        await identityStore.fetchAccessData();
+    }
+
+    const organizationId = activeOrganizationId.value;
+    await Promise.all([
+        assetStore.fetchAssetManagementData({organizationId}),
+        monitoringStore.fetchMonitoringData({organizationId}),
+    ]);
+}
 
 onUnmounted(() => {
     if (telemetryIntervalId) window.clearInterval(telemetryIntervalId);
@@ -166,7 +173,9 @@ function buildCriticalAlertsKpi() {
  */
 function buildActiveSensorsKpi() {
     const summary = assetSummary.value;
-    const linkedDevices = organizationIoTDevices.value.filter(iotDevice => iotDevice.status === IoTDeviceStatus.Linked).length;
+    const linkedDevices = organizationIoTDevices.value.filter(iotDevice =>
+        iotDevice.status === IoTDeviceStatus.Linked && iotDevice.calibrationStatus === CalibrationStatus.Calibrated,
+    ).length;
     const availableDevices = organizationIoTDevices.value.filter(iotDevice => iotDevice.status === IoTDeviceStatus.Available).length;
     const offlineDevices = organizationIoTDevices.value.filter(iotDevice => iotDevice.status === IoTDeviceStatus.Offline).length;
 
@@ -291,44 +300,41 @@ function buildStorageDistribution() {
     const total = assets.length;
     if (!total) return [];
 
+    const latestReadingsByAssetId = latestTemperatureReadingsByAssetId();
+    const counts = {
+        frozen: 0,
+        refrigerated: 0,
+        ambient: 0,
+        noData: 0,
+    };
+
+    assets.forEach(asset => {
+        counts[thermalStateForAsset(asset, latestReadingsByAssetId)] += 1;
+    });
+
     const groups = [
         {
             id: 1,
             label: 'monitoring.operational.storage-frozen',
-            count: assets.filter(asset => {
-                const temperature = temperatureFromAsset(asset.currentTemperature);
-                return temperature !== null && temperature <= 0;
-            }).length,
+            count: counts.frozen,
             color: '#91BDFF',
         },
         {
             id: 2,
             label: 'monitoring.operational.storage-refrigerated',
-            count: assets.filter(asset => {
-                const temperature = temperatureFromAsset(asset.currentTemperature);
-                const maximumTemperature = maximumTemperatureForAsset(asset);
-                return temperature !== null && maximumTemperature !== null && temperature > 0 && temperature <= maximumTemperature;
-            }).length,
+            count: counts.refrigerated,
             color: '#51BD7A',
         },
         {
             id: 3,
             label: 'monitoring.operational.storage-ambient',
-            count: assets.filter(asset => {
-                const temperature = temperatureFromAsset(asset.currentTemperature);
-                const maximumTemperature = maximumTemperatureForAsset(asset);
-                return temperature !== null && maximumTemperature !== null && temperature > maximumTemperature;
-            }).length,
+            count: counts.ambient,
             color: '#F5BD38',
         },
         {
             id: 4,
             label: 'monitoring.operational.storage-other',
-            count: assets.filter(asset => {
-                const temperature = temperatureFromAsset(asset.currentTemperature);
-                const maximumTemperature = maximumTemperatureForAsset(asset);
-                return temperature === null || (temperature > 0 && maximumTemperature === null);
-            }).length,
+            count: counts.noData,
             color: '#9AA3AF',
         },
     ];
@@ -340,6 +346,39 @@ function buildStorageDistribution() {
         percentage: Number(((group.count / total) * 100).toFixed(1)),
         color: group.color,
     }));
+}
+
+/**
+ * Resolves the latest temperature reading per asset.
+ *
+ * @returns {Map<number, *>}
+ */
+function latestTemperatureReadingsByAssetId() {
+    const readingsByAssetId = new Map();
+
+    organizationReadings.value.forEach(reading => {
+        if (reading.temperature === null || readingsByAssetId.has(Number(reading.assetId))) return;
+        readingsByAssetId.set(Number(reading.assetId), reading);
+    });
+
+    return readingsByAssetId;
+}
+
+/**
+ * Resolves the dashboard thermal state for one asset.
+ *
+ * @param {*} asset
+ * @param {Map<number, *>} readingsByAssetId
+ * @returns {'frozen'|'refrigerated'|'ambient'|'noData'}
+ */
+function thermalStateForAsset(asset, readingsByAssetId) {
+    const reading = readingsByAssetId.get(Number(asset.id));
+    const settings = assetStore.settingsForAsset(activeOrganizationId.value, asset.id);
+
+    if (!reading || reading.temperature === null || !settings) return 'noData';
+    if (reading.temperature <= 0) return 'frozen';
+    if (reading.temperature <= settings.maximumTemperature) return 'refrigerated';
+    return 'ambient';
 }
 
 /**
@@ -807,6 +846,13 @@ function kpi(config) {
       <div class="loading-spinner"></div>
     </div>
 
+    <header class="dashboard-hero">
+      <div class="dashboard-title-block">
+        <h1>{{ t('monitoring.operational.title') }}</h1>
+        <p>{{ t('monitoring.operational.subtitle') }}</p>
+      </div>
+    </header>
+
     <div v-if="hasOperationalData" class="dashboard-board">
       <section class="primary-column">
         <div class="temp-chart-container dashboard-card-slot">
@@ -866,6 +912,24 @@ function kpi(config) {
   container-type: inline-size;
   min-height: 100%;
   padding: 8px 18px 40px;
+}
+
+.dashboard-hero {
+  margin-bottom: 18px;
+}
+
+.dashboard-title-block h1 {
+  color: #263348;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.dashboard-title-block p {
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 6px 0 0;
 }
 
 .loading-overlay {

@@ -25,7 +25,11 @@ export class MaintenanceScheduleAssembler {
      * @returns {MaintenanceSchedule}
      */
     static toEntityFromResource(resource) {
-        return new MaintenanceSchedule({...resource});
+        return new MaintenanceSchedule({
+            ...resource,
+            period: resource.period ?? dateKeyFrom(resource.scheduledDate),
+            createdAt: resource.createdAt ?? '',
+        });
     }
 
     /**
@@ -39,4 +43,14 @@ export class MaintenanceScheduleAssembler {
         const resources = response.data instanceof Array ? response.data : response.data.maintenanceSchedules;
         return (resources ?? []).map(resource => this.toEntityFromResource(resource));
     }
+}
+
+/**
+ * Extracts a date key suitable for period display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function dateKeyFrom(value) {
+    return value ? String(value).slice(0, 7) : '';
 }

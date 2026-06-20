@@ -10,7 +10,6 @@ const store = useIdentityAccessStore();
 const form = ref({
     email: '',
     password: '',
-    keepSignedIn: true,
 });
 const submitted = ref(false);
 const signingIn = ref(false);
@@ -80,7 +79,7 @@ async function submit() {
               id="password"
               v-model="form.password"
               :type="passwordVisible ? 'text' : 'password'"
-              placeholder="************"
+              placeholder="••••••••••••"
               autocomplete="current-password"
             />
             <button
@@ -89,18 +88,15 @@ async function submit() {
               :aria-label="t('sign-in.toggle-password-visibility')"
               @click="passwordVisible = !passwordVisible"
             >
-              <i :class="passwordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"/>
+              <span class="material-icons" aria-hidden="true">
+                {{ passwordVisible ? 'visibility_off' : 'visibility' }}
+              </span>
             </button>
           </div>
           <p v-if="submitted && passwordInvalid" class="field-error">
             {{ t('sign-in.error.password-required') }}
           </p>
         </div>
-
-        <label class="check-row">
-          <input v-model="form.keepSignedIn" type="checkbox"/>
-          <span>{{ t('sign-in.keep-signed-in') }}</span>
-        </label>
 
         <p v-if="feedback === 'invalid-credentials'" class="form-feedback error">
           {{ t('sign-in.error.invalid-credentials') }}

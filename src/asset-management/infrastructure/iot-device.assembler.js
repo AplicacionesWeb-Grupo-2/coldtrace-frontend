@@ -4,6 +4,7 @@ import {IoTDevice} from '@/asset-management/domain/model/iot-device-entity.js';
  * @typedef {Object} IoTDeviceApiResource
  * @property {*} [id]
  * @property {*} [organizationId]
+ * @property {*} [gatewayId]
  * @property {*} [uuid]
  * @property {*} [deviceType]
  * @property {*} [model]
@@ -53,6 +54,7 @@ export class IoTDeviceAssembler {
         return {
             id: entity.id,
             organizationId: entity.organizationId,
+            gatewayId: entity.gatewayId,
             uuid: entity.uuid,
             deviceType: entity.deviceType,
             model: entity.model,

@@ -41,12 +41,18 @@ const useReportsStore = defineStore('reports', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchReports() {
+    async function fetchReports(organizationId) {
         loading.value = true;
         errors.value = [];
 
         try {
-            const response = await reportsApi.getReports();
+            if (!organizationId) {
+                reports.value = [];
+                reportsLoaded.value = false;
+                return reports.value;
+            }
+
+            const response = await reportsApi.getReportsForOrganization(organizationId);
             reports.value = ReportAssembler.toEntitiesFromResponse(response);
             reportsLoaded.value = true;
             return reports.value;
@@ -429,7 +435,7 @@ const useReportsStore = defineStore('reports', () => {
      * @returns {Promise<*>}
      */
     async function createReport(report) {
-        const response = await reportsApi.createReport(ReportAssembler.toResourceFromEntity(report));
+        const response = await reportsApi.createReport(report.organizationId, ReportAssembler.toResourceFromEntity(report));
         const createdReport = ReportAssembler.toEntityFromResource(response.data);
         reports.value.push(createdReport);
         return createdReport;

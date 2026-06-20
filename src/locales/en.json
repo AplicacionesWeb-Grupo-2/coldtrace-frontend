@@ -2,6 +2,12 @@
   "app": {
     "name": "ColdTrace"
   },
+  "language-switcher": {
+    "open": "Open language selector",
+    "selector": "Language selector",
+    "english": "English",
+    "spanish": "Spanish"
+  },
   "sign-in": {
     "title": "Sign in",
     "email": "Email address",
@@ -87,6 +93,7 @@
     "delete": "Delete",
     "deleting": "Deleting...",
     "delete-confirm": "Delete {name}? This action cannot be undone.",
+    "edit": "Edit",
     "empty": "No users match this search.",
     "empty-section-message": "This section does not have content yet.",
     "menu": {
@@ -189,7 +196,16 @@
     "nav-findings": "Findings",
     "nav-audit-evidence": "Audit evidence",
     "nav-notifications": "Notifications",
+    "nav-access-aria": "Access navigation",
+    "nav-settings-aria": "Settings navigation",
+    "nav-reports-aria": "Reports navigation",
+    "section-navigation": "Section navigation",
     "notification-shortcut": "Pending alerts: {count}",
+    "team-members": "Team members",
+    "team-members-aria": "Organization members",
+    "team-manage": "Manage organization members",
+    "settings-action": "Open settings",
+    "logout-action": "Log out",
     "download-report": "Download Monthly Report",
     "theme-light": "Light",
     "theme-dark": "Dark"
@@ -201,6 +217,7 @@
     "delete": "Delete",
     "deleting": "Deleting...",
     "delete-confirm": "Delete {name}? This action cannot be undone.",
+    "edit": "Edit",
     "cold-room-title": "Cold Room",
     "cold-room-subtitle": "Register and review cold rooms from the active organization.",
     "empty": "No cold rooms match this search.",
@@ -208,6 +225,7 @@
     "tabs": {
       "cold-room": "Cold Room",
       "transport": "Transport",
+      "location": "Locations",
       "iot-device": "IoT Devices",
       "gateway": "Gateway",
       "settings": "Settings"
@@ -221,6 +239,7 @@
         "form-subtitle": "Create a cold room for the active organization.",
         "form-create": "Create cold room",
         "feedback-created": "Cold room created successfully.",
+        "feedback-updated": "Cold room updated successfully.",
         "feedback-duplicate": "A cold room with this ID already exists.",
         "name-placeholder": "Cold Room 21"
       },
@@ -232,6 +251,7 @@
         "form-subtitle": "Create a refrigerated transport unit for the active organization.",
         "form-create": "Create transport",
         "feedback-created": "Transport unit created successfully.",
+        "feedback-updated": "Transport unit updated successfully.",
         "feedback-duplicate": "A transport unit with this ID already exists.",
         "name-placeholder": "Truck 08"
       }
@@ -253,6 +273,7 @@
       "high-temperature": "High temperature",
       "connection-lost": "Connection lost",
       "high-humidity": "High humidity",
+      "low-humidity": "Low humidity",
       "low-temperature": "Low temperature",
       "none": "No incidents"
     },
@@ -271,11 +292,15 @@
       "subtitle": "Review monitoring devices from the active organization.",
       "form-open": "New IoT device",
       "form-title": "Register IoT device",
+      "form-edit-title": "Edit IoT device",
       "form-subtitle": "Create a monitoring device and optionally assign it to an asset.",
+      "form-edit-subtitle": "Update the selected device assignment and operational metadata.",
       "form-create": "Create IoT device",
+      "form-update": "Update IoT device",
       "unassigned": "Unassigned",
       "empty": "No IoT devices registered for this organization.",
       "feedback-created": "IoT device created successfully.",
+      "feedback-updated": "IoT device updated successfully.",
       "feedback-deleted": "IoT device deleted successfully.",
       "feedback-duplicate": "An IoT device with this ID already exists.",
       "form": {
@@ -293,8 +318,14 @@
         "measurement-error": "Enter at least 3 characters.",
         "asset": "Assigned asset",
         "unassigned": "Leave unassigned",
+        "status": "Status",
+        "calibration-status": "Calibration status",
+        "last-calibration": "Last calibration",
+        "last-calibration-placeholder": "01 Oct 2026",
         "next-calibration": "Next calibration",
-        "next-calibration-placeholder": "01 Nov 2026"
+        "next-calibration-placeholder": "01 Nov 2026",
+        "reading-frequency": "Reading frequency (minutes)",
+        "reading-frequency-error": "Enter a value between 5 and 1440 minutes."
       },
       "device-types": {
         "temperature-sensor": "Temperature sensor",
@@ -334,16 +365,69 @@
         "unknown": "Unknown"
       }
     },
+    "locations": {
+      "title": "Locations",
+      "subtitle": "Create and update operational locations used by assets and gateways.",
+      "form-open": "New location",
+      "form-title": "Register location",
+      "form-edit-title": "Edit location",
+      "form-subtitle": "Create an organization location for assets, gateways, and operational tracking.",
+      "form-edit-subtitle": "Update the location details used by linked assets and gateways.",
+      "form-create": "Create location",
+      "form-update": "Update location",
+      "edit": "Edit",
+      "empty": "No locations registered for this organization.",
+      "feedback-created": "Location created successfully.",
+      "feedback-updated": "Location updated successfully.",
+      "feedback-duplicate": "A location with this name already exists.",
+      "form": {
+        "name": "Name",
+        "name-placeholder": "Main Warehouse",
+        "name-error": "Enter at least 2 characters.",
+        "type": "Type",
+        "type-error": "Select a location type.",
+        "address": "Address",
+        "address-placeholder": "Av. Industrial 123, Lima",
+        "description": "Description",
+        "description-placeholder": "Cold storage area for vaccines",
+        "status": "Status"
+      },
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "address": "Address",
+        "description": "Description",
+        "status": "Status"
+      },
+      "types": {
+        "WAREHOUSE": "Warehouse",
+        "CLIENT_SITE": "Client site",
+        "ROUTE": "Route",
+        "LABORATORY": "Laboratory",
+        "DISTRIBUTION_CENTER": "Distribution center",
+        "facility": "Facility",
+        "transport-route": "Transport route"
+      },
+      "status": {
+        "active": "Active",
+        "maintenance": "Maintenance",
+        "inactive": "Inactive"
+      }
+    },
     "gateways": {
-      "title": "Gateways and locations",
+      "title": "Gateways",
       "subtitle": "Review transmission points used by organization assets and IoT devices.",
       "form-open": "New gateway",
       "form-title": "Register gateway",
+      "form-edit-title": "Edit gateway",
       "form-subtitle": "Create a transmission point for an organization location.",
+      "form-edit-subtitle": "Update the selected gateway location, network, and status.",
       "form-create": "Create gateway",
+      "form-update": "Update gateway",
       "unassigned": "Unassigned",
       "empty": "No gateways registered for this organization.",
       "feedback-created": "Gateway created successfully.",
+      "feedback-updated": "Gateway updated successfully.",
       "feedback-deleted": "Gateway deleted successfully.",
       "feedback-duplicate": "A gateway with this ID already exists.",
       "form": {
@@ -355,7 +439,7 @@
         "name-error": "Enter at least 3 characters.",
         "location": "Location",
         "location-placeholder": "San Miguel - Plaza Center",
-        "location-error": "Enter at least 3 characters.",
+        "location-error": "Select a location.",
         "network": "Network",
         "network-placeholder": "LTE / Wi-Fi",
         "network-error": "Enter a valid network.",
@@ -433,7 +517,7 @@
       "summary-assets": "Monitored assets",
       "summary-profiles": "Asset profiles",
       "summary-temperature": "Range to save",
-      "summary-humidity": "Humidity to save",
+      "summary-humidity": "Humidity range to save",
       "empty": "No safety ranges registered for this organization.",
       "form": {
         "scope": "Apply to",
@@ -441,10 +525,12 @@
         "selected-range": "Saved range",
         "minimum-temperature": "Minimum temperature",
         "maximum-temperature": "Maximum temperature",
+        "minimum-humidity": "Minimum humidity (%)",
         "maximum-humidity": "Maximum humidity (%)",
         "number-error": "Enter a valid number.",
-        "humidity-error": "Enter a value from 1 to 100.",
-        "temperature-range-error": "Maximum temperature must be greater than minimum temperature."
+        "humidity-error": "Enter a value from 0 to 100.",
+        "temperature-range-error": "Maximum temperature must be greater than minimum temperature.",
+        "humidity-range-error": "Maximum humidity must be greater than minimum humidity."
       },
       "table-title": "Configured profiles",
       "table-subtitle": "The organization default is the base profile; asset profiles override it during monitoring readings.",
@@ -521,15 +607,21 @@
       "name-error": "Enter at least 3 characters.",
       "gateway": "Gateway",
       "select-gateway": "Select gateway",
+      "select-location": "Select location",
       "gateway-error": "Select a gateway.",
       "capacity": "Capacity (kg)",
       "capacity-error": "Enter a capacity greater than zero.",
       "location": "Derived location",
-      "location-derived-empty": "Select a gateway to resolve the location.",
+      "location-error": "Select a location.",
+      "location-derived-empty": "Select a location to resolve the warehouse.",
       "description": "Description",
       "description-placeholder": "Cold room operating notes",
+      "status": "Status",
       "cancel": "Cancel",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "update": "Update asset",
+      "edit-title": "Edit asset",
+      "edit-subtitle": "Update the selected asset using the backend contract."
     },
     "update": {
       "feedback-updated": "Asset updated successfully."
@@ -546,11 +638,12 @@
   "monitoring": {
     "operational": {
       "title": "Main Page",
+      "subtitle": "Operational overview for assets, readings, incidents, and maintenance.",
       "chart-temp-title": "Temperature",
       "chart-temp-subtitle": "Hourly average across monitored assets",
       "chart-temp-helper": "Read left to right by hour. The line is in range while it stays between both limits; it changes color when it leaves the range.",
       "cold-room-label": "Cold Room 01",
-      "chart-storage-title": "Storage Distribution",
+      "chart-storage-title": "Thermal State",
       "metric-total-assets": "Total Assets",
       "metric-monitored": "Monitored Assets",
       "metric-sensors": "Active Sensors",
@@ -583,7 +676,7 @@
       "storage-frozen": "Frozen",
       "storage-refrigerated": "Refrigerated",
       "storage-ambient": "Ambient",
-      "storage-other": "Other",
+      "storage-other": "No data",
       "storage-cold-rooms": "Cold rooms",
       "storage-transport": "Transport",
       "storage-connected": "Connected",
@@ -764,6 +857,10 @@
       "active-alerts": "active alert(s)",
       "pending": "pending",
       "failed": "failed",
+      "filter-active": "Active",
+      "filter-pending": "Pending",
+      "filter-failed": "Failed",
+      "search-placeholder": "Search notifications by asset, recipient, status or channel...",
       "empty-title": "No notifications dispatched",
       "empty-description": "When a reading exceeds range, humidity, battery, or signal limits, a notification will appear here.",
       "recipient": "Recipient:",

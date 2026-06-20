@@ -5,6 +5,7 @@ import {AssetAssembler} from '@/asset-management/infrastructure/asset.assembler.
 import {AssetSettingsAssembler} from '@/asset-management/infrastructure/asset-settings.assembler.js';
 import {GatewayAssembler} from '@/asset-management/infrastructure/gateway.assembler.js';
 import {IoTDeviceAssembler} from '@/asset-management/infrastructure/iot-device.assembler.js';
+import {LocationAssembler} from '@/asset-management/infrastructure/location.assembler.js';
 import {AssetStatus} from '@/asset-management/domain/model/asset-status.js';
 import {CalibrationStatus} from '@/asset-management/domain/model/calibration-status.js';
 import {ConnectivityStatus} from '@/asset-management/domain/model/connectivity-status.js';
@@ -13,6 +14,7 @@ import {IoTDeviceStatus} from '@/asset-management/domain/model/iot-device-status
 import {Asset} from '@/asset-management/domain/model/asset-entity.js';
 import {Gateway} from '@/asset-management/domain/model/gateway-entity.js';
 import {IoTDevice} from '@/asset-management/domain/model/iot-device-entity.js';
+import {Location} from '@/asset-management/domain/model/location-entity.js';
 
 const assetManagementApi = new AssetManagementApi();
 
@@ -25,12 +27,14 @@ const useAssetManagementStore = defineStore('asset-management', () => {
     const assets = ref([]);
     const iotDevices = ref([]);
     const gateways = ref([]);
+    const locations = ref([]);
     const assetSettings = ref([]);
     const errors = ref([]);
     const loading = ref(false);
     const assetsLoaded = ref(false);
     const iotDevicesLoaded = ref(false);
     const gatewaysLoaded = ref(false);
+    const locationsLoaded = ref(false);
     const assetSettingsLoaded = ref(false);
     const assetCount = computed(() => assets.value.length);
     let telemetryUpdateStep = 0;
@@ -40,9 +44,16 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchAssets() {
-        const response = await assetManagementApi.getAssets();
+    async function fetchAssets(organizationId) {
+        if (!organizationId) {
+            assets.value = [];
+            assetsLoaded.value = false;
+            return assets.value;
+        }
+
+        const response = await assetManagementApi.getAssets(organizationId);
         assets.value = AssetAssembler.toEntitiesFromResponse(response);
+        enrichAssetsWithGatewayData();
         assetsLoaded.value = true;
         return assets.value;
     }
@@ -52,8 +63,14 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchIoTDevices() {
-        const response = await assetManagementApi.getIoTDevices();
+    async function fetchIoTDevices(organizationId) {
+        if (!organizationId) {
+            iotDevices.value = [];
+            iotDevicesLoaded.value = false;
+            return iotDevices.value;
+        }
+
+        const response = await assetManagementApi.getIoTDevices(organizationId);
         iotDevices.value = IoTDeviceAssembler.toEntitiesFromResponse(response);
         iotDevicesLoaded.value = true;
         return iotDevices.value;
@@ -64,9 +81,16 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchGateways() {
-        const response = await assetManagementApi.getGateways();
+    async function fetchGateways(organizationId, availableLocations = null) {
+        if (!organizationId) {
+            gateways.value = [];
+            gatewaysLoaded.value = false;
+            return gateways.value;
+        }
+
+        const response = await assetManagementApi.getGateways(organizationId, availableLocations);
         gateways.value = GatewayAssembler.toEntitiesFromResponse(response);
+        enrichAssetsWithGatewayData();
         gatewaysLoaded.value = true;
         return gateways.value;
     }
@@ -76,11 +100,35 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchAssetSettings() {
-        const response = await assetManagementApi.getAssetSettings();
+    async function fetchAssetSettings(organizationId) {
+        if (!organizationId) {
+            assetSettings.value = [];
+            assetSettingsLoaded.value = false;
+            return assetSettings.value;
+        }
+
+        const response = await assetManagementApi.getAssetSettings(organizationId);
         assetSettings.value = AssetSettingsAssembler.toEntitiesFromResponse(response);
         assetSettingsLoaded.value = true;
         return assetSettings.value;
+    }
+
+    /**
+     * Loads locations from the API and updates application state.
+     *
+     * @returns {Promise<*>}
+     */
+    async function fetchLocations(organizationId) {
+        if (!organizationId) {
+            locations.value = [];
+            locationsLoaded.value = false;
+            return locations.value;
+        }
+
+        const response = await assetManagementApi.getLocations(organizationId);
+        locations.value = LocationAssembler.toEntitiesFromResponse(response);
+        locationsLoaded.value = true;
+        return locations.value;
     }
 
     /**
@@ -89,14 +137,25 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @param {Object} options
      * @returns {Promise<*>}
      */
-    async function fetchAssetManagementData({includeSettings = true} = {}) {
+    async function fetchAssetManagementData({organizationId, includeSettings = true} = {}) {
         loading.value = true;
         errors.value = [];
         try {
-            const requests = [fetchAssets(), fetchIoTDevices(), fetchGateways()];
-            if (includeSettings) requests.push(fetchAssetSettings());
+            if (!organizationId) {
+                assets.value = [];
+                iotDevices.value = [];
+                gateways.value = [];
+                locations.value = [];
+                if (includeSettings) assetSettings.value = [];
+                return {assets: assets.value, iotDevices: iotDevices.value, gateways: gateways.value, locations: locations.value, assetSettings: assetSettings.value};
+            }
+
+            const loadedLocations = await fetchLocations(organizationId);
+            const requests = [fetchGateways(organizationId, loadedLocations), fetchAssets(organizationId), fetchIoTDevices(organizationId)];
+            if (includeSettings) requests.push(fetchAssetSettings(organizationId));
             await Promise.all(requests);
-            return {assets: assets.value, iotDevices: iotDevices.value, gateways: gateways.value, assetSettings: assetSettings.value};
+            enrichAssetsWithGatewayData();
+            return {assets: assets.value, iotDevices: iotDevices.value, gateways: gateways.value, locations: locations.value, assetSettings: assetSettings.value};
         } catch (error) {
             errors.value.push(error);
             throw error;
@@ -112,8 +171,8 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function createAsset(asset) {
-        const response = await assetManagementApi.createAsset(AssetAssembler.toResourceFromEntity(asset));
-        const createdAsset = AssetAssembler.toEntityFromResource(response.data);
+        const response = await assetManagementApi.createAsset(asset.organizationId, AssetAssembler.toResourceFromEntity(asset));
+        const createdAsset = enrichAssetWithGatewayData(AssetAssembler.toEntityFromResource(response.data));
         assets.value.push(createdAsset);
         return createdAsset;
     }
@@ -125,8 +184,8 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function updateAsset(asset) {
-        const response = await assetManagementApi.updateAsset(AssetAssembler.toResourceFromEntity(asset));
-        const updatedAsset = AssetAssembler.toEntityFromResource(response.data);
+        const response = await assetManagementApi.updateAsset(asset.organizationId, AssetAssembler.toResourceFromEntity(asset));
+        const updatedAsset = enrichAssetWithGatewayData(AssetAssembler.toEntityFromResource(response.data));
         assets.value = assets.value.map(current => current.id === updatedAsset.id ? updatedAsset : current);
         return updatedAsset;
     }
@@ -138,7 +197,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function deleteAsset(asset) {
-        if (!assetSettingsLoaded.value) await fetchAssetSettings();
+        if (!assetSettingsLoaded.value) await fetchAssetSettings(asset.organizationId);
 
         const linkedDevices = iotDevices.value.filter(iotDevice => iotDevice.assetId === asset.id);
         const linkedSettings = assetSettings.value.filter(settings => settings.assetId === asset.id);
@@ -146,8 +205,8 @@ const useAssetManagementStore = defineStore('asset-management', () => {
         await Promise.all(linkedDevices.map(iotDevice =>
             updateIoTDevice(new IoTDevice({...iotDevice, assetId: null, status: IoTDeviceStatus.Available})),
         ));
-        await Promise.all(linkedSettings.map(settings => assetManagementApi.deleteAssetSettings(settings.id)));
-        await assetManagementApi.deleteAsset(asset.id);
+        await Promise.all(linkedSettings.map(settings => assetManagementApi.deleteAssetSettings(settings.organizationId, settings.id)));
+        await assetManagementApi.deleteAsset(asset.organizationId, asset.id);
 
         assetSettings.value = assetSettings.value.filter(settings => settings.assetId !== asset.id);
         assets.value = assets.value.filter(current => current.id !== asset.id);
@@ -160,7 +219,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function createIoTDevice(iotDevice) {
-        const response = await assetManagementApi.createIoTDevice(IoTDeviceAssembler.toResourceFromEntity(iotDevice));
+        const response = await assetManagementApi.createIoTDevice(iotDevice.organizationId, IoTDeviceAssembler.toResourceFromEntity(iotDevice));
         const createdIoTDevice = IoTDeviceAssembler.toEntityFromResource(response.data);
         iotDevices.value.push(createdIoTDevice);
         return createdIoTDevice;
@@ -173,7 +232,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function updateIoTDevice(iotDevice) {
-        const response = await assetManagementApi.updateIoTDevice(IoTDeviceAssembler.toResourceFromEntity(iotDevice));
+        const response = await assetManagementApi.updateIoTDevice(iotDevice.organizationId, IoTDeviceAssembler.toResourceFromEntity(iotDevice));
         const updatedIoTDevice = IoTDeviceAssembler.toEntityFromResource(response.data);
         iotDevices.value = iotDevices.value.map(current => current.id === updatedIoTDevice.id ? updatedIoTDevice : current);
         return updatedIoTDevice;
@@ -186,7 +245,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function deleteIoTDevice(iotDevice) {
-        await assetManagementApi.deleteIoTDevice(iotDevice.id);
+        await assetManagementApi.deleteIoTDevice(iotDevice.organizationId, iotDevice.id);
         iotDevices.value = iotDevices.value.filter(current => current.id !== iotDevice.id);
     }
 
@@ -197,7 +256,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function createGateway(gateway) {
-        const response = await assetManagementApi.createGateway(GatewayAssembler.toResourceFromEntity(gateway));
+        const response = await assetManagementApi.createGateway(gateway.organizationId, GatewayAssembler.toResourceFromEntity(gateway));
         const createdGateway = GatewayAssembler.toEntityFromResource(response.data);
         gateways.value.push(createdGateway);
         return createdGateway;
@@ -210,9 +269,10 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function updateGateway(gateway) {
-        const response = await assetManagementApi.updateGateway(GatewayAssembler.toResourceFromEntity(gateway));
+        const response = await assetManagementApi.updateGateway(gateway.organizationId, GatewayAssembler.toResourceFromEntity(gateway));
         const updatedGateway = GatewayAssembler.toEntityFromResource(response.data);
         gateways.value = gateways.value.map(current => current.id === updatedGateway.id ? updatedGateway : current);
+        enrichAssetsWithGatewayData();
         return updatedGateway;
     }
 
@@ -226,10 +286,40 @@ const useAssetManagementStore = defineStore('asset-management', () => {
         const linkedAssets = assets.value.filter(asset => asset.gatewayId === gateway.id);
 
         await Promise.all(linkedAssets.map(asset =>
-            updateAsset(new Asset({...asset, gatewayId: null, location: asset.location || gateway.location})),
+            updateAsset(new Asset({...asset, gatewayId: null, locationId: asset.locationId ?? gateway.locationId, location: asset.location || gateway.location})),
         ));
-        await assetManagementApi.deleteGateway(gateway.id);
+        await assetManagementApi.deleteGateway(gateway.organizationId, gateway.id);
         gateways.value = gateways.value.filter(current => current.id !== gateway.id);
+    }
+
+    /**
+     * Creates location in the asset management context.
+     *
+     * @param {*} location
+     * @returns {Promise<*>}
+     */
+    async function createLocation(location) {
+        const response = await assetManagementApi.createLocation(location.organizationId, LocationAssembler.toResourceFromEntity(location));
+        const createdLocation = LocationAssembler.toEntityFromResource(response.data);
+        locations.value.push(createdLocation);
+        return createdLocation;
+    }
+
+    /**
+     * Updates location in the asset management context.
+     *
+     * @param {*} location
+     * @returns {Promise<*>}
+     */
+    async function updateLocation(location) {
+        const response = await assetManagementApi.updateLocation(location.organizationId, LocationAssembler.toResourceFromEntity(location));
+        const updatedLocation = LocationAssembler.toEntityFromResource(response.data);
+        locations.value = locations.value.map(current => current.id === updatedLocation.id ? updatedLocation : current);
+        gateways.value = gateways.value.map(gateway => gateway.locationId === updatedLocation.id
+            ? new Gateway({...gateway, location: updatedLocation.name})
+            : gateway);
+        enrichAssetsWithGatewayData();
+        return updatedLocation;
     }
 
     /**
@@ -239,7 +329,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function createAssetSettings(settings) {
-        const response = await assetManagementApi.createAssetSettings(AssetSettingsAssembler.toResourceFromEntity(settings));
+        const response = await assetManagementApi.createAssetSettings(settings.organizationId, AssetSettingsAssembler.toResourceFromEntity(settings));
         const createdSettings = AssetSettingsAssembler.toEntityFromResource(response.data);
         assetSettings.value.push(createdSettings);
         return createdSettings;
@@ -252,7 +342,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @returns {Promise<*>}
      */
     async function updateAssetSettings(settings) {
-        const response = await assetManagementApi.updateAssetSettings(AssetSettingsAssembler.toResourceFromEntity(settings));
+        const response = await assetManagementApi.updateAssetSettings(settings.organizationId, AssetSettingsAssembler.toResourceFromEntity(settings));
         const updatedSettings = AssetSettingsAssembler.toEntityFromResource(response.data);
         assetSettings.value = assetSettings.value.map(current => current.id === updatedSettings.id ? updatedSettings : current);
         return updatedSettings;
@@ -266,7 +356,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      */
     function assetIssueCountFor(organizationId) {
         if (!organizationId) return 0;
-        return assets.value.filter(asset => asset.organizationId === organizationId && hasAssetIssue(asset)).length;
+        return assets.value.filter(asset => asset.organizationId === Number(organizationId) && hasAssetIssue(asset)).length;
     }
 
     /**
@@ -278,7 +368,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      */
     function assetsForOrganization(organizationId, availableAssets = assets.value) {
         if (!organizationId) return [];
-        return availableAssets.filter(asset => asset.organizationId === organizationId);
+        return availableAssets.filter(asset => asset.organizationId === Number(organizationId));
     }
 
     /**
@@ -290,7 +380,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      */
     function iotDevicesForOrganization(organizationId, availableDevices = iotDevices.value) {
         if (!organizationId) return [];
-        return availableDevices.filter(iotDevice => iotDevice.organizationId === organizationId);
+        return availableDevices.filter(iotDevice => iotDevice.organizationId === Number(organizationId));
     }
 
     /**
@@ -302,7 +392,19 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      */
     function gatewaysForOrganization(organizationId, availableGateways = gateways.value) {
         if (!organizationId) return [];
-        return availableGateways.filter(gateway => gateway.organizationId === organizationId);
+        return availableGateways.filter(gateway => gateway.organizationId === Number(organizationId));
+    }
+
+    /**
+     * Handles locations for organization behavior in the asset management context.
+     *
+     * @param {number|string} organizationId
+     * @param {*} availableLocations
+     * @returns {*}
+     */
+    function locationsForOrganization(organizationId, availableLocations = locations.value) {
+        if (!organizationId) return [];
+        return availableLocations.filter(location => location.organizationId === Number(organizationId));
     }
 
     /**
@@ -314,7 +416,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      */
     function assetSettingsForOrganization(organizationId, availableSettings = assetSettings.value) {
         if (!organizationId) return [];
-        return availableSettings.filter(settings => settings.organizationId === organizationId);
+        return availableSettings.filter(settings => settings.organizationId === Number(organizationId));
     }
 
     /**
@@ -334,8 +436,22 @@ const useAssetManagementStore = defineStore('asset-management', () => {
      * @param {*} availableGateways
      * @returns {string}
      */
-    function locationForAsset(asset, availableGateways = gateways.value) {
-        return locationForGateway(asset.gatewayId, availableGateways) ?? asset.location;
+    function locationForAsset(asset, availableGateways = gateways.value, availableLocations = locations.value) {
+        const gateway = gatewayForAsset(asset, availableGateways);
+        const location = availableLocations.find(current => current.id === Number(asset.locationId));
+        return gateway?.location ?? location?.name ?? asset.location;
+    }
+
+    /**
+     * Handles location name by id behavior in the asset management context.
+     *
+     * @param {number|string} locationId
+     * @param {*} availableLocations
+     * @returns {string}
+     */
+    function locationNameById(locationId, availableLocations = locations.value) {
+        if (!locationId) return 'N/A';
+        return availableLocations.find(location => location.id === Number(locationId))?.name ?? 'N/A';
     }
 
     /**
@@ -348,6 +464,46 @@ const useAssetManagementStore = defineStore('asset-management', () => {
     function locationForGateway(gatewayId, availableGateways = gateways.value) {
         if (!gatewayId) return null;
         return availableGateways.find(gateway => gateway.id === Number(gatewayId))?.location ?? null;
+    }
+
+    /**
+     * Handles gateway for asset behavior in the asset management context.
+     *
+     * @param {*} asset
+     * @param {*} availableGateways
+     * @returns {*}
+     */
+    function gatewayForAsset(asset, availableGateways = gateways.value) {
+        if (!asset) return null;
+        return availableGateways.find(gateway => gateway.id === Number(asset.gatewayId)) ??
+            availableGateways.find(gateway => asset.locationId !== null && gateway.locationId === Number(asset.locationId)) ??
+            null;
+    }
+
+    /**
+     * Enriches loaded assets with location and gateway display data preserved by the UI.
+     *
+     * @returns {void}
+     */
+    function enrichAssetsWithGatewayData() {
+        assets.value = assets.value.map(asset => enrichAssetWithGatewayData(asset));
+    }
+
+    /**
+     * Enriches one asset with matching gateway display data.
+     *
+     * @param {*} asset
+     * @returns {*}
+     */
+    function enrichAssetWithGatewayData(asset) {
+        const gateway = gatewayForAsset(asset);
+        if (!gateway) return asset;
+        return new Asset({
+            ...asset,
+            gatewayId: asset.gatewayId ?? gateway.id,
+            locationId: asset.locationId ?? gateway.locationId,
+            location: asset.location || gateway.location,
+        });
     }
 
     /**
@@ -640,17 +796,20 @@ const useAssetManagementStore = defineStore('asset-management', () => {
         assets,
         iotDevices,
         gateways,
+        locations,
         assetSettings,
         errors,
         loading,
         assetsLoaded,
         iotDevicesLoaded,
         gatewaysLoaded,
+        locationsLoaded,
         assetSettingsLoaded,
         assetCount,
         fetchAssets,
         fetchIoTDevices,
         fetchGateways,
+        fetchLocations,
         fetchAssetSettings,
         fetchAssetManagementData,
         createAsset,
@@ -662,16 +821,21 @@ const useAssetManagementStore = defineStore('asset-management', () => {
         createGateway,
         updateGateway,
         deleteGateway,
+        createLocation,
+        updateLocation,
         createAssetSettings,
         updateAssetSettings,
         assetIssueCountFor,
         assetsForOrganization,
         iotDevicesForOrganization,
         gatewaysForOrganization,
+        locationsForOrganization,
         assetSettingsForOrganization,
         defaultSettingsForOrganization,
         locationForAsset,
+        locationNameById,
         locationForGateway,
+        gatewayForAsset,
         monitoredAssetsForOrganization,
         iotDevicesForAsset,
         settingsForAsset,

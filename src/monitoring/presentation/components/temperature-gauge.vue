@@ -108,10 +108,13 @@ const displayMaximumTemperature = computed(() => hasTemperature.value ? Math.cei
 <style scoped>
 .gauge-content {
   align-items: center;
+  box-sizing: border-box;
   display: flex;
   gap: 20px;
   height: 100%;
+  min-width: 0;
   padding: 16px 24px;
+  width: 100%;
 }
 
 .gauge-container {
@@ -146,9 +149,10 @@ const displayMaximumTemperature = computed(() => hasTemperature.value ? Math.cei
 
 .asset-details {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 12px;
-  min-width: 220px;
+  min-width: 0;
 }
 
 .detail-item {
@@ -156,6 +160,7 @@ const displayMaximumTemperature = computed(() => hasTemperature.value ? Math.cei
   display: flex;
   font-family: 'Inter', sans-serif;
   gap: 10px;
+  min-width: 0;
 }
 
 .detail-item .material-icons {
@@ -176,5 +181,36 @@ const displayMaximumTemperature = computed(() => hasTemperature.value ? Math.cei
   color: #0f172a;
   font-size: 12px;
   font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+  .gauge-content {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .gauge-container {
+    align-self: center;
+    height: 132px;
+    width: 132px;
+  }
+
+  .asset-details {
+    width: 100%;
+  }
+
+  .detail-item {
+    display: grid;
+    grid-template-columns: 16px minmax(74px, 0.8fr) minmax(0, 1fr);
+  }
+
+  .detail-label {
+    min-width: 0;
+  }
 }
 </style>

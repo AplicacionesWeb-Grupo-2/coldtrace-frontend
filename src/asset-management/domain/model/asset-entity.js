@@ -8,6 +8,7 @@ import {ConnectivityStatus} from '@/asset-management/domain/model/connectivity-s
  * @property {number|null} [organizationId]
  * @property {string} [uuid]
  * @property {*} [type]
+ * @property {number|null} [locationId]
  * @property {number|null} [gatewayId]
  * @property {string} [name]
  * @property {string} [location]
@@ -32,6 +33,7 @@ export class Asset {
         organizationId = null,
         uuid = '',
         type = AssetType.ColdRoom,
+        locationId = null,
         gatewayId = null,
         name = '',
         location = '',
@@ -47,6 +49,7 @@ export class Asset {
         this.organizationId = Number(organizationId);
         this.uuid = uuid;
         this.type = type;
+        this.locationId = locationId === null || locationId === undefined ? null : Number(locationId);
         this.gatewayId = gatewayId === null || gatewayId === undefined ? null : Number(gatewayId);
         this.name = name;
         this.location = location;

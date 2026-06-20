@@ -73,10 +73,11 @@ async function loadPageData() {
     pageLoading.value = true;
 
     try {
+        await identityAccessStore.fetchAccessData();
+        const organizationId = activeOrganizationId.value;
         await Promise.all([
-            identityAccessStore.fetchAccessData(),
-            assetManagementStore.fetchAssetManagementData({includeSettings: true}),
-            monitoringStore.fetchMonitoringData({includeDependencies: false}),
+            assetManagementStore.fetchAssetManagementData({organizationId, includeSettings: true}),
+            monitoringStore.fetchMonitoringData({organizationId, includeDependencies: false}),
         ]);
     } finally {
         pageLoading.value = false;
@@ -199,7 +200,7 @@ function formatDateTime(value) {
     </section>
 
     <template v-else>
-      <section class="filter-card four-columns" aria-label="Operational history filters">
+      <section class="filter-card" aria-label="Operational history filters">
         <label class="filter-field">
           <span>{{ t('reports.history.filter-from') }}</span>
           <input
@@ -429,7 +430,10 @@ function formatDateTime(value) {
 .primary-action {
   background: #2563eb;
   border: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
   color: #ffffff;
+  height: 48px;
+  width: 100%;
 }
 
 .secondary-action,
@@ -437,6 +441,10 @@ function formatDateTime(value) {
   background: #ffffff;
   border: 1px solid #ebeef2;
   color: #606c80;
+}
+
+.secondary-action {
+  height: 36px;
 }
 
 .primary-action:disabled,
@@ -497,20 +505,8 @@ function formatDateTime(value) {
   align-items: end;
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(3, minmax(180px, 240px)) minmax(140px, 1fr);
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
   padding: 20px 24px;
-}
-
-.filter-card.two-columns {
-  grid-template-columns: repeat(2, minmax(220px, 280px)) minmax(140px, 1fr);
-}
-
-.filter-card.three-columns {
-  grid-template-columns: repeat(3, minmax(180px, 240px));
-}
-
-.filter-card.four-columns {
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
 }
 
 .filter-field {
@@ -540,12 +536,12 @@ function formatDateTime(value) {
 .filter-field input,
 .filter-field select {
   background: #f4f4f4;
-  border: 0;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.14);
   box-sizing: border-box;
   color: #404040;
   font-size: 13px;
+  font-weight: 400;
   min-height: 38px;
   outline: none;
   padding: 9px 12px;
@@ -558,10 +554,37 @@ function formatDateTime(value) {
 
 .filter-meta {
   align-items: center;
+  align-self: end;
+  background: #f8fafc;
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
   display: flex;
+  justify-content: space-between;
+  justify-self: stretch;
+  min-height: 40px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.report-card-actions {
+  align-items: center;
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
-  min-height: 38px;
+  justify-self: stretch;
+  min-height: 40px;
+}
+
+.report-card-actions .primary-action,
+.report-card-actions .secondary-action {
+  height: 40px;
+  min-height: 40px;
+  min-width: 0;
+  padding: 7px 14px;
+  white-space: nowrap;
+  width: auto;
 }
 
 .filter-meta strong,
@@ -912,10 +935,7 @@ function formatDateTime(value) {
 
 @media (max-width: 980px) {
   .page-heading,
-  .filter-card,
-  .filter-card.two-columns,
-  .filter-card.three-columns,
-  .filter-card.four-columns {
+  .filter-card {
     display: grid;
     grid-template-columns: 1fr;
   }

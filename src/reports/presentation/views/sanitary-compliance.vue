@@ -81,11 +81,12 @@ async function loadPageData() {
     feedback.value = 'idle';
 
     try {
+        await identityAccessStore.fetchAccessData();
+        const organizationId = activeOrganizationId.value;
         await Promise.all([
-            identityAccessStore.fetchAccessData(),
-            assetManagementStore.fetchAssetManagementData({includeSettings: true}),
-            monitoringStore.fetchMonitoringData({includeDependencies: false}),
-            reportsStore.fetchReports(),
+            assetManagementStore.fetchAssetManagementData({organizationId, includeSettings: true}),
+            monitoringStore.fetchMonitoringData({organizationId, includeDependencies: false}),
+            reportsStore.fetchReports(organizationId),
         ]);
     } catch {
         feedback.value = 'server-error';
@@ -271,21 +272,6 @@ function fileNamePart(value) {
         <p>{{ t('reports.compliance.subtitle') }}</p>
       </div>
 
-      <div class="heading-actions">
-        <button type="button" class="secondary-action" @click="loadPageData">
-          <span class="material-icons" aria-hidden="true">refresh</span>
-          {{ t('reports.compliance.reload') }}
-        </button>
-        <button
-          type="button"
-          class="primary-action"
-          :disabled="!canExportReport || !canExportReports"
-          @click="exportComplianceReport"
-        >
-          <span class="material-icons" aria-hidden="true">download</span>
-          {{ t('reports.compliance.export') }}
-        </button>
-      </div>
     </div>
 
     <p v-if="feedback === 'exported'" class="feedback success">
@@ -341,6 +327,22 @@ function fileNamePart(value) {
         <div class="filter-meta">
           <span>{{ t('reports.compliance.generated-reports') }}</span>
           <strong>{{ generatedReportsCount }}</strong>
+        </div>
+
+        <div class="report-card-actions">
+          <button type="button" class="secondary-action" @click="loadPageData">
+            <span class="material-icons" aria-hidden="true">refresh</span>
+            {{ t('reports.compliance.reload') }}
+          </button>
+          <button
+            type="button"
+            class="primary-action"
+            :disabled="!canExportReport || !canExportReports"
+            @click="exportComplianceReport"
+          >
+            <span class="material-icons" aria-hidden="true">download</span>
+            {{ t('reports.compliance.export') }}
+          </button>
         </div>
       </section>
 
@@ -493,7 +495,6 @@ function fileNamePart(value) {
 .page-heading h1 {
   color: #263348;
   font-size: 22px;
-  line-height: 30px;
   margin: 0;
 }
 
@@ -512,7 +513,6 @@ function fileNamePart(value) {
   color: #98a2b3;
   font-size: 12px;
   font-weight: 800;
-  line-height: 20px;
   margin: 6px 0 0;
 }
 
@@ -521,7 +521,6 @@ function fileNamePart(value) {
   display: block;
   font-size: 11px;
   font-weight: 800;
-  line-height: 16px;
   margin-bottom: 4px;
 }
 
@@ -551,7 +550,10 @@ function fileNamePart(value) {
 .primary-action {
   background: #2563eb;
   border: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
   color: #ffffff;
+  height: 48px;
+  width: 100%;
 }
 
 .secondary-action,
@@ -559,6 +561,10 @@ function fileNamePart(value) {
   background: #ffffff;
   border: 1px solid #ebeef2;
   color: #606c80;
+}
+
+.secondary-action {
+  height: 36px;
 }
 
 .primary-action:disabled,
@@ -619,20 +625,8 @@ function fileNamePart(value) {
   align-items: end;
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(3, minmax(180px, 240px)) minmax(140px, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   padding: 20px 24px;
-}
-
-.filter-card.two-columns {
-  grid-template-columns: repeat(2, minmax(220px, 280px)) minmax(140px, 1fr);
-}
-
-.filter-card.three-columns {
-  grid-template-columns: repeat(3, minmax(180px, 240px));
-}
-
-.filter-card.four-columns {
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
 }
 
 .filter-field {
@@ -651,7 +645,6 @@ function fileNamePart(value) {
 .history-table small {
   font-size: 12px;
   font-weight: 800;
-  line-height: 18px;
 }
 
 .filter-field span,
@@ -667,7 +660,10 @@ function fileNamePart(value) {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.14);
   box-sizing: border-box;
   color: #404040;
+  font-family: inherit;
   font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
   min-height: 38px;
   outline: none;
   padding: 9px 12px;
@@ -680,10 +676,37 @@ function fileNamePart(value) {
 
 .filter-meta {
   align-items: center;
+  align-self: end;
+  background: #f8fafc;
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
   display: flex;
+  justify-content: space-between;
+  justify-self: stretch;
+  min-height: 40px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.report-card-actions {
+  align-items: center;
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
-  min-height: 38px;
+  justify-self: stretch;
+  min-height: 40px;
+}
+
+.report-card-actions .primary-action,
+.report-card-actions .secondary-action {
+  height: 40px;
+  min-height: 40px;
+  min-width: 0;
+  padding: 7px 14px;
+  white-space: nowrap;
+  width: auto;
 }
 
 .filter-meta strong,
@@ -1034,10 +1057,7 @@ function fileNamePart(value) {
 
 @media (max-width: 980px) {
   .page-heading,
-  .filter-card,
-  .filter-card.two-columns,
-  .filter-card.three-columns,
-  .filter-card.four-columns {
+  .filter-card {
     display: grid;
     grid-template-columns: 1fr;
   }

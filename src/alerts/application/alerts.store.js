@@ -81,8 +81,14 @@ const useAlertsStore = defineStore('alerts', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchIncidentsOnly() {
-        const response = await alertsApi.getIncidents();
+    async function fetchIncidentsOnly(organizationId = identityStore.currentOrganizationIdFrom()) {
+        if (!organizationId) {
+            incidents.value = [];
+            incidentsLoaded.value = false;
+            return incidents.value;
+        }
+
+        const response = await alertsApi.getIncidentsForOrganization(organizationId);
         incidents.value = IncidentAssembler.toEntitiesFromResponse(response);
         incidentsLoaded.value = true;
         return incidents.value;
@@ -93,8 +99,14 @@ const useAlertsStore = defineStore('alerts', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchNotificationsOnly() {
-        const response = await alertsApi.getNotifications();
+    async function fetchNotificationsOnly(organizationId = identityStore.currentOrganizationIdFrom()) {
+        if (!organizationId) {
+            notifications.value = [];
+            notificationsLoaded.value = false;
+            return notifications.value;
+        }
+
+        const response = await alertsApi.getNotificationsForOrganization(organizationId);
         notifications.value = NotificationAssembler.toEntitiesFromResponse(response);
         notificationsLoaded.value = true;
         return notifications.value;
@@ -106,7 +118,7 @@ const useAlertsStore = defineStore('alerts', () => {
      * @param {Object} options
      * @returns {Promise<*>}
      */
-    async function loadIncidents({silent = false} = {}) {
+    async function loadIncidents({organizationId = identityStore.currentOrganizationIdFrom(), silent = false} = {}) {
         if (incidentsRequestInFlight) return {incidents: incidents.value, notifications: notifications.value};
 
         incidentsRequestInFlight = true;
@@ -120,12 +132,19 @@ const useAlertsStore = defineStore('alerts', () => {
                 await identityStore.fetchAccessData();
             }
 
+            const activeOrganizationId = organizationId ?? identityStore.currentOrganizationIdFrom();
+            if (!activeOrganizationId) {
+                incidents.value = [];
+                notifications.value = [];
+                return {incidents: incidents.value, notifications: notifications.value};
+            }
+
             const [incidentResponse, notificationResponse, readingsResponse, assetsResponse, settingsResponse] = await Promise.all([
-                alertsApi.getIncidents(),
-                alertsApi.getNotifications(),
-                monitoringApi.getSensorReadings(),
-                assetManagementApi.getAssets(),
-                assetManagementApi.getAssetSettings(),
+                alertsApi.getIncidentsForOrganization(activeOrganizationId),
+                alertsApi.getNotificationsForOrganization(activeOrganizationId),
+                monitoringApi.getSensorReadingsForOrganization(activeOrganizationId),
+                assetManagementApi.getAssets(activeOrganizationId),
+                assetManagementApi.getAssetSettings(activeOrganizationId),
             ]);
             let currentIncidents = IncidentAssembler.toEntitiesFromResponse(incidentResponse);
             let currentNotifications = NotificationAssembler.toEntitiesFromResponse(notificationResponse);
@@ -243,10 +262,10 @@ const useAlertsStore = defineStore('alerts', () => {
 
         try {
             const [assetsResponse, iotDevicesResponse, settingsResponse, readingsResponse] = await Promise.all([
-                assetManagementApi.getAssets(),
-                assetManagementApi.getIoTDevices(),
-                assetManagementApi.getAssetSettings(),
-                monitoringApi.getSensorReadings(),
+                assetManagementApi.getAssets(incident.organizationId),
+                assetManagementApi.getIoTDevices(incident.organizationId),
+                assetManagementApi.getAssetSettings(incident.organizationId),
+                monitoringApi.getSensorReadingsForOrganization(incident.organizationId),
             ]);
             const assets = AssetAssembler.toEntitiesFromResponse(assetsResponse);
             const iotDevices = IoTDeviceAssembler.toEntitiesFromResponse(iotDevicesResponse);
@@ -256,7 +275,7 @@ const useAlertsStore = defineStore('alerts', () => {
 
             if (!reading) throw new Error('missing-stabilization-context');
 
-            await monitoringApi.createSensorReading(SensorReadingAssembler.toResourceFromEntity(reading));
+            await monitoringApi.createSensorReading(incident.organizationId, SensorReadingAssembler.toResourceFromEntity(reading));
             const updated = await updateIncidentWithRetry(incidentWith(incident, {conditionStable: true}));
             incidents.value = incidents.value.map(current => current.id === updated.id ? updated : current);
             feedback.value = 'alerts.incident-list.feedback-stabilized';
@@ -377,7 +396,7 @@ const useAlertsStore = defineStore('alerts', () => {
      */
     async function createIncidentWithRetry(incident) {
         return retryRequest(async () => {
-            const response = await alertsApi.createIncident(IncidentAssembler.toResourceFromEntity(incident));
+            const response = await alertsApi.createIncident(incident.organizationId, IncidentAssembler.toResourceFromEntity(incident));
             return IncidentAssembler.toEntityFromResource(response.data);
         });
     }
@@ -390,7 +409,7 @@ const useAlertsStore = defineStore('alerts', () => {
      */
     async function updateIncidentWithRetry(incident) {
         return retryRequest(async () => {
-            const response = await alertsApi.updateIncident(IncidentAssembler.toResourceFromEntity(incident));
+            const response = await alertsApi.updateIncident(incident.organizationId, IncidentAssembler.toResourceFromEntity(incident));
             return IncidentAssembler.toEntityFromResource(response.data);
         });
     }
@@ -574,7 +593,7 @@ const useAlertsStore = defineStore('alerts', () => {
      * @returns {*}
      */
     function incidentWithCurrentEscalation(incident, now) {
-        if (incident.isClosed || incident.escalationStatus === 'reviewed') return null;
+        if (incident.isClosed || incident.isEscalated || incident.escalationStatus === 'reviewed') return null;
 
         if (!incident.isOpen) {
             return incident.escalationStatus === 'pending-configuration'

@@ -26,7 +26,17 @@ export class AlertsApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getIncidents() {
-        return this.#incidentsEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests incidents from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getIncidentsForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, incidentsEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
     }
 
     /**
@@ -35,8 +45,11 @@ export class AlertsApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    createIncident(resource) {
-        return this.#incidentsEndpoint.create(resource);
+    createIncident(organizationId, resource) {
+        const endpoint = this.#endpointForOrganization(organizationId, incidentsEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to create an incident.'));
+
+        return endpoint.create(this.#incidentRequestFrom(resource));
     }
 
     /**
@@ -45,8 +58,36 @@ export class AlertsApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    updateIncident(resource) {
-        return this.#incidentsEndpoint.update(resource.id, resource);
+    updateIncident(organizationId, resource) {
+        const basePath = this.organizationScopedPath(organizationId, `${incidentsEndpointPath}/${resource.id}`);
+        if (!basePath) return Promise.reject(new Error('Organization is required to update an incident.'));
+
+        if (resource.status === 'recognized' && resource.recognizedBy) {
+            return this.http.post(`${basePath}/acknowledgements`, {acknowledgedBy: resource.recognizedBy});
+        }
+
+        if (resource.status === 'closed' && resource.closedBy) {
+            return this.http.post(`${basePath}/resolutions`, {
+                resolvedBy: resource.closedBy,
+                resolutionNotes: resource.closureEvidence ?? resource.correctiveAction ?? 'Resolved from ColdTrace.',
+            });
+        }
+
+        if (resource.escalationStatus === 'escalated') {
+            return this.http.patch(`${basePath}/escalation`, {
+                escalatedBy: resource.escalatedTo ?? 'ColdTrace',
+                escalationReason: resource.conditionKey ?? resource.type ?? 'Incident escalation threshold reached.',
+            });
+        }
+
+        if (resource.correctiveAction) {
+            return this.http.patch(`${basePath}/corrective-action`, {
+                correctiveAction: resource.correctiveAction,
+                registeredBy: resource.recognizedBy ?? resource.closedBy ?? 'ColdTrace',
+            });
+        }
+
+        return Promise.resolve({status: 200, data: resource});
     }
 
     /**
@@ -55,7 +96,17 @@ export class AlertsApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getNotifications() {
-        return this.#notificationsEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests notifications from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getNotificationsForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, notificationsEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
     }
 
     /**
@@ -65,6 +116,37 @@ export class AlertsApi extends BaseApi {
      * @returns {Promise<*>}
      */
     createNotification(resource) {
-        return this.#notificationsEndpoint.create(resource);
+        return Promise.resolve({status: 201, data: resource});
+    }
+
+    /**
+     * Builds an endpoint helper for an organization-scoped resource.
+     *
+     * @param {number|string} organizationId
+     * @param {string} endpointPath
+     * @returns {BaseEndpoint|null}
+     */
+    #endpointForOrganization(organizationId, endpointPath) {
+        const scopedPath = this.organizationScopedPath(organizationId, endpointPath);
+        return scopedPath ? new BaseEndpoint(this, scopedPath) : null;
+    }
+
+    /**
+     * Maps incident data to backend create request.
+     *
+     * @param {*} resource
+     * @returns {*}
+     */
+    #incidentRequestFrom(resource) {
+        return {
+            assetId: resource.assetId,
+            deviceId: resource.deviceId ?? resource.iotDeviceId ?? null,
+            readingId: resource.readingId ?? resource.sourceReadingId ?? null,
+            assetName: resource.assetName,
+            deviceName: resource.deviceName ?? null,
+            type: resource.type,
+            severity: resource.severity,
+            value: resource.value,
+        };
     }
 }

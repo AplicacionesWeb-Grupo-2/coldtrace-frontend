@@ -73,7 +73,7 @@ function roleFor(roleId) {
  * @returns {*}
  */
 function toUserAccessRow(user) {
-    const selectedRoleId = selectedRoleByUserId.value[user.id] ?? user.roleId;
+    const selectedRoleId = selectedRoleByUserId.value[user.id] ?? 0;
     const currentRole = roleFor(user.roleId);
     const selectedRole = roleFor(selectedRoleId);
     return {
@@ -82,7 +82,7 @@ function toUserAccessRow(user) {
         selectedRole,
         selectedRoleId,
         permissionKeys: store.permissionKeysForRole(selectedRole ?? currentRole),
-        pending: selectedRoleId !== user.roleId,
+        pending: selectedRoleId !== 0 && selectedRoleId !== user.roleId,
     };
 }
 
@@ -333,14 +333,6 @@ function loadAccessData() {
                     @click="saveRole(row.user)"
                   >
                     {{ t(row.pending ? 'roles-permissions.save' : 'roles-permissions.saved') }}
-                  </button>
-                  <button
-                    class="delete-action"
-                    type="button"
-                    :disabled="deletingUserId === row.user.id || !store.canDeleteUser(row.user)"
-                    @click="deleteUser(row.user)"
-                  >
-                    {{ t(deletingUserId === row.user.id ? 'roles-permissions.deleting' : 'roles-permissions.delete') }}
                   </button>
                 </div>
               </td>
