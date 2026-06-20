@@ -27,7 +27,14 @@ export class TechnicalServiceRequestAssembler {
      * @returns {TechnicalServiceRequest}
      */
     static toEntityFromResource(resource) {
-        return new TechnicalServiceRequest({...resource});
+        return new TechnicalServiceRequest({
+            ...resource,
+            uuid: resource.uuid ?? resource.code ?? '',
+            requestedDate: resource.requestedDate ?? dateKeyFrom(resource.requestedAt),
+            interventionNotes: resource.interventionNotes ?? resource.closureSummary ?? null,
+            resultNotes: resource.resultNotes ?? resource.evidence ?? null,
+            functionalTestPassed: resource.functionalTestPassed ?? (resource.status === 'closed' ? true : null),
+        });
     }
 
     /**
@@ -41,4 +48,14 @@ export class TechnicalServiceRequestAssembler {
         const resources = response.data instanceof Array ? response.data : response.data.technicalServiceRequests;
         return (resources ?? []).map(resource => this.toEntityFromResource(resource));
     }
+}
+
+/**
+ * Extracts a date key suitable for table display.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function dateKeyFrom(value) {
+    return value ? String(value).slice(0, 10) : '';
 }

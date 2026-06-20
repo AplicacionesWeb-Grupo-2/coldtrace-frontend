@@ -57,11 +57,22 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchUsers() {
-        const response = await identityAccessApi.getUsers();
+    async function fetchUsers(organizationId = currentOrganizationIdFrom()) {
+        const response = await identityAccessApi.getUsers(organizationId);
         users.value = UserAssembler.toEntitiesFromResponse(response);
-        usersLoaded.value = true;
+        usersLoaded.value = !!organizationId;
         return users.value;
+    }
+
+    /**
+     * Loads users from one organization without replacing state.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<User[]>}
+     */
+    async function fetchUsersForOrganization(organizationId) {
+        const response = await identityAccessApi.getUsersForOrganization(organizationId);
+        return UserAssembler.toEntitiesFromResponse(response);
     }
 
     /**
@@ -98,11 +109,17 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         loading.value = true;
         errors.value = [];
         try {
-            const [loadedUsers, loadedRoles, loadedOrganizations] = await Promise.all([
-                fetchUsers(),
+            const [loadedRoles, loadedOrganizations] = await Promise.all([
                 fetchRoles(),
                 fetchOrganizations(),
             ]);
+            const organizationUsers = await initialUsersForCurrentContext(loadedOrganizations);
+            const loadedUsers = organizationUsers.users;
+
+            users.value = loadedUsers;
+            usersLoaded.value = organizationUsers.organization !== null;
+            if (organizationUsers.organization && !currentOrganization.value) currentOrganization.value = organizationUsers.organization;
+
             setCurrentContextFrom(loadedUsers, loadedRoles, loadedOrganizations);
             return {users: loadedUsers, roles: loadedRoles, organizations: loadedOrganizations};
         } catch (error) {
@@ -123,8 +140,8 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      */
     function setCurrentContext(user, availableRoles = roles.value, availableOrganizations = organizations.value) {
         currentUser.value = user;
-        currentRole.value = availableRoles.find(role => role.id === user?.roleId) ?? null;
-        currentOrganization.value = availableOrganizations.find(organization => organization.id === user?.organizationId) ?? null;
+        currentRole.value = availableRoles.find(role => role.id === Number(user?.roleId)) ?? null;
+        currentOrganization.value = availableOrganizations.find(organization => organization.id === Number(user?.organizationId)) ?? null;
     }
 
     /**
@@ -139,6 +156,46 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         const user = currentUserFrom(availableUsers);
         if (user) setCurrentContext(user, availableRoles, availableOrganizations);
         initializeRolePermissions(availableRoles);
+    }
+
+    /**
+     * Resolves initial users for the current session or the first organization with users.
+     *
+     * @param {Organization[]} availableOrganizations
+     * @returns {Promise<{organization: Organization|null, users: User[]}>}
+     */
+    async function initialUsersForCurrentContext(availableOrganizations) {
+        const currentOrganizationId = currentUser.value?.organizationId ?? currentOrganization.value?.id;
+        if (currentOrganizationId) {
+            return {
+                organization: availableOrganizations.find(organization => organization.id === Number(currentOrganizationId)) ?? null,
+                users: await fetchUsersForOrganization(currentOrganizationId),
+            };
+        }
+
+        for (const organization of availableOrganizations) {
+            const organizationUsers = await fetchUsersForOrganization(organization.id);
+            if (organizationUsers.length) return {organization, users: organizationUsers};
+        }
+
+        return {organization: availableOrganizations[0] ?? null, users: []};
+    }
+
+    /**
+     * Finds the first organization user matching the provided email.
+     *
+     * @param {Organization[]} availableOrganizations
+     * @param {string} email
+     * @returns {Promise<{organization: Organization|null, users: User[], user: User|null}>}
+     */
+    async function findUserByEmail(availableOrganizations, email) {
+        for (const organization of availableOrganizations) {
+            const organizationUsers = await fetchUsersForOrganization(organization.id);
+            const user = organizationUsers.find(current => current.email.toLowerCase() === email);
+            if (user) return {organization, users: organizationUsers, user};
+        }
+
+        return {organization: null, users: [], user: null};
     }
 
     /**
@@ -185,7 +242,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      */
     function currentOrganizationNameFrom(availableUsers = users.value, availableOrganizations = organizations.value) {
         const organizationId = currentOrganizationIdFrom(availableUsers);
-        const organization = availableOrganizations.find(current => current.id === organizationId);
+        const organization = availableOrganizations.find(current => current.id === Number(organizationId));
         return organization?.commercialName || currentOrganization.value?.commercialName || 'ColdTrace';
     }
 
@@ -208,7 +265,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      */
     function currentRoleFrom(availableUsers = users.value, availableRoles = roles.value) {
         const user = currentUserFrom(availableUsers);
-        return availableRoles.find(role => role.id === user?.roleId);
+        return availableRoles.find(role => role.id === Number(user?.roleId));
     }
 
     /**
@@ -485,18 +542,33 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         const validPassword = 'ColdTrace123';
         const revokedAccessEmail = 'revoked@coldtrace.com';
         const normalizedEmail = email.trim().toLowerCase();
-        const accessData = await fetchAccessData();
 
         if (normalizedEmail === revokedAccessEmail) {
             return 'revoked-access';
         }
 
-        const user = accessData.users.find(current => current.email.toLowerCase() === normalizedEmail);
+        loading.value = true;
+        errors.value = [];
+        let loadedRoles;
+        let loadedOrganizations;
+        try {
+            [loadedRoles, loadedOrganizations] = await Promise.all([
+                fetchRoles(),
+                fetchOrganizations(),
+            ]);
+        } finally {
+            loading.value = false;
+        }
+
+        const match = await findUserByEmail(loadedOrganizations, normalizedEmail);
+        const user = match.user;
         if (!user || password !== validPassword) {
             return 'invalid-credentials';
         }
 
-        setCurrentContext(user, accessData.roles, accessData.organizations);
+        users.value = match.users;
+        usersLoaded.value = true;
+        setCurrentContext(user, loadedRoles, loadedOrganizations);
         return 'success';
     }
 
@@ -508,50 +580,32 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      */
     async function createAccount({organizationName, fullName, email}) {
         const normalizedEmail = email.trim().toLowerCase();
-        const accessData = await fetchAccessData();
-        const duplicateEmail = accessData.users.some(user => user.email.toLowerCase() === normalizedEmail);
+        const [loadedRoles, loadedOrganizations] = await Promise.all([
+            fetchRoles(),
+            fetchOrganizations(),
+        ]);
+        const duplicateEmail = (await findUserByEmail(loadedOrganizations, normalizedEmail)).user !== null;
 
         if (duplicateEmail) {
             return {status: 'duplicate-email'};
         }
 
         const [firstName, ...lastNameParts] = fullName.trim().replace(/\s+/g, ' ').split(' ');
-        const nextOrganizationId = Math.max(...accessData.organizations.map(organization => organization.id), 0) + 1;
-        const nextUserId = Math.max(...accessData.users.map(user => user.id), 0) + 1;
-        const creatorRole = accessData.roles.find(role => role.name === RoleName.SuperAdministrator);
-
-        if (!creatorRole) {
-            return {status: 'server-error'};
-        }
-
-        const organization = new Organization({
-            id: nextOrganizationId,
+        const response = await identityAccessApi.createOrganizationSignUp({
             legalName: organizationName,
             commercialName: organizationName,
             taxId: '',
             contactEmail: normalizedEmail,
-        });
-        const createdOrganizationResponse = await identityAccessApi.createOrganization(
-            OrganizationAssembler.toResourceFromEntity(organization),
-        );
-        const createdOrganization = OrganizationAssembler.toEntityFromResource(createdOrganizationResponse.data);
-
-        const user = new User({
-            id: nextUserId,
-            uuid: `USR-${nextUserId}`,
-            organizationUserId: 1,
             firstName,
             lastName: lastNameParts.join(' '),
             email: normalizedEmail,
-            organizationId: createdOrganization.id,
-            roleId: creatorRole.id,
         });
-        const createdUserResponse = await identityAccessApi.createUser(UserAssembler.toResourceFromEntity(user));
-        const createdUser = UserAssembler.toEntityFromResource(createdUserResponse.data);
+        const createdOrganization = OrganizationAssembler.toEntityFromResource(response.data.organization ?? response.data.Organization);
+        const createdUser = UserAssembler.toEntityFromResource(response.data.user ?? response.data.User);
 
         users.value.push(createdUser);
         organizations.value.push(createdOrganization);
-        setCurrentContext(createdUser, accessData.roles, [...accessData.organizations, createdOrganization]);
+        setCurrentContext(createdUser, loadedRoles, [...loadedOrganizations, createdOrganization]);
         return {status: 'success', user: createdUser};
     }
 
@@ -570,7 +624,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         }
 
         const normalizedEmail = email.trim().toLowerCase();
-        await fetchUsers();
+        await fetchUsers(organizationId);
         const duplicateEmail = users.value.some(user => user.email.toLowerCase() === normalizedEmail);
         if (duplicateEmail) return {status: 'duplicate-email'};
 
@@ -592,7 +646,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
             organizationId,
             roleId: Number(roleId),
         });
-        const response = await identityAccessApi.createUser(UserAssembler.toResourceFromEntity(user));
+        const response = await identityAccessApi.createUser(organizationId, UserAssembler.toResourceFromEntity(user));
         const createdUser = UserAssembler.toEntityFromResource(response.data);
         users.value.push(createdUser);
         return {status: 'success', user: createdUser};
@@ -607,7 +661,10 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      */
     async function updateUserRole(user, roleId) {
         const updatedUser = new User({...user, roleId: Number(roleId)});
-        const response = await identityAccessApi.updateUser(UserAssembler.toResourceFromEntity(updatedUser));
+        const response = await identityAccessApi.updateUser(
+            updatedUser.organizationId,
+            UserAssembler.toResourceFromEntity(updatedUser),
+        );
         const savedUser = UserAssembler.toEntityFromResource(response.data);
         users.value = users.value.map(current => current.id === savedUser.id ? savedUser : current);
         return savedUser;
@@ -631,7 +688,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
             await identityAccessApi.deleteUser(user.id);
             return {status: 'success'};
         } catch (error) {
-            if (await userWasDeletedRemotely(user.id)) {
+            if (await userWasDeletedRemotely(user.organizationId, user.id)) {
                 return {status: 'success'};
             }
 
@@ -643,12 +700,13 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     /**
      * Handles user was deleted remotely behavior in the identity access context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} userId
      * @returns {Promise<*>}
      */
-    async function userWasDeletedRemotely(userId) {
+    async function userWasDeletedRemotely(organizationId, userId) {
         try {
-            const response = await identityAccessApi.getUsers();
+            const response = await identityAccessApi.getUsers(organizationId);
             const remoteUsers = UserAssembler.toEntitiesFromResponse(response);
             return !remoteUsers.some(user => user.id === userId);
         } catch {

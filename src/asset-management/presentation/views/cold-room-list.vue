@@ -14,22 +14,40 @@ import {GatewayStatus} from '@/asset-management/domain/model/gateway-status.js';
 import {IoTDevice} from '@/asset-management/domain/model/iot-device-entity.js';
 import {IoTDeviceStatus} from '@/asset-management/domain/model/iot-device-status.js';
 import {IOT_DEVICE_DEFINITIONS} from '@/asset-management/domain/model/iot-device-definitions.js';
+import {Location} from '@/asset-management/domain/model/location-entity.js';
 import ListPagination from '@/shared/presentation/components/list-pagination.vue';
 
 const {t} = useI18n();
 const assetManagementStore = useAssetManagementStore();
 const identityAccessStore = useIdentityAccessStore();
-const {assets, iotDevices, gateways, loading, errors} = storeToRefs(assetManagementStore);
+const {assets, iotDevices, gateways, locations, loading, errors} = storeToRefs(assetManagementStore);
 
-const assetTypeTabs = [AssetType.ColdRoom, AssetType.Transport, 'iot-device', 'gateway'];
+const assetTypeTabs = [AssetType.ColdRoom, AssetType.Transport, 'location', 'gateway', 'iot-device'];
 const assetStatuses = [AssetStatus.Active, AssetStatus.Maintenance, AssetStatus.Inactive];
 const iotDeviceDefinitions = IOT_DEVICE_DEFINITIONS;
 const iotDeviceTypes = iotDeviceDefinitions.map(definition => definition.type);
 const gatewayStatuses = [GatewayStatus.Active, GatewayStatus.Maintenance, GatewayStatus.Offline];
+const iotDeviceStatuses = [IoTDeviceStatus.Linked, IoTDeviceStatus.Available, IoTDeviceStatus.Offline];
+const calibrationStatuses = [
+    CalibrationStatus.Compliant,
+    CalibrationStatus.DueSoon,
+    CalibrationStatus.Expired,
+    CalibrationStatus.Unknown,
+];
+const locationTypes = ['WAREHOUSE', 'CLIENT_SITE', 'ROUTE', 'LABORATORY', 'DISTRIBUTION_CENTER'];
+const locationStatuses = ['active', 'maintenance', 'inactive'];
+const locationTypeFormAliases = {
+    facility: 'WAREHOUSE',
+    'transport-route': 'ROUTE',
+};
 
 const identityLoading = ref(false);
 const creating = ref(false);
 const updatingAssetId = ref(null);
+const editingAssetId = ref(null);
+const editingIoTDeviceId = ref(null);
+const editingGatewayId = ref(null);
+const editingLocationId = ref(null);
 const deletingResourceKey = ref('');
 const pendingAssetStatuses = ref({});
 const submitted = ref(false);
@@ -41,6 +59,7 @@ const pageSize = 10;
 const assetPage = ref(1);
 const iotDevicePage = ref(1);
 const gatewayPage = ref(1);
+const locationPage = ref(1);
 const users = ref([]);
 const roles = ref([]);
 const organizations = ref([]);
@@ -48,24 +67,37 @@ const organizations = ref([]);
 const coldRoomForm = reactive({
     internalId: '',
     name: '',
-    gatewayId: 0,
+    locationId: 0,
     capacity: 0,
     description: '',
+    status: AssetStatus.Active,
 });
 const iotDeviceForm = reactive({
     internalId: '',
+    gatewayId: 0,
     deviceType: '',
     model: '',
     measurementType: '',
     assetId: 0,
+    status: IoTDeviceStatus.Available,
+    calibrationStatus: CalibrationStatus.Unknown,
+    lastCalibrationDate: '',
     nextCalibrationDate: '',
+    readingFrequencyMinutes: 60,
 });
 const gatewayForm = reactive({
     internalId: '',
     name: '',
-    location: '',
+    locationId: 0,
     network: '',
     status: GatewayStatus.Active,
+});
+const locationForm = reactive({
+    name: '',
+    type: 'WAREHOUSE',
+    address: '',
+    description: '',
+    status: 'active',
 });
 
 const pageLoading = computed(() => identityLoading.value || loading.value);
@@ -79,10 +111,23 @@ const isAssetTab = computed(() =>
     selectedTab.value === AssetType.ColdRoom || selectedTab.value === AssetType.Transport,
 );
 const canCreateSelectedResource = computed(() =>
-    isAssetTab.value || selectedTab.value === 'iot-device' || selectedTab.value === 'gateway',
+    isAssetTab.value || selectedTab.value === 'location' || selectedTab.value === 'iot-device' || selectedTab.value === 'gateway',
 );
 const positiveFeedback = computed(() =>
-    ['success', 'updated', 'asset-deleted', 'iot-device-created', 'iot-device-deleted', 'gateway-created', 'gateway-deleted'].includes(feedback.value),
+    [
+        'success',
+        'updated',
+        'asset-updated',
+        'iot-device-created',
+        'iot-device-updated',
+        'gateway-created',
+        'gateway-updated',
+        'location-created',
+        'location-updated',
+        'asset-deleted',
+        'iot-device-deleted',
+        'gateway-deleted',
+    ].includes(feedback.value),
 );
 const organizationAssets = computed(() => {
     const organizationId = activeOrganizationId.value;
@@ -98,6 +143,23 @@ const organizationIoTDevices = computed(() => {
 const organizationGateways = computed(() => {
     const organizationId = activeOrganizationId.value;
     return organizationId ? gateways.value.filter(gateway => gateway.organizationId === organizationId) : [];
+});
+const organizationLocations = computed(() =>
+    assetManagementStore.locationsForOrganization(activeOrganizationId.value, locations.value),
+);
+const filteredLocations = computed(() => {
+    const normalizedSearch = searchTerm.value.trim().toLowerCase();
+    if (!normalizedSearch) return organizationLocations.value;
+
+    return organizationLocations.value.filter(location =>
+        [
+            location.name,
+            location.type,
+            location.address,
+            location.description,
+            location.status,
+        ].join(' ').toLowerCase().includes(normalizedSearch),
+    );
 });
 const calibrationSummary = computed(() => [
     {status: CalibrationStatus.Compliant, count: calibrationCount(CalibrationStatus.Compliant)},
@@ -115,7 +177,7 @@ const filteredAssets = computed(() => {
             asset.name,
             assetLocationFor(asset),
             asset.status,
-            asset.connectivity,
+            displayedConnectivity(asset),
             asset.lastIncident,
             gatewayNameForAsset(asset),
         ].join(' ').toLowerCase().includes(normalizedSearch),
@@ -124,23 +186,33 @@ const filteredAssets = computed(() => {
 const paginatedAssets = computed(() => paginate(filteredAssets.value, assetPage.value));
 const paginatedIoTDevices = computed(() => paginate(organizationIoTDevices.value, iotDevicePage.value));
 const paginatedGateways = computed(() => paginate(organizationGateways.value, gatewayPage.value));
+const paginatedLocations = computed(() => paginate(filteredLocations.value, locationPage.value));
 const assetFormErrors = computed(() => ({
     internalId: coldRoomForm.internalId.trim().length < 3,
     name: coldRoomForm.name.trim().length < 3,
-    gatewayId: Number(coldRoomForm.gatewayId) < 1,
+    locationId: Number(coldRoomForm.locationId) < 1,
     capacity: Number(coldRoomForm.capacity) < 1,
 }));
 const iotDeviceFormErrors = computed(() => ({
     internalId: iotDeviceForm.internalId.trim().length < 3,
+    gatewayId: Number(iotDeviceForm.gatewayId) < 1,
     deviceType: !iotDeviceForm.deviceType,
     model: iotDeviceForm.model.trim().length < 3,
     measurementType: !iotDeviceForm.measurementType,
+    status: !iotDeviceForm.status,
+    calibrationStatus: !iotDeviceForm.calibrationStatus,
+    readingFrequencyMinutes: Number(iotDeviceForm.readingFrequencyMinutes) < 5 ||
+        Number(iotDeviceForm.readingFrequencyMinutes) > 1440,
 }));
 const gatewayFormErrors = computed(() => ({
     internalId: gatewayForm.internalId.trim().length < 3,
     name: gatewayForm.name.trim().length < 3,
-    location: gatewayForm.location.trim().length < 3,
+    locationId: Number(gatewayForm.locationId) < 1,
     network: gatewayForm.network.trim().length < 2,
+}));
+const locationFormErrors = computed(() => ({
+    name: locationForm.name.trim().length < 2,
+    type: !locationForm.type,
 }));
 
 onMounted(() => {
@@ -151,6 +223,7 @@ watch([searchTerm, selectedTab], () => {
     assetPage.value = 1;
     iotDevicePage.value = 1;
     gatewayPage.value = 1;
+    locationPage.value = 1;
 });
 
 /**
@@ -162,10 +235,9 @@ async function loadPageData() {
     identityLoading.value = true;
     feedback.value = 'idle';
     try {
-        const [accessData] = await Promise.all([
-            identityAccessStore.fetchAccessData(),
-            assetManagementStore.fetchAssetManagementData({includeSettings: false}),
-        ]);
+        const accessData = await identityAccessStore.fetchAccessData();
+        const organizationId = identityAccessStore.currentOrganizationIdFrom(accessData.users);
+        await assetManagementStore.fetchAssetManagementData({organizationId, includeSettings: false});
         users.value = accessData.users;
         roles.value = accessData.roles;
         organizations.value = accessData.organizations;
@@ -190,9 +262,14 @@ function selectAssetType(tab) {
     assetPage.value = 1;
     iotDevicePage.value = 1;
     gatewayPage.value = 1;
+    locationPage.value = 1;
     formVisible.value = false;
     feedback.value = 'idle';
     submitted.value = false;
+    editingAssetId.value = null;
+    editingIoTDeviceId.value = null;
+    editingGatewayId.value = null;
+    editingLocationId.value = null;
     resetForms();
 }
 
@@ -204,7 +281,12 @@ function selectAssetType(tab) {
 function toggleForm() {
     feedback.value = 'idle';
     submitted.value = false;
-    formVisible.value = !formVisible.value;
+    const willOpen = !formVisible.value;
+    formVisible.value = willOpen;
+    editingAssetId.value = null;
+    editingIoTDeviceId.value = null;
+    editingGatewayId.value = null;
+    editingLocationId.value = null;
     resetForms();
 }
 
@@ -241,46 +323,57 @@ async function submit() {
     if (isFormInvalid(assetFormErrors.value) || !canManageAssets.value) return;
 
     const organizationId = activeOrganizationId.value;
-    const gatewayId = Number(coldRoomForm.gatewayId);
-    const gateway = organizationGateways.value.find(currentGateway => currentGateway.id === gatewayId);
-    if (!organizationId || !gateway) {
+    const editingId = editingAssetId.value;
+    const locationId = Number(coldRoomForm.locationId);
+    const location = organizationLocations.value.find(currentLocation => currentLocation.id === locationId);
+    if (!organizationId || !location) {
         feedback.value = 'server-error';
         return;
     }
 
     const internalId = coldRoomForm.internalId.trim().toUpperCase();
-    const duplicatedInternalId = selectedAssets.value.some(
-        asset => asset.uuid.toLowerCase() === internalId.toLowerCase(),
+    const duplicatedInternalId = organizationAssets.value.some(
+        asset => asset.id !== editingId && asset.uuid.toLowerCase() === internalId.toLowerCase(),
     );
     if (duplicatedInternalId) {
         feedback.value = 'duplicate-id';
         return;
     }
 
+    const currentAsset = editingId
+        ? organizationAssets.value.find(asset => asset.id === editingId)
+        : null;
+    if (editingId && !currentAsset) {
+        feedback.value = 'server-error';
+        return;
+    }
+
     const asset = new Asset({
-        id: Math.max(...assets.value.map(currentAsset => currentAsset.id), 0) + 1,
+        id: editingId ?? Math.max(...assets.value.map(currentAsset => currentAsset.id), 0) + 1,
         organizationId,
         uuid: internalId,
         type: selectedAssetType.value,
-        gatewayId: gateway.id,
+        locationId: location.id,
+        gatewayId: currentAsset?.gatewayId ?? null,
         name: coldRoomForm.name.trim(),
-        location: gateway.location,
+        location: location.name,
         capacity: Number(coldRoomForm.capacity),
         description: coldRoomForm.description.trim(),
-        status: AssetStatus.Active,
-        lastIncident: 'none',
-        currentTemperature: '—',
-        entryDate: entryDate(),
-        connectivity: ConnectivityStatus.Online,
+        status: coldRoomForm.status,
+        lastIncident: currentAsset?.lastIncident ?? 'none',
+        currentTemperature: currentAsset?.currentTemperature ?? '—',
+        entryDate: currentAsset?.entryDate ?? entryDate(),
+        connectivity: currentAsset?.connectivity ?? ConnectivityStatus.Online,
     });
 
     creating.value = true;
     try {
-        await assetManagementStore.createAsset(asset);
-        feedback.value = 'success';
+        if (editingId) await assetManagementStore.updateAsset(asset);
+        else await assetManagementStore.createAsset(asset);
+        feedback.value = editingId ? 'asset-updated' : 'success';
         submitted.value = false;
         formVisible.value = false;
-        assetPage.value = lastPageFor(filteredAssets.value);
+        editingAssetId.value = null;
         resetForm();
     } catch (error) {
         feedback.value = 'server-error';
@@ -305,9 +398,10 @@ async function submitIoTDevice() {
         return;
     }
 
+    const editingId = editingIoTDeviceId.value;
     const internalId = iotDeviceForm.internalId.trim().toUpperCase();
     const duplicatedInternalId = organizationIoTDevices.value.some(
-        iotDevice => iotDevice.uuid.toLowerCase() === internalId.toLowerCase(),
+        iotDevice => iotDevice.id !== editingId && iotDevice.uuid.toLowerCase() === internalId.toLowerCase(),
     );
     if (duplicatedInternalId) {
         feedback.value = 'duplicate-id';
@@ -315,29 +409,44 @@ async function submitIoTDevice() {
     }
 
     const assetId = Number(iotDeviceForm.assetId) || null;
+    const gatewayId = Number(iotDeviceForm.gatewayId);
+    const gateway = organizationGateways.value.find(currentGateway => currentGateway.id === gatewayId);
+    if (!gateway) {
+        feedback.value = 'server-error';
+        return;
+    }
+
     const measurementParameters = measurementParametersForDeviceType(iotDeviceForm.deviceType);
+    const status = assetId
+        ? iotDeviceForm.status
+        : iotDeviceForm.status === IoTDeviceStatus.Linked
+            ? IoTDeviceStatus.Available
+            : iotDeviceForm.status;
     const iotDevice = new IoTDevice({
-        id: Math.max(...iotDevices.value.map(currentIoTDevice => currentIoTDevice.id), 0) + 1,
+        id: editingId ?? Math.max(...iotDevices.value.map(currentIoTDevice => currentIoTDevice.id), 0) + 1,
         organizationId,
+        gatewayId: gateway.id,
         uuid: internalId,
         deviceType: iotDeviceForm.deviceType,
         model: iotDeviceForm.model.trim(),
         measurementType: measurementTypeLabel(measurementParameters),
         assetId,
-        status: assetId ? IoTDeviceStatus.Linked : IoTDeviceStatus.Available,
-        calibrationStatus: CalibrationStatus.Unknown,
-        lastCalibrationDate: '—',
+        status,
+        calibrationStatus: iotDeviceForm.calibrationStatus,
+        lastCalibrationDate: iotDeviceForm.lastCalibrationDate.trim() || '—',
         nextCalibrationDate: iotDeviceForm.nextCalibrationDate.trim() || '—',
         measurementParameters,
+        readingFrequencySeconds: Number(iotDeviceForm.readingFrequencyMinutes) * 60,
     });
 
     creating.value = true;
     try {
-        await assetManagementStore.createIoTDevice(iotDevice);
-        feedback.value = 'iot-device-created';
+        if (editingId) await assetManagementStore.updateIoTDevice(iotDevice);
+        else await assetManagementStore.createIoTDevice(iotDevice);
+        feedback.value = editingId ? 'iot-device-updated' : 'iot-device-created';
         submitted.value = false;
         formVisible.value = false;
-        iotDevicePage.value = lastPageFor(organizationIoTDevices.value);
+        editingIoTDeviceId.value = null;
         resetIoTDeviceForm();
     } catch (error) {
         feedback.value = 'server-error';
@@ -362,38 +471,202 @@ async function submitGateway() {
         return;
     }
 
+    const editingId = editingGatewayId.value;
     const internalId = gatewayForm.internalId.trim().toUpperCase();
     const duplicatedInternalId = organizationGateways.value.some(
-        gateway => gateway.uuid.toLowerCase() === internalId.toLowerCase(),
+        gateway => gateway.id !== editingId && gateway.uuid.toLowerCase() === internalId.toLowerCase(),
     );
     if (duplicatedInternalId) {
         feedback.value = 'duplicate-id';
         return;
     }
 
+    const locationId = Number(gatewayForm.locationId);
+    const location = organizationLocations.value.find(currentLocation => currentLocation.id === locationId);
+    if (!location) {
+        feedback.value = 'server-error';
+        return;
+    }
+
     const gateway = new Gateway({
-        id: Math.max(...gateways.value.map(currentGateway => currentGateway.id), 0) + 1,
+        id: editingId ?? Math.max(...gateways.value.map(currentGateway => currentGateway.id), 0) + 1,
         organizationId,
+        locationId: location.id,
         uuid: internalId,
         name: gatewayForm.name.trim(),
-        location: gatewayForm.location.trim(),
+        location: location.name,
         network: gatewayForm.network.trim(),
         status: gatewayForm.status,
     });
 
     creating.value = true;
     try {
-        await assetManagementStore.createGateway(gateway);
-        feedback.value = 'gateway-created';
+        if (editingId) await assetManagementStore.updateGateway(gateway);
+        else await assetManagementStore.createGateway(gateway);
+        feedback.value = editingId ? 'gateway-updated' : 'gateway-created';
         submitted.value = false;
         formVisible.value = false;
-        gatewayPage.value = lastPageFor(organizationGateways.value);
+        editingGatewayId.value = null;
         resetGatewayForm();
     } catch (error) {
         feedback.value = 'server-error';
     } finally {
         creating.value = false;
     }
+}
+
+/**
+ * Handles submit location behavior in the asset management context.
+ *
+ * @returns {Promise<*>}
+ */
+async function submitLocation() {
+    submitted.value = true;
+    feedback.value = 'idle';
+    if (isFormInvalid(locationFormErrors.value) || !canManageAssets.value) return;
+
+    const organizationId = activeOrganizationId.value;
+    if (!organizationId) {
+        feedback.value = 'server-error';
+        return;
+    }
+
+    const editingId = editingLocationId.value;
+    const name = locationForm.name.trim();
+    const duplicatedName = organizationLocations.value.some(location =>
+        location.id !== editingId && location.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (duplicatedName) {
+        feedback.value = 'duplicate-id';
+        return;
+    }
+
+    const location = new Location({
+        id: editingId ?? nextLocationId(),
+        organizationId,
+        name,
+        type: locationForm.type,
+        address: locationForm.address.trim(),
+        description: locationForm.description.trim(),
+        status: locationForm.status,
+    });
+
+    creating.value = true;
+    try {
+        if (editingId) await assetManagementStore.updateLocation(location);
+        else await assetManagementStore.createLocation(location);
+        feedback.value = editingId ? 'location-updated' : 'location-created';
+        submitted.value = false;
+        formVisible.value = false;
+        editingLocationId.value = null;
+        resetLocationForm();
+    } catch (error) {
+        feedback.value = 'server-error';
+    } finally {
+        creating.value = false;
+    }
+}
+
+/**
+ * Opens the asset form for editing.
+ *
+ * @param {*} asset
+ * @returns {void}
+ */
+function editAsset(asset) {
+    if (!canManageAssets.value) return;
+
+    selectedTab.value = asset.type;
+    feedback.value = 'idle';
+    submitted.value = false;
+    editingAssetId.value = asset.id;
+    editingIoTDeviceId.value = null;
+    editingGatewayId.value = null;
+    editingLocationId.value = null;
+    coldRoomForm.internalId = asset.uuid;
+    coldRoomForm.name = asset.name;
+    coldRoomForm.locationId = asset.locationId ?? 0;
+    coldRoomForm.capacity = asset.capacity;
+    coldRoomForm.description = asset.description;
+    coldRoomForm.status = asset.status;
+    formVisible.value = true;
+}
+
+/**
+ * Opens the IoT device form for editing.
+ *
+ * @param {*} iotDevice
+ * @returns {void}
+ */
+function editIoTDevice(iotDevice) {
+    if (!canManageAssets.value) return;
+
+    selectedTab.value = 'iot-device';
+    feedback.value = 'idle';
+    submitted.value = false;
+    editingAssetId.value = null;
+    editingIoTDeviceId.value = iotDevice.id;
+    editingGatewayId.value = null;
+    editingLocationId.value = null;
+    iotDeviceForm.internalId = iotDevice.uuid;
+    iotDeviceForm.gatewayId = iotDevice.gatewayId ?? 0;
+    iotDeviceForm.deviceType = iotDevice.deviceType;
+    iotDeviceForm.model = iotDevice.model;
+    iotDeviceForm.measurementType = measurementTypeLabel(measurementParametersFor(iotDevice));
+    iotDeviceForm.assetId = iotDevice.assetId ?? 0;
+    iotDeviceForm.status = iotDevice.status;
+    iotDeviceForm.calibrationStatus = iotDevice.calibrationStatus;
+    iotDeviceForm.lastCalibrationDate = blankIfPlaceholder(iotDevice.lastCalibrationDate);
+    iotDeviceForm.nextCalibrationDate = blankIfPlaceholder(iotDevice.nextCalibrationDate);
+    iotDeviceForm.readingFrequencyMinutes = Math.max(5, Math.round(iotDevice.readingFrequencySeconds / 60));
+    formVisible.value = true;
+}
+
+/**
+ * Opens the gateway form for editing.
+ *
+ * @param {*} gateway
+ * @returns {void}
+ */
+function editGateway(gateway) {
+    if (!canManageAssets.value) return;
+
+    selectedTab.value = 'gateway';
+    feedback.value = 'idle';
+    submitted.value = false;
+    editingAssetId.value = null;
+    editingIoTDeviceId.value = null;
+    editingGatewayId.value = gateway.id;
+    editingLocationId.value = null;
+    gatewayForm.internalId = gateway.uuid;
+    gatewayForm.name = gateway.name;
+    gatewayForm.locationId = gateway.locationId ?? 0;
+    gatewayForm.network = gateway.network;
+    gatewayForm.status = gateway.status;
+    formVisible.value = true;
+}
+
+/**
+ * Opens the location form for editing.
+ *
+ * @param {*} location
+ * @returns {void}
+ */
+function editLocation(location) {
+    if (!canManageAssets.value) return;
+
+    feedback.value = 'idle';
+    submitted.value = false;
+    editingAssetId.value = null;
+    editingIoTDeviceId.value = null;
+    editingGatewayId.value = null;
+    editingLocationId.value = location.id;
+    locationForm.name = location.name;
+    locationForm.type = locationTypeFormValue(location.type);
+    locationForm.address = location.address;
+    locationForm.description = location.description;
+    locationForm.status = location.status;
+    formVisible.value = true;
 }
 
 /**
@@ -538,6 +811,16 @@ function hasGatewayControlError(controlName) {
 }
 
 /**
+ * Determines whether location control error exists.
+ *
+ * @param {*} controlName
+ * @returns {boolean}
+ */
+function hasLocationControlError(controlName) {
+    return locationFormErrors.value[controlName] && submitted.value;
+}
+
+/**
  * Determines whether form invalid is true.
  *
  * @param {*} errorsByField
@@ -575,7 +858,8 @@ function displayedAssetStatus(asset) {
  * @returns {string}
  */
 function gatewayNameForAsset(asset) {
-    return gatewayNameById(asset.gatewayId);
+    const gateway = assetManagementStore.gatewayForAsset(asset, organizationGateways.value);
+    return gateway ? gatewayDisplayName(gateway) : 'asset-management.gateways.unassigned';
 }
 
 /**
@@ -585,8 +869,7 @@ function gatewayNameForAsset(asset) {
  * @returns {string}
  */
 function gatewayNameForIoTDevice(iotDevice) {
-    const asset = assets.value.find(currentAsset => currentAsset.id === iotDevice.assetId);
-    return asset ? gatewayNameById(asset.gatewayId) : 'asset-management.iot-devices.unassigned';
+    return gatewayNameById(iotDevice.gatewayId);
 }
 
 /**
@@ -596,7 +879,12 @@ function gatewayNameForIoTDevice(iotDevice) {
  * @returns {number}
  */
 function gatewayAssetCount(gateway) {
-    return organizationAssets.value.filter(asset => asset.gatewayId === gateway.id).length;
+    const assetIds = new Set(
+        organizationIoTDevices.value
+            .filter(iotDevice => iotDevice.gatewayId === gateway.id && iotDevice.assetId !== null)
+            .map(iotDevice => iotDevice.assetId),
+    );
+    return organizationAssets.value.filter(asset => assetIds.has(asset.id)).length;
 }
 
 /**
@@ -606,10 +894,7 @@ function gatewayAssetCount(gateway) {
  * @returns {number}
  */
 function gatewayDeviceCount(gateway) {
-    const assetIds = organizationAssets.value
-        .filter(asset => asset.gatewayId === gateway.id)
-        .map(asset => asset.id);
-    return organizationIoTDevices.value.filter(iotDevice => iotDevice.assetId && assetIds.includes(iotDevice.assetId)).length;
+    return organizationIoTDevices.value.filter(iotDevice => iotDevice.gatewayId === gateway.id).length;
 }
 
 /**
@@ -684,6 +969,7 @@ function formCreateKey() {
 function createButtonKey() {
     if (formVisible.value) return 'asset-management.form.close';
     if (selectedTab.value === 'iot-device') return 'asset-management.iot-devices.form-open';
+    if (selectedTab.value === 'location') return 'asset-management.locations.form-open';
     if (selectedTab.value === 'gateway') return 'asset-management.gateways.form-open';
     return formOpenKey();
 }
@@ -695,11 +981,16 @@ function createButtonKey() {
  */
 function formCreatedKey() {
     if (feedback.value === 'updated') return 'asset-management.update.feedback-updated';
+    if (feedback.value === 'asset-updated') return `asset-management.sections.${selectedAssetType.value}.feedback-updated`;
     if (feedback.value === 'asset-deleted') return 'asset-management.feedback-deleted';
     if (feedback.value === 'iot-device-created') return 'asset-management.iot-devices.feedback-created';
+    if (feedback.value === 'iot-device-updated') return 'asset-management.iot-devices.feedback-updated';
     if (feedback.value === 'iot-device-deleted') return 'asset-management.iot-devices.feedback-deleted';
     if (feedback.value === 'gateway-created') return 'asset-management.gateways.feedback-created';
+    if (feedback.value === 'gateway-updated') return 'asset-management.gateways.feedback-updated';
     if (feedback.value === 'gateway-deleted') return 'asset-management.gateways.feedback-deleted';
+    if (feedback.value === 'location-created') return 'asset-management.locations.feedback-created';
+    if (feedback.value === 'location-updated') return 'asset-management.locations.feedback-updated';
     return `asset-management.sections.${selectedAssetType.value}.feedback-created`;
 }
 
@@ -711,6 +1002,7 @@ function formCreatedKey() {
 function formDuplicateKey() {
     if (selectedTab.value === 'iot-device') return 'asset-management.iot-devices.feedback-duplicate';
     if (selectedTab.value === 'gateway') return 'asset-management.gateways.feedback-duplicate';
+    if (selectedTab.value === 'location') return 'asset-management.locations.feedback-duplicate';
     return `asset-management.sections.${selectedAssetType.value}.feedback-duplicate`;
 }
 
@@ -824,6 +1116,26 @@ function gatewayStatusLabelKey(status) {
 }
 
 /**
+ * Returns the i18n label key for location type.
+ *
+ * @param {string} type
+ * @returns {string}
+ */
+function locationTypeLabelKey(type) {
+    return `asset-management.locations.types.${type}`;
+}
+
+/**
+ * Returns the i18n label key for location status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+function locationStatusLabelKey(status) {
+    return `asset-management.locations.status.${status}`;
+}
+
+/**
  * Returns the CSS class for asset status tone.
  *
  * @param {string} status
@@ -881,13 +1193,27 @@ function gatewayStatusToneClass(status) {
 }
 
 /**
- * Selects ed gateway for form in the current view state.
+ * Returns the CSS class for location status tone.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+function locationStatusToneClass(status) {
+    return {
+        active: 'tone-success',
+        maintenance: 'tone-warning',
+        inactive: 'tone-danger',
+    }[status] ?? 'tone-neutral';
+}
+
+/**
+ * Selects ed location for form in the current view state.
  *
  * @returns {void}
  */
-function selectedGatewayForForm() {
-    const gatewayId = Number(coldRoomForm.gatewayId);
-    return organizationGateways.value.find(gateway => gateway.id === gatewayId) ?? null;
+function selectedLocationForForm() {
+    const locationId = Number(coldRoomForm.locationId);
+    return locationNameById(locationId) || 'N/A';
 }
 
 /**
@@ -897,7 +1223,27 @@ function selectedGatewayForForm() {
  * @returns {string}
  */
 function assetLocationFor(asset) {
-    return assetManagementStore.locationForAsset(asset, organizationGateways.value);
+    return assetManagementStore.locationForAsset(asset, organizationGateways.value, organizationLocations.value);
+}
+
+/**
+ * Handles gateway location for behavior in the asset management context.
+ *
+ * @param {*} gateway
+ * @returns {string}
+ */
+function gatewayLocationFor(gateway) {
+    return locationNameById(gateway.locationId) || gateway.location || 'N/A';
+}
+
+/**
+ * Handles displayed connectivity behavior in the asset management context.
+ *
+ * @param {*} asset
+ * @returns {string}
+ */
+function displayedConnectivity(asset) {
+    return asset.connectivity;
 }
 
 /**
@@ -985,6 +1331,7 @@ function resetForms() {
     resetForm();
     resetIoTDeviceForm();
     resetGatewayForm();
+    resetLocationForm();
 }
 
 /**
@@ -995,9 +1342,10 @@ function resetForms() {
 function resetForm() {
     coldRoomForm.internalId = generatedAssetUuid(selectedAssetType.value);
     coldRoomForm.name = '';
-    coldRoomForm.gatewayId = 0;
+    coldRoomForm.locationId = 0;
     coldRoomForm.capacity = 0;
     coldRoomForm.description = '';
+    coldRoomForm.status = AssetStatus.Active;
 }
 
 /**
@@ -1007,11 +1355,16 @@ function resetForm() {
  */
 function resetIoTDeviceForm() {
     iotDeviceForm.internalId = generatedIoTDeviceUuid();
+    iotDeviceForm.gatewayId = 0;
     iotDeviceForm.deviceType = '';
     iotDeviceForm.model = '';
     iotDeviceForm.measurementType = '';
     iotDeviceForm.assetId = 0;
+    iotDeviceForm.status = IoTDeviceStatus.Available;
+    iotDeviceForm.calibrationStatus = CalibrationStatus.Unknown;
+    iotDeviceForm.lastCalibrationDate = '';
     iotDeviceForm.nextCalibrationDate = '';
+    iotDeviceForm.readingFrequencyMinutes = 60;
 }
 
 /**
@@ -1022,9 +1375,32 @@ function resetIoTDeviceForm() {
 function resetGatewayForm() {
     gatewayForm.internalId = generatedGatewayUuid();
     gatewayForm.name = '';
-    gatewayForm.location = '';
+    gatewayForm.locationId = 0;
     gatewayForm.network = '';
     gatewayForm.status = GatewayStatus.Active;
+}
+
+/**
+ * Resets location form to its default state.
+ *
+ * @returns {void}
+ */
+function resetLocationForm() {
+    locationForm.name = '';
+    locationForm.type = 'WAREHOUSE';
+    locationForm.address = '';
+    locationForm.description = '';
+    locationForm.status = 'active';
+}
+
+/**
+ * Maps legacy location type values to the current form catalog.
+ *
+ * @param {string} type
+ * @returns {string}
+ */
+function locationTypeFormValue(type) {
+    return locationTypes.includes(type) ? type : (locationTypeFormAliases[type] ?? 'WAREHOUSE');
 }
 
 /**
@@ -1048,6 +1424,16 @@ function measurementTypeLabel(parameters) {
 }
 
 /**
+ * Returns a blank value when an API placeholder is displayed.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function blankIfPlaceholder(value) {
+    return value === '—' ? '' : value;
+}
+
+/**
  * Handles clear pending asset status behavior in the asset management context.
  *
  * @param {number|string} assetId
@@ -1067,7 +1453,27 @@ function clearPendingAssetStatus(assetId) {
  */
 function gatewayNameById(gatewayId) {
     const gateway = gateways.value.find(currentGateway => currentGateway.id === gatewayId);
-    return gateway ? `${gateway.uuid} - ${gateway.location}` : 'asset-management.gateways.unassigned';
+    return gateway ? gatewayDisplayName(gateway) : 'asset-management.gateways.unassigned';
+}
+
+/**
+ * Handles gateway display name behavior in the asset management context.
+ *
+ * @param {*} gateway
+ * @returns {string}
+ */
+function gatewayDisplayName(gateway) {
+    return `${gateway.uuid} - ${gatewayLocationFor(gateway)}`;
+}
+
+/**
+ * Handles location name by id behavior in the asset management context.
+ *
+ * @param {number|string} locationId
+ * @returns {string}
+ */
+function locationNameById(locationId) {
+    return organizationLocations.value.find(location => location.id === Number(locationId))?.name ?? '';
 }
 
 /**
@@ -1122,6 +1528,15 @@ function generatedGatewayUuid() {
         .filter(gateway => !organizationId || gateway.organizationId === organizationId)
         .map(gateway => gateway.uuid);
     return generatedUuid('GW', currentUuids, currentUuids.length + 1, 3);
+}
+
+/**
+ * Handles next location id behavior in the asset management context.
+ *
+ * @returns {number}
+ */
+function nextLocationId() {
+    return Math.max(...locations.value.map(location => location.id), 0) + 1;
 }
 
 /**
@@ -1198,8 +1613,8 @@ function translateOrText(value) {
     <section v-if="formVisible && canManageAssets && isAssetTab" class="form-card" aria-labelledby="cold-room-form-title">
       <div class="section-heading">
         <div>
-          <h2 id="cold-room-form-title">{{ t(formTitleKey()) }}</h2>
-          <p>{{ t(formSubtitleKey()) }}</p>
+          <h2 id="cold-room-form-title">{{ t(editingAssetId ? 'asset-management.form.edit-title' : formTitleKey()) }}</h2>
+          <p>{{ t(editingAssetId ? 'asset-management.form.edit-subtitle' : formSubtitleKey()) }}</p>
         </div>
       </div>
 
@@ -1217,14 +1632,14 @@ function translateOrText(value) {
         </label>
 
         <label class="form-field">
-          <span>{{ t('asset-management.form.gateway') }}</span>
-          <select v-model.number="coldRoomForm.gatewayId">
-            <option :value="0">{{ t('asset-management.form.select-gateway') }}</option>
-            <option v-for="gateway in organizationGateways" :key="gateway.id" :value="gateway.id">
-              {{ gateway.uuid }} - {{ gateway.location }}
+          <span>{{ t('asset-management.form.location') }}</span>
+          <select v-model.number="coldRoomForm.locationId">
+            <option :value="0">{{ t('asset-management.form.select-location') }}</option>
+            <option v-for="location in organizationLocations" :key="location.id" :value="location.id">
+              {{ location.name }}
             </option>
           </select>
-          <small v-if="hasControlError('gatewayId')">{{ t('asset-management.form.gateway-error') }}</small>
+          <small v-if="hasControlError('locationId')">{{ t('asset-management.form.location-error') }}</small>
         </label>
 
         <label class="form-field">
@@ -1235,10 +1650,19 @@ function translateOrText(value) {
 
         <div class="form-field">
           <span>{{ t('asset-management.form.location') }}</span>
-          <div class="derived-field" :class="{empty: !selectedGatewayForForm()}">
-            {{ selectedGatewayForForm()?.location ?? t('asset-management.form.location-derived-empty') }}
+          <div class="derived-field" :class="{empty: selectedLocationForForm() === 'N/A'}">
+            {{ selectedLocationForForm() !== 'N/A' ? selectedLocationForForm() : t('asset-management.form.location-derived-empty') }}
           </div>
         </div>
+
+        <label class="form-field">
+          <span>{{ t('asset-management.form.status') }}</span>
+          <select v-model="coldRoomForm.status">
+            <option v-for="status in assetStatuses" :key="status" :value="status">
+              {{ assetStatusLabel(status) }}
+            </option>
+          </select>
+        </label>
 
         <label class="form-field full">
           <span>{{ t('asset-management.form.description') }}</span>
@@ -1250,7 +1674,7 @@ function translateOrText(value) {
             {{ t('asset-management.form.cancel') }}
           </button>
           <button type="submit" class="primary-action" :disabled="creating">
-            {{ t(creating ? 'asset-management.form.creating' : formCreateKey()) }}
+            {{ t(creating ? 'asset-management.form.creating' : editingAssetId ? 'asset-management.form.update' : formCreateKey()) }}
           </button>
         </div>
       </form>
@@ -1259,8 +1683,12 @@ function translateOrText(value) {
     <section v-if="formVisible && canManageAssets && selectedTab === 'iot-device'" class="form-card" aria-labelledby="iot-device-form-title">
       <div class="section-heading">
         <div>
-          <h2 id="iot-device-form-title">{{ t('asset-management.iot-devices.form-title') }}</h2>
-          <p>{{ t('asset-management.iot-devices.form-subtitle') }}</p>
+          <h2 id="iot-device-form-title">
+            {{ t(editingIoTDeviceId ? 'asset-management.iot-devices.form-edit-title' : 'asset-management.iot-devices.form-title') }}
+          </h2>
+          <p>
+            {{ t(editingIoTDeviceId ? 'asset-management.iot-devices.form-edit-subtitle' : 'asset-management.iot-devices.form-subtitle') }}
+          </p>
         </div>
       </div>
 
@@ -1300,6 +1728,17 @@ function translateOrText(value) {
         </label>
 
         <label class="form-field">
+          <span>{{ t('asset-management.iot-devices.table.gateway') }}</span>
+          <select v-model.number="iotDeviceForm.gatewayId">
+            <option :value="0">{{ t('asset-management.form.select-gateway') }}</option>
+            <option v-for="gateway in organizationGateways" :key="gateway.id" :value="gateway.id">
+              {{ gatewayNameById(gateway.id) }}
+            </option>
+          </select>
+          <small v-if="hasIoTDeviceControlError('gatewayId')">{{ t('asset-management.form.gateway-error') }}</small>
+        </label>
+
+        <label class="form-field">
           <span>{{ t('asset-management.iot-devices.form.asset') }}</span>
           <select v-model.number="iotDeviceForm.assetId">
             <option :value="0">{{ t('asset-management.iot-devices.form.unassigned') }}</option>
@@ -1310,8 +1749,37 @@ function translateOrText(value) {
         </label>
 
         <label class="form-field">
+          <span>{{ t('asset-management.iot-devices.form.status') }}</span>
+          <select v-model="iotDeviceForm.status">
+            <option v-for="status in iotDeviceStatuses" :key="status" :value="status">
+              {{ t(`asset-management.iot-devices.status.${status}`) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>{{ t('asset-management.iot-devices.form.calibration-status') }}</span>
+          <select v-model="iotDeviceForm.calibrationStatus">
+            <option v-for="status in calibrationStatuses" :key="status" :value="status">
+              {{ t(calibrationLabelKey(status)) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>{{ t('asset-management.iot-devices.form.last-calibration') }}</span>
+          <input v-model="iotDeviceForm.lastCalibrationDate" type="text" :placeholder="t('asset-management.iot-devices.form.last-calibration-placeholder')"/>
+        </label>
+
+        <label class="form-field">
           <span>{{ t('asset-management.iot-devices.form.next-calibration') }}</span>
           <input v-model="iotDeviceForm.nextCalibrationDate" type="text" :placeholder="t('asset-management.iot-devices.form.next-calibration-placeholder')"/>
+        </label>
+
+        <label class="form-field">
+          <span>{{ t('asset-management.iot-devices.form.reading-frequency') }}</span>
+          <input v-model.number="iotDeviceForm.readingFrequencyMinutes" type="number" min="5" max="1440"/>
+          <small v-if="hasIoTDeviceControlError('readingFrequencyMinutes')">{{ t('asset-management.iot-devices.form.reading-frequency-error') }}</small>
         </label>
 
         <div class="form-actions">
@@ -1319,7 +1787,7 @@ function translateOrText(value) {
             {{ t('asset-management.form.cancel') }}
           </button>
           <button type="submit" class="primary-action" :disabled="creating">
-            {{ t(creating ? 'asset-management.form.creating' : 'asset-management.iot-devices.form-create') }}
+            {{ t(creating ? 'asset-management.form.creating' : editingIoTDeviceId ? 'asset-management.iot-devices.form-update' : 'asset-management.iot-devices.form-create') }}
           </button>
         </div>
       </form>
@@ -1328,8 +1796,12 @@ function translateOrText(value) {
     <section v-if="formVisible && canManageAssets && selectedTab === 'gateway'" class="form-card" aria-labelledby="gateway-form-title">
       <div class="section-heading">
         <div>
-          <h2 id="gateway-form-title">{{ t('asset-management.gateways.form-title') }}</h2>
-          <p>{{ t('asset-management.gateways.form-subtitle') }}</p>
+          <h2 id="gateway-form-title">
+            {{ t(editingGatewayId ? 'asset-management.gateways.form-edit-title' : 'asset-management.gateways.form-title') }}
+          </h2>
+          <p>
+            {{ t(editingGatewayId ? 'asset-management.gateways.form-edit-subtitle' : 'asset-management.gateways.form-subtitle') }}
+          </p>
         </div>
       </div>
 
@@ -1348,8 +1820,13 @@ function translateOrText(value) {
 
         <label class="form-field">
           <span>{{ t('asset-management.gateways.form.location') }}</span>
-          <input v-model="gatewayForm.location" type="text" :placeholder="t('asset-management.gateways.form.location-placeholder')"/>
-          <small v-if="hasGatewayControlError('location')">{{ t('asset-management.gateways.form.location-error') }}</small>
+          <select v-model.number="gatewayForm.locationId">
+            <option :value="0">{{ t('asset-management.form.select-location') }}</option>
+            <option v-for="location in organizationLocations" :key="location.id" :value="location.id">
+              {{ location.name }}
+            </option>
+          </select>
+          <small v-if="hasGatewayControlError('locationId')">{{ t('asset-management.gateways.form.location-error') }}</small>
         </label>
 
         <label class="form-field">
@@ -1372,10 +1849,116 @@ function translateOrText(value) {
             {{ t('asset-management.form.cancel') }}
           </button>
           <button type="submit" class="primary-action" :disabled="creating">
-            {{ t(creating ? 'asset-management.form.creating' : 'asset-management.gateways.form-create') }}
+            {{ t(creating ? 'asset-management.form.creating' : editingGatewayId ? 'asset-management.gateways.form-update' : 'asset-management.gateways.form-create') }}
           </button>
         </div>
       </form>
+    </section>
+
+    <section v-if="formVisible && canManageAssets && selectedTab === 'location'" class="form-card" aria-labelledby="location-form-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="location-form-title">
+            {{ t(editingLocationId ? 'asset-management.locations.form-edit-title' : 'asset-management.locations.form-title') }}
+          </h2>
+          <p>
+            {{ t(editingLocationId ? 'asset-management.locations.form-edit-subtitle' : 'asset-management.locations.form-subtitle') }}
+          </p>
+        </div>
+      </div>
+
+      <form class="cold-room-form" @submit.prevent="submitLocation">
+        <label class="form-field">
+          <span>{{ t('asset-management.locations.form.name') }}</span>
+          <input v-model="locationForm.name" type="text" :placeholder="t('asset-management.locations.form.name-placeholder')"/>
+          <small v-if="hasLocationControlError('name')">{{ t('asset-management.locations.form.name-error') }}</small>
+        </label>
+
+        <label class="form-field">
+          <span>{{ t('asset-management.locations.form.type') }}</span>
+          <select v-model="locationForm.type">
+            <option v-for="type in locationTypes" :key="type" :value="type">
+              {{ t(locationTypeLabelKey(type)) }}
+            </option>
+          </select>
+          <small v-if="hasLocationControlError('type')">{{ t('asset-management.locations.form.type-error') }}</small>
+        </label>
+
+        <label class="form-field">
+          <span>{{ t('asset-management.locations.form.status') }}</span>
+          <select v-model="locationForm.status">
+            <option v-for="status in locationStatuses" :key="status" :value="status">
+              {{ t(locationStatusLabelKey(status)) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>{{ t('asset-management.locations.form.address') }}</span>
+          <input v-model="locationForm.address" type="text" :placeholder="t('asset-management.locations.form.address-placeholder')"/>
+        </label>
+
+        <label class="form-field full">
+          <span>{{ t('asset-management.locations.form.description') }}</span>
+          <textarea v-model="locationForm.description" rows="3" :placeholder="t('asset-management.locations.form.description-placeholder')"></textarea>
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="secondary-action" @click="toggleForm">
+            {{ t('asset-management.form.cancel') }}
+          </button>
+          <button type="submit" class="primary-action" :disabled="creating">
+            {{ t(creating ? 'asset-management.form.creating' : editingLocationId ? 'asset-management.locations.form-update' : 'asset-management.locations.form-create') }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section v-if="selectedTab === 'location'" class="table-card" aria-labelledby="location-table-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="location-table-title">{{ t('asset-management.locations.title') }}</h2>
+          <p>{{ t('asset-management.locations.subtitle') }}</p>
+        </div>
+        <button type="button" class="secondary-action" @click="loadPageData">{{ t('asset-management.reload') }}</button>
+      </div>
+
+      <div class="assets-table-wrapper">
+        <table class="assets-table location-table">
+          <thead>
+            <tr>
+              <th>{{ t('asset-management.locations.table.name') }}</th>
+              <th>{{ t('asset-management.locations.table.type') }}</th>
+              <th>{{ t('asset-management.locations.table.address') }}</th>
+              <th>{{ t('asset-management.locations.table.description') }}</th>
+              <th>{{ t('asset-management.locations.table.status') }}</th>
+              <th v-if="canManageAssets">{{ t('asset-management.table.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="location in paginatedLocations" :key="location.id">
+              <td :data-label="t('asset-management.locations.table.name')">{{ location.name }}</td>
+              <td :data-label="t('asset-management.locations.table.type')">{{ t(locationTypeLabelKey(location.type)) }}</td>
+              <td :data-label="t('asset-management.locations.table.address')">{{ location.address || 'N/A' }}</td>
+              <td :data-label="t('asset-management.locations.table.description')">{{ location.description || 'N/A' }}</td>
+              <td :data-label="t('asset-management.locations.table.status')">
+                <span class="status-pill" :class="locationStatusToneClass(location.status)">
+                  {{ t(locationStatusLabelKey(location.status)) }}
+                </span>
+              </td>
+              <td v-if="canManageAssets" :data-label="t('asset-management.table.actions')">
+                <button class="secondary-action" type="button" @click="editLocation(location)">
+                  {{ t('asset-management.locations.edit') }}
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!filteredLocations.length">
+              <td class="empty-state" :colspan="canManageAssets ? 6 : 5">{{ t('asset-management.locations.empty') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <list-pagination v-model="locationPage" :total="filteredLocations.length" :page-size="pageSize"/>
     </section>
 
     <section v-if="selectedTab === 'iot-device'" class="table-card" aria-labelledby="iot-device-table-title">
@@ -1407,7 +1990,7 @@ function translateOrText(value) {
               <th>{{ t('asset-management.iot-devices.table.status') }}</th>
               <th>{{ t('asset-management.iot-devices.table.calibration') }}</th>
               <th>{{ t('asset-management.iot-devices.table.next-calibration') }}</th>
-              <th v-if="canDeleteAssetResources">{{ t('asset-management.table.actions') }}</th>
+              <th v-if="canManageAssets">{{ t('asset-management.table.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -1435,19 +2018,18 @@ function translateOrText(value) {
                 </span>
               </td>
               <td :data-label="t('asset-management.iot-devices.table.next-calibration')">{{ iotDevice.nextCalibrationDate }}</td>
-              <td v-if="canDeleteAssetResources" :data-label="t('asset-management.table.actions')">
+              <td v-if="canManageAssets" :data-label="t('asset-management.table.actions')">
                 <button
-                  class="danger-action"
+                  class="secondary-action"
                   type="button"
-                  :disabled="deletingResourceKey === resourceKey('iot-device', iotDevice.id)"
-                  @click="deleteIoTDevice(iotDevice)"
+                  @click="editIoTDevice(iotDevice)"
                 >
-                  {{ t(deletingResourceKey === resourceKey('iot-device', iotDevice.id) ? 'asset-management.deleting' : 'asset-management.delete') }}
+                  {{ t('asset-management.edit') }}
                 </button>
               </td>
             </tr>
             <tr v-if="!organizationIoTDevices.length">
-              <td class="empty-state" :colspan="canDeleteAssetResources ? 10 : 9">{{ t('asset-management.iot-devices.empty') }}</td>
+              <td class="empty-state" :colspan="canManageAssets ? 10 : 9">{{ t('asset-management.iot-devices.empty') }}</td>
             </tr>
           </tbody>
         </table>
@@ -1475,14 +2057,14 @@ function translateOrText(value) {
               <th>{{ t('asset-management.gateways.table.assets') }}</th>
               <th>{{ t('asset-management.gateways.table.devices') }}</th>
               <th>{{ t('asset-management.gateways.table.status') }}</th>
-              <th v-if="canDeleteAssetResources">{{ t('asset-management.table.actions') }}</th>
+              <th v-if="canManageAssets">{{ t('asset-management.table.actions') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="gateway in paginatedGateways" :key="gateway.id">
               <td :data-label="t('asset-management.gateways.table.id')">{{ gateway.uuid }}</td>
               <td :data-label="t('asset-management.gateways.table.name')">{{ gateway.name }}</td>
-              <td :data-label="t('asset-management.gateways.table.location')">{{ gateway.location }}</td>
+              <td :data-label="t('asset-management.gateways.table.location')">{{ gatewayLocationFor(gateway) }}</td>
               <td :data-label="t('asset-management.gateways.table.network')">{{ gateway.network }}</td>
               <td :data-label="t('asset-management.gateways.table.assets')">{{ gatewayAssetCount(gateway) }}</td>
               <td :data-label="t('asset-management.gateways.table.devices')">{{ gatewayDeviceCount(gateway) }}</td>
@@ -1491,19 +2073,18 @@ function translateOrText(value) {
                   {{ t(gatewayStatusLabelKey(gateway.status)) }}
                 </span>
               </td>
-              <td v-if="canDeleteAssetResources" :data-label="t('asset-management.table.actions')">
+              <td v-if="canManageAssets" :data-label="t('asset-management.table.actions')">
                 <button
-                  class="danger-action"
+                  class="secondary-action"
                   type="button"
-                  :disabled="deletingResourceKey === resourceKey('gateway', gateway.id)"
-                  @click="deleteGateway(gateway)"
+                  @click="editGateway(gateway)"
                 >
-                  {{ t(deletingResourceKey === resourceKey('gateway', gateway.id) ? 'asset-management.deleting' : 'asset-management.delete') }}
+                  {{ t('asset-management.edit') }}
                 </button>
               </td>
             </tr>
             <tr v-if="!organizationGateways.length">
-              <td class="empty-state" :colspan="canDeleteAssetResources ? 8 : 7">{{ t('asset-management.gateways.empty') }}</td>
+              <td class="empty-state" :colspan="canManageAssets ? 8 : 7">{{ t('asset-management.gateways.empty') }}</td>
             </tr>
           </tbody>
         </table>
@@ -1538,7 +2119,7 @@ function translateOrText(value) {
                 <th>{{ t('asset-management.table.entry-date') }}</th>
                 <th>{{ t('asset-management.table.status') }}</th>
                 <th>{{ t('asset-management.table.connectivity') }}</th>
-                <th v-if="canDeleteAssetResources">{{ t('asset-management.table.actions') }}</th>
+                <th v-if="canManageAssets">{{ t('asset-management.table.actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1582,27 +2163,26 @@ function translateOrText(value) {
                   <span
                     class="connectivity"
                     :class="{
-                      online: asset.connectivity === ConnectivityStatus.Online,
-                      unstable: asset.connectivity === ConnectivityStatus.Unstable,
-                      offline: asset.connectivity === ConnectivityStatus.Offline,
+                      online: displayedConnectivity(asset) === ConnectivityStatus.Online,
+                      unstable: displayedConnectivity(asset) === ConnectivityStatus.Unstable,
+                      offline: displayedConnectivity(asset) === ConnectivityStatus.Offline,
                     }"
                   >
-                    {{ t(connectivityLabelKey(asset.connectivity)) }}
+                    {{ t(connectivityLabelKey(displayedConnectivity(asset))) }}
                   </span>
                 </td>
-                <td v-if="canDeleteAssetResources" :data-label="t('asset-management.table.actions')">
+                <td v-if="canManageAssets" :data-label="t('asset-management.table.actions')">
                   <button
-                    class="danger-action"
+                    class="secondary-action"
                     type="button"
-                    :disabled="deletingResourceKey === resourceKey('asset', asset.id)"
-                    @click="deleteAsset(asset)"
+                    @click="editAsset(asset)"
                   >
-                    {{ t(deletingResourceKey === resourceKey('asset', asset.id) ? 'asset-management.deleting' : 'asset-management.delete') }}
+                    {{ t('asset-management.edit') }}
                   </button>
                 </td>
               </tr>
               <tr v-if="!filteredAssets.length">
-                <td class="empty-state" :colspan="canDeleteAssetResources ? 10 : 9">{{ t('asset-management.empty') }}</td>
+                <td class="empty-state" :colspan="canManageAssets ? 10 : 9">{{ t('asset-management.empty') }}</td>
               </tr>
             </tbody>
           </table>
@@ -1618,8 +2198,8 @@ function translateOrText(value) {
 .asset-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
-  margin-top: 26px;
+  gap: 26px;
+  margin: 0 0 10px;
 }
 
 .asset-tabs button {
@@ -1628,42 +2208,50 @@ function translateOrText(value) {
   color: #98a2b3;
   cursor: pointer;
   font:
-    800 12px/20px 'Inter',
+    800 13px/24px 'Inter',
     Arial,
     sans-serif;
-  padding: 0;
+  padding: 0 0 8px;
   text-decoration: none;
 }
 
-.asset-tabs button.active {
-  color: #98a2b3;
-  text-decoration: underline;
+.asset-tabs button.active,
+.asset-tabs button:hover {
+  border-bottom: 2px solid #2563eb;
+  color: #2563eb;
 }
 
 .assets-toolbar {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   justify-content: space-between;
-  margin-top: 20px;
+  margin: 0 0 24px;
 }
 
 .search-box {
   align-items: center;
-  color: #cfd5df;
+  background: #ffffff;
+  border: 1px solid #ebeef2;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(96, 108, 128, 0.14);
+  color: #98a2b3;
   display: flex;
-  gap: 8px;
+  flex: 1 1 420px;
+  gap: 10px;
   margin: 0;
-  min-width: min(320px, 100%);
+  min-height: 42px;
+  min-width: min(420px, 100%);
+  padding: 0 14px;
 }
 
 .search-icon {
-  color: #cfd5df;
-  font-size: 26px;
-  height: 26px;
+  color: #b8c0cc;
+  font-size: 24px;
+  height: 24px;
   opacity: 1;
-  width: 26px;
+  width: 24px;
 }
 
 .search-box input {
@@ -1672,9 +2260,10 @@ function translateOrText(value) {
   color: #404040;
   flex: 1;
   font:
-    800 12px/20px 'Inter',
+    800 13px/20px 'Inter',
     Arial,
     sans-serif;
+  min-width: 0;
   outline: 0;
 }
 
@@ -1690,15 +2279,14 @@ function translateOrText(value) {
   cursor: pointer;
   display: inline-flex;
   font:
-    800 12px/20px 'Inter',
+    800 13px/20px 'Inter',
     Arial,
     sans-serif;
   gap: 8px;
-  height: auto;
   justify-content: center;
-  min-height: 34px;
+  min-height: 38px;
   min-width: 0;
-  padding: 6px 12px;
+  padding: 0 14px;
   width: auto;
 }
 
@@ -1761,14 +2349,14 @@ function translateOrText(value) {
 .form-card,
 .table-card {
   background: #ffffff;
+  border: 1px solid #ebeef2;
   border-radius: 8px;
-  box-shadow:
-    0 1px 3px rgba(96, 108, 128, 0.14),
-    0 4px 4px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 1px 3px rgba(96, 108, 128, 0.14);
   box-sizing: border-box;
-  margin-top: 20px;
+  margin-bottom: 24px;
+  margin-top: 0;
   max-width: 100%;
-  padding: 20px 24px;
+  padding: 22px 26px;
 }
 
 .section-heading {
@@ -1781,7 +2369,7 @@ function translateOrText(value) {
 .section-heading h2 {
   color: #323c4d;
   font:
-    800 14px/20px 'Inter',
+    800 18px/24px 'Inter',
     Arial,
     sans-serif;
   margin: 0;
@@ -2029,7 +2617,7 @@ function translateOrText(value) {
 
 .assets-table {
   border-collapse: collapse;
-  min-width: 1240px;
+  min-width: 1060px;
   width: 100%;
 }
 
@@ -2039,7 +2627,7 @@ function translateOrText(value) {
     400 12px/14px 'Varela Round',
     Arial,
     sans-serif;
-  padding: 12px 0 18px;
+  padding: 13px 12px;
   text-align: left;
 }
 
@@ -2050,7 +2638,7 @@ function translateOrText(value) {
     400 12px/14px 'Varela Round',
     Arial,
     sans-serif;
-  padding: 14px 0;
+  padding: 13px 12px;
 }
 
 .incident,
@@ -2083,14 +2671,18 @@ function translateOrText(value) {
 }
 
 .status-pill {
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.status-pill {
   background: var(--tone-bg, #ffffff);
-  border: 1px solid var(--tone-border, #ebeef2);
-  border-radius: 3px;
   color: var(--tone-text, #404040);
   display: inline-flex;
   justify-content: center;
   min-width: 96px;
-  padding: 2px 8px;
 }
 
 .connectivity.online {
@@ -2114,21 +2706,18 @@ function translateOrText(value) {
 .status-select-field {
   align-items: center;
   background: var(--tone-bg, #ffffff);
-  border: 1px solid var(--tone-border, #ebeef2);
-  border-radius: 3px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
   box-sizing: border-box;
   color: var(--tone-text, #404040);
   cursor: pointer;
   display: inline-flex;
   font:
-    400 12px/14px 'Varela Round',
+    800 12px/14px 'Varela Round',
     Arial,
     sans-serif;
-  justify-content: space-between;
-  min-height: 26px;
-  min-width: 128px;
-  padding: 3px 8px;
-  position: relative;
+  gap: 6px;
+  padding: 6px 10px;
 }
 
 .status-select-field span,
@@ -2145,16 +2734,12 @@ function translateOrText(value) {
 }
 
 .status-select-field select {
-  appearance: none;
   background: transparent;
   border: 0;
+  color: inherit;
   cursor: pointer;
-  height: auto;
-  inset: 0;
-  opacity: 0;
+  font-weight: 800;
   outline: 0;
-  position: absolute;
-  width: 100%;
 }
 
 .status-select-field:focus-within {

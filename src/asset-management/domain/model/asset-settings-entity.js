@@ -7,11 +7,14 @@
  * @property {Array<*>} [iotDeviceTypes]
  * @property {number} [minimumTemperature]
  * @property {number} [maximumTemperature]
+ * @property {number} [minimumHumidity]
  * @property {number} [maximumHumidity]
  * @property {number} [calibrationFrequencyDays]
  * @property {string} [temperatureUnit]
  * @property {string} [humidityUnit]
  * @property {string} [weightUnit]
+ * @property {number} [readingFrequencySeconds]
+ * @property {number} [alertThresholdMinutes]
  * @property {number|null} [assetId]
  */
 
@@ -30,11 +33,14 @@ export class AssetSettings {
         iotDeviceTypes = [],
         minimumTemperature = -5,
         maximumTemperature = 8,
+        minimumHumidity = 0,
         maximumHumidity = 85,
         calibrationFrequencyDays = 180,
         temperatureUnit = '°C',
         humidityUnit = '%',
         weightUnit = 'kg',
+        readingFrequencySeconds = 3600,
+        alertThresholdMinutes = 30,
         assetId = null,
     }) {
         this.id = Number(id);
@@ -44,11 +50,14 @@ export class AssetSettings {
         this.iotDeviceTypes = [...iotDeviceTypes];
         this.minimumTemperature = Number(minimumTemperature);
         this.maximumTemperature = Number(maximumTemperature);
+        this.minimumHumidity = Number(minimumHumidity);
         this.maximumHumidity = Number(maximumHumidity);
         this.calibrationFrequencyDays = Number(calibrationFrequencyDays);
         this.temperatureUnit = temperatureUnit;
         this.humidityUnit = humidityUnit;
         this.weightUnit = weightUnit;
+        this.readingFrequencySeconds = Number(readingFrequencySeconds);
+        this.alertThresholdMinutes = Number(alertThresholdMinutes);
         this.assetId = assetId === null || assetId === undefined ? null : Number(assetId);
     }
 }

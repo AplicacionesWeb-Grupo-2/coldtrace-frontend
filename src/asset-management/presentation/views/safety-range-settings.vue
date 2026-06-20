@@ -28,10 +28,12 @@ const roles = ref([]);
 const organizations = ref([]);
 const selectedMinimumTemperature = ref(DEFAULT_ASSET_SETTING_VALUES.minimumTemperature);
 const selectedMaximumTemperature = ref(DEFAULT_ASSET_SETTING_VALUES.maximumTemperature);
+const selectedMinimumHumidity = ref(DEFAULT_ASSET_SETTING_VALUES.minimumHumidity);
 const selectedMaximumHumidity = ref(DEFAULT_ASSET_SETTING_VALUES.maximumHumidity);
 const rangeForm = reactive({
     minimumTemperature: DEFAULT_ASSET_SETTING_VALUES.minimumTemperature,
     maximumTemperature: DEFAULT_ASSET_SETTING_VALUES.maximumTemperature,
+    minimumHumidity: DEFAULT_ASSET_SETTING_VALUES.minimumHumidity,
     maximumHumidity: DEFAULT_ASSET_SETTING_VALUES.maximumHumidity,
 });
 
@@ -68,7 +70,11 @@ const selectedRangeLabel = computed(() =>
     ),
 );
 const selectedHumidityLabel = computed(() =>
-    humidityLabel(selectedMaximumHumidity.value, selectedSettings.value.humidityUnit),
+    humidityRangeLabel(
+        selectedMinimumHumidity.value,
+        selectedMaximumHumidity.value,
+        selectedSettings.value.humidityUnit,
+    ),
 );
 const currentProfiles = computed(() =>
     [...organizationSettings.value].sort((a, b) => {
@@ -84,6 +90,10 @@ const paginatedProfiles = computed(() => {
 const rangeErrors = computed(() => ({
     minimumTemperature: !Number.isFinite(Number(rangeForm.minimumTemperature)),
     maximumTemperature: !Number.isFinite(Number(rangeForm.maximumTemperature)),
+    minimumHumidity:
+        !Number.isFinite(Number(rangeForm.minimumHumidity)) ||
+        Number(rangeForm.minimumHumidity) < 0 ||
+        Number(rangeForm.minimumHumidity) > 99,
     maximumHumidity:
         !Number.isFinite(Number(rangeForm.maximumHumidity)) ||
         Number(rangeForm.maximumHumidity) < 1 ||
@@ -103,10 +113,9 @@ async function loadPageData() {
     identityLoading.value = true;
     feedback.value = 'idle';
     try {
-        const [accessData] = await Promise.all([
-            identityAccessStore.fetchAccessData(),
-            assetManagementStore.fetchAssetManagementData(),
-        ]);
+        const accessData = await identityAccessStore.fetchAccessData();
+        const organizationId = identityAccessStore.currentOrganizationIdFrom(accessData.users);
+        await assetManagementStore.fetchAssetManagementData({organizationId});
         users.value = accessData.users;
         roles.value = accessData.roles;
         organizations.value = accessData.organizations;
@@ -149,6 +158,16 @@ function updateMinimumTemperaturePreview(value) {
  */
 function updateMaximumTemperaturePreview(value) {
     selectedMaximumTemperature.value = numberFromInput(value);
+}
+
+/**
+ * Updates minimum humidity preview in the asset management context.
+ *
+ * @param {string} value
+ * @returns {number}
+ */
+function updateMinimumHumidityPreview(value) {
+    selectedMinimumHumidity.value = numberFromInput(value);
 }
 
 /**
@@ -197,6 +216,7 @@ async function saveRangeSettings() {
         iotDeviceTypes: fallbackSettings.iotDeviceTypes,
         minimumTemperature: Number(rangeForm.minimumTemperature),
         maximumTemperature: Number(rangeForm.maximumTemperature),
+        minimumHumidity: Number(rangeForm.minimumHumidity),
         maximumHumidity: Number(rangeForm.maximumHumidity),
         calibrationFrequencyDays: fallbackSettings.calibrationFrequencyDays,
         temperatureUnit: fallbackSettings.temperatureUnit,
@@ -229,9 +249,11 @@ function resetRangeForm() {
     submitted.value = false;
     rangeForm.minimumTemperature = settings.minimumTemperature;
     rangeForm.maximumTemperature = settings.maximumTemperature;
+    rangeForm.minimumHumidity = settings.minimumHumidity;
     rangeForm.maximumHumidity = settings.maximumHumidity;
     selectedMinimumTemperature.value = settings.minimumTemperature;
     selectedMaximumTemperature.value = settings.maximumTemperature;
+    selectedMinimumHumidity.value = settings.minimumHumidity;
     selectedMaximumHumidity.value = settings.maximumHumidity;
 }
 
@@ -252,6 +274,15 @@ function hasRangeControlError(controlName) {
  */
 function hasTemperatureRangeError() {
     return submitted.value && !hasValidTemperatureRange();
+}
+
+/**
+ * Determines whether humidity range error exists.
+ *
+ * @returns {boolean}
+ */
+function hasHumidityRangeError() {
+    return submitted.value && !hasValidHumidityRange();
 }
 
 /**
@@ -306,7 +337,7 @@ function settingStatusClass(settings) {
  * @returns {boolean}
  */
 function hasInvalidRangeForm() {
-    return Object.values(rangeErrors.value).some(Boolean) || !hasValidTemperatureRange();
+    return Object.values(rangeErrors.value).some(Boolean) || !hasValidTemperatureRange() || !hasValidHumidityRange();
 }
 
 /**
@@ -316,6 +347,15 @@ function hasInvalidRangeForm() {
  */
 function hasValidTemperatureRange() {
     return Number(rangeForm.minimumTemperature) < Number(rangeForm.maximumTemperature);
+}
+
+/**
+ * Determines whether valid humidity range exists.
+ *
+ * @returns {boolean}
+ */
+function hasValidHumidityRange() {
+    return Number(rangeForm.minimumHumidity) < Number(rangeForm.maximumHumidity);
 }
 
 /**
@@ -395,14 +435,16 @@ function temperatureRangeLabel(minimumTemperature, maximumTemperature, temperatu
 }
 
 /**
- * Handles humidity label behavior in the asset management context.
+ * Handles humidity range label behavior in the asset management context.
  *
+ * @param {number|string} minimumHumidity
  * @param {number|string} maximumHumidity
  * @param {*} humidityUnit
  * @returns {string}
  */
-function humidityLabel(maximumHumidity, humidityUnit) {
-    return Number.isFinite(Number(maximumHumidity)) ? `${maximumHumidity}${humidityUnit}` : 'N/A';
+function humidityRangeLabel(minimumHumidity, maximumHumidity, humidityUnit) {
+    if (!Number.isFinite(Number(minimumHumidity)) || !Number.isFinite(Number(maximumHumidity))) return 'N/A';
+    return `${minimumHumidity}${humidityUnit} - ${maximumHumidity}${humidityUnit}`;
 }
 
 /**
@@ -527,9 +569,17 @@ function translateOrText(value) {
           </label>
 
           <label class="filter-field">
+            <span>{{ t('asset-management.safety-ranges.form.minimum-humidity') }}</span>
+            <input v-model.number="rangeForm.minimumHumidity" type="number" step="1" @input="updateMinimumHumidityPreview($event.target.value)"/>
+            <small v-if="hasRangeControlError('minimumHumidity')">{{ t('asset-management.safety-ranges.form.humidity-error') }}</small>
+          </label>
+
+          <label class="filter-field">
             <span>{{ t('asset-management.safety-ranges.form.maximum-humidity') }}</span>
             <input v-model.number="rangeForm.maximumHumidity" type="number" step="1" @input="updateMaximumHumidityPreview($event.target.value)"/>
-            <small v-if="hasRangeControlError('maximumHumidity')">{{ t('asset-management.safety-ranges.form.humidity-error') }}</small>
+            <small v-if="hasRangeControlError('maximumHumidity') || hasHumidityRangeError()">
+              {{ t(hasHumidityRangeError() ? 'asset-management.safety-ranges.form.humidity-range-error' : 'asset-management.safety-ranges.form.humidity-error') }}
+            </small>
           </label>
 
           <div class="save-actions">
@@ -569,7 +619,7 @@ function translateOrText(value) {
               </td>
               <td>{{ translateOrText(scopeLocationFor(settings)) }}</td>
               <td>{{ settings.minimumTemperature }}{{ settings.temperatureUnit }} - {{ settings.maximumTemperature }}{{ settings.temperatureUnit }}</td>
-              <td>{{ settings.maximumHumidity }}{{ settings.humidityUnit }}</td>
+              <td>{{ settings.minimumHumidity }}{{ settings.humidityUnit }} - {{ settings.maximumHumidity }}{{ settings.humidityUnit }}</td>
               <td>
                 <span class="status-pill" :class="settingStatusClass(settings)">
                   {{ t(settingStatusKey(settings)) }}
@@ -878,7 +928,7 @@ function translateOrText(value) {
   align-items: start;
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(3, minmax(170px, 1fr)) minmax(140px, auto);
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(140px, auto);
 }
 
 .save-actions {

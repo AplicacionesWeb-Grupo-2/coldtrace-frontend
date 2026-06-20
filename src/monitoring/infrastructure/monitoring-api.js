@@ -32,7 +32,17 @@ export class MonitoringApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getSensorReadings() {
-        return this.#sensorReadingsEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests sensor readings from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getSensorReadingsForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, sensorReadingsEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
     }
 
     /**
@@ -41,9 +51,11 @@ export class MonitoringApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    createSensorReading(resource) {
-        const {id: _temporaryId, ...resourceWithoutId} = resource;
-        return this.#sensorReadingsEndpoint.create(resourceWithoutId);
+    createSensorReading(organizationId, resource) {
+        const endpoint = this.#endpointForOrganization(organizationId, sensorReadingsEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to create a sensor reading.'));
+
+        return endpoint.create(this.#sensorReadingRequestFrom(resource));
     }
 
     /**
@@ -52,7 +64,17 @@ export class MonitoringApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getIncidents() {
-        return this.#incidentsEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests incidents from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getIncidentsForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, incidentsEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
     }
 
     /**
@@ -61,9 +83,11 @@ export class MonitoringApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    createIncident(resource) {
-        const {id: _temporaryId, ...resourceWithoutId} = resource;
-        return this.#incidentsEndpoint.create(resourceWithoutId);
+    createIncident(organizationId, resource) {
+        const endpoint = this.#endpointForOrganization(organizationId, incidentsEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to create an incident.'));
+
+        return endpoint.create(this.#incidentRequestFrom(resource));
     }
 
     /**
@@ -73,8 +97,36 @@ export class MonitoringApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    updateIncident(id, resource) {
-        return this.#incidentsEndpoint.update(id, resource);
+    updateIncident(organizationId, id, resource) {
+        const basePath = this.organizationScopedPath(organizationId, `${incidentsEndpointPath}/${id}`);
+        if (!basePath) return Promise.reject(new Error('Organization is required to update an incident.'));
+
+        if (resource.status === 'recognized' && resource.recognizedBy) {
+            return this.http.post(`${basePath}/acknowledgements`, {acknowledgedBy: resource.recognizedBy});
+        }
+
+        if (resource.status === 'closed' && resource.closedBy) {
+            return this.http.post(`${basePath}/resolutions`, {
+                resolvedBy: resource.closedBy,
+                resolutionNotes: resource.closureEvidence ?? resource.correctiveAction ?? 'Resolved from ColdTrace.',
+            });
+        }
+
+        if (resource.escalationStatus === 'escalated') {
+            return this.http.patch(`${basePath}/escalation`, {
+                escalatedBy: resource.escalatedTo ?? 'ColdTrace',
+                escalationReason: resource.conditionKey ?? resource.type ?? 'Incident escalation threshold reached.',
+            });
+        }
+
+        if (resource.correctiveAction) {
+            return this.http.patch(`${basePath}/corrective-action`, {
+                correctiveAction: resource.correctiveAction,
+                registeredBy: resource.recognizedBy ?? resource.closedBy ?? 'ColdTrace',
+            });
+        }
+
+        return Promise.resolve({status: 200, data: resource});
     }
 
     /**
@@ -83,7 +135,17 @@ export class MonitoringApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getMaintenanceSchedules() {
-        return this.#maintenanceSchedulesEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests maintenance schedules from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getMaintenanceSchedulesForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, maintenanceSchedulesEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
     }
 
     /**
@@ -92,6 +154,67 @@ export class MonitoringApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getTechnicalServiceRequests() {
-        return this.#technicalServiceRequestsEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests technical service requests from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getTechnicalServiceRequestsForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, technicalServiceRequestsEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
+    }
+
+    /**
+     * Builds an endpoint helper for an organization-scoped resource.
+     *
+     * @param {number|string} organizationId
+     * @param {string} endpointPath
+     * @returns {BaseEndpoint|null}
+     */
+    #endpointForOrganization(organizationId, endpointPath) {
+        const scopedPath = this.organizationScopedPath(organizationId, endpointPath);
+        return scopedPath ? new BaseEndpoint(this, scopedPath) : null;
+    }
+
+    /**
+     * Maps sensor reading data to backend create request.
+     *
+     * @param {*} resource
+     * @returns {*}
+     */
+    #sensorReadingRequestFrom(resource) {
+        return {
+            assetId: resource.assetId,
+            iotDeviceId: resource.iotDeviceId,
+            temperature: resource.temperature,
+            humidity: resource.humidity,
+            recordedAt: resource.recordedAt,
+            motionDetected: resource.motionDetected,
+            imageCaptured: resource.imageCaptured,
+            batteryLevel: resource.batteryLevel,
+            signalStrength: resource.signalStrength,
+        };
+    }
+
+    /**
+     * Maps incident data to backend create request.
+     *
+     * @param {*} resource
+     * @returns {*}
+     */
+    #incidentRequestFrom(resource) {
+        return {
+            assetId: resource.assetId,
+            deviceId: resource.deviceId ?? resource.iotDeviceId ?? null,
+            readingId: resource.readingId ?? resource.sourceReadingId ?? null,
+            assetName: resource.assetName,
+            deviceName: resource.deviceName ?? null,
+            type: resource.type,
+            severity: resource.severity,
+            value: resource.value,
+        };
     }
 }

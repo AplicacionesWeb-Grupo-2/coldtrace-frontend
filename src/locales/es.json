@@ -2,6 +2,12 @@
   "app": {
     "name": "ColdTrace"
   },
+  "language-switcher": {
+    "open": "Abrir selector de idioma",
+    "selector": "Selector de idioma",
+    "english": "Inglés",
+    "spanish": "Español"
+  },
   "sign-in": {
     "title": "Iniciar sesión",
     "email": "Correo electrónico",
@@ -87,6 +93,7 @@
     "delete": "Eliminar",
     "deleting": "Eliminando...",
     "delete-confirm": "Eliminar {name}? Esta acción no se puede deshacer.",
+    "edit": "Editar",
     "empty": "No hay usuarios para esta búsqueda.",
     "empty-section-message": "Esta sección todavía no tiene contenido.",
     "menu": {
@@ -189,7 +196,16 @@
     "nav-findings": "Hallazgos",
     "nav-audit-evidence": "Evidencia",
     "nav-notifications": "Notificaciones",
+    "nav-access-aria": "Navegación de acceso",
+    "nav-settings-aria": "Navegación de configuración",
+    "nav-reports-aria": "Navegación de reportes",
+    "section-navigation": "Navegación de sección",
     "notification-shortcut": "Alertas pendientes: {count}",
+    "team-members": "Miembros del equipo",
+    "team-members-aria": "Miembros de la organización",
+    "team-manage": "Gestionar miembros de la organización",
+    "settings-action": "Abrir configuración",
+    "logout-action": "Cerrar sesión",
     "download-report": "Descargar reporte mensual",
     "theme-light": "Claro",
     "theme-dark": "Oscuro"
@@ -201,6 +217,7 @@
     "delete": "Eliminar",
     "deleting": "Eliminando...",
     "delete-confirm": "Eliminar {name}? Esta acción no se puede deshacer.",
+    "edit": "Editar",
     "cold-room-title": "Cámaras frigoríficas",
     "cold-room-subtitle": "Registra y revisa cámaras frigoríficas de la organización activa.",
     "empty": "No hay cámaras frigoríficas para esta búsqueda.",
@@ -208,6 +225,7 @@
     "tabs": {
       "cold-room": "Cámara",
       "transport": "Transporte",
+      "location": "Ubicaciones",
       "iot-device": "Dispositivos IoT",
       "gateway": "Gateway",
       "settings": "Ajustes"
@@ -221,6 +239,7 @@
         "form-subtitle": "Crea una cámara frigorífica para la organización activa.",
         "form-create": "Crear cámara",
         "feedback-created": "Cámara creada correctamente.",
+        "feedback-updated": "Cámara actualizada correctamente.",
         "feedback-duplicate": "Ya existe una cámara con este ID.",
         "name-placeholder": "Cámara 21"
       },
@@ -232,6 +251,7 @@
         "form-subtitle": "Crea una unidad de transporte refrigerado para la organización activa.",
         "form-create": "Crear transporte",
         "feedback-created": "Unidad de transporte creada correctamente.",
+        "feedback-updated": "Unidad de transporte actualizada correctamente.",
         "feedback-duplicate": "Ya existe una unidad de transporte con este ID.",
         "name-placeholder": "Camión 08"
       }
@@ -253,6 +273,7 @@
       "high-temperature": "Temperatura alta",
       "connection-lost": "Conexión perdida",
       "high-humidity": "Humedad alta",
+      "low-humidity": "Humedad baja",
       "low-temperature": "Temperatura baja",
       "none": "Sin incidentes"
     },
@@ -271,11 +292,15 @@
       "subtitle": "Revisa dispositivos de monitoreo de la organización activa.",
       "form-open": "Nuevo dispositivo IoT",
       "form-title": "Registrar dispositivo IoT",
+      "form-edit-title": "Editar dispositivo IoT",
       "form-subtitle": "Crea un dispositivo de monitoreo y asígnalo a un activo si corresponde.",
+      "form-edit-subtitle": "Actualiza la asignación y metadatos operativos del dispositivo seleccionado.",
       "form-create": "Crear dispositivo IoT",
+      "form-update": "Actualizar dispositivo IoT",
       "unassigned": "Sin asignar",
       "empty": "No hay dispositivos IoT registrados para esta organización.",
       "feedback-created": "Dispositivo IoT creado correctamente.",
+      "feedback-updated": "Dispositivo IoT actualizado correctamente.",
       "feedback-deleted": "Dispositivo IoT eliminado correctamente.",
       "feedback-duplicate": "Ya existe un dispositivo IoT con este ID.",
       "form": {
@@ -293,8 +318,14 @@
         "measurement-error": "Ingresa al menos 3 caracteres.",
         "asset": "Activo asignado",
         "unassigned": "Dejar sin asignar",
+        "status": "Estado",
+        "calibration-status": "Estado de calibración",
+        "last-calibration": "Última calibración",
+        "last-calibration-placeholder": "01 Oct 2026",
         "next-calibration": "Próxima calibración",
-        "next-calibration-placeholder": "01 Nov 2026"
+        "next-calibration-placeholder": "01 Nov 2026",
+        "reading-frequency": "Frecuencia de lectura (minutos)",
+        "reading-frequency-error": "Ingresa un valor entre 5 y 1440 minutos."
       },
       "device-types": {
         "temperature-sensor": "Sensor de temperatura",
@@ -334,16 +365,69 @@
         "unknown": "Desconocido"
       }
     },
+    "locations": {
+      "title": "Ubicaciones",
+      "subtitle": "Crea y actualiza ubicaciones operativas usadas por activos y gateways.",
+      "form-open": "Nueva ubicación",
+      "form-title": "Registrar ubicación",
+      "form-edit-title": "Editar ubicación",
+      "form-subtitle": "Crea una ubicación de la organización para activos, gateways y seguimiento operativo.",
+      "form-edit-subtitle": "Actualiza los datos de la ubicación usados por activos y gateways vinculados.",
+      "form-create": "Crear ubicación",
+      "form-update": "Actualizar ubicación",
+      "edit": "Editar",
+      "empty": "No hay ubicaciones registradas para esta organización.",
+      "feedback-created": "Ubicación creada correctamente.",
+      "feedback-updated": "Ubicación actualizada correctamente.",
+      "feedback-duplicate": "Ya existe una ubicación con este nombre.",
+      "form": {
+        "name": "Nombre",
+        "name-placeholder": "Almacén principal",
+        "name-error": "Ingresa al menos 2 caracteres.",
+        "type": "Tipo",
+        "type-error": "Selecciona un tipo de ubicación.",
+        "address": "Dirección",
+        "address-placeholder": "Av. Industrial 123, Lima",
+        "description": "Descripción",
+        "description-placeholder": "Área de almacenamiento en frío para vacunas",
+        "status": "Estado"
+      },
+      "table": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "address": "Dirección",
+        "description": "Descripción",
+        "status": "Estado"
+      },
+      "types": {
+        "WAREHOUSE": "Almacén",
+        "CLIENT_SITE": "Sede de cliente",
+        "ROUTE": "Ruta",
+        "LABORATORY": "Laboratorio",
+        "DISTRIBUTION_CENTER": "Centro de distribución",
+        "facility": "Instalación",
+        "transport-route": "Ruta de transporte"
+      },
+      "status": {
+        "active": "Activo",
+        "maintenance": "Mantenimiento",
+        "inactive": "Inactivo"
+      }
+    },
     "gateways": {
-      "title": "Gateways y ubicaciones",
+      "title": "Gateways",
       "subtitle": "Revisa puntos de transmisión usados por activos y dispositivos IoT de la organización.",
       "form-open": "Nuevo gateway",
       "form-title": "Registrar gateway",
+      "form-edit-title": "Editar gateway",
       "form-subtitle": "Crea un punto de transmisión para una ubicación de la organización.",
+      "form-edit-subtitle": "Actualiza la ubicación, red y estado del gateway seleccionado.",
       "form-create": "Crear gateway",
+      "form-update": "Actualizar gateway",
       "unassigned": "Sin asignar",
       "empty": "No hay gateways registrados para esta organización.",
       "feedback-created": "Gateway creado correctamente.",
+      "feedback-updated": "Gateway actualizado correctamente.",
       "feedback-deleted": "Gateway eliminado correctamente.",
       "feedback-duplicate": "Ya existe un gateway con este ID.",
       "form": {
@@ -355,7 +439,7 @@
         "name-error": "Ingresa al menos 3 caracteres.",
         "location": "Ubicación",
         "location-placeholder": "San Miguel - Plaza Center",
-        "location-error": "Ingresa al menos 3 caracteres.",
+        "location-error": "Selecciona una ubicación.",
         "network": "Red",
         "network-placeholder": "LTE / Wi-Fi",
         "network-error": "Ingresa una red válida.",
@@ -433,7 +517,7 @@
       "summary-assets": "Activos monitoreados",
       "summary-profiles": "Perfiles por activo",
       "summary-temperature": "Rango por guardar",
-      "summary-humidity": "Humedad por guardar",
+      "summary-humidity": "Rango de humedad por guardar",
       "empty": "No hay rangos seguros registrados para esta organización.",
       "form": {
         "scope": "Aplicar a",
@@ -441,10 +525,12 @@
         "selected-range": "Rango guardado",
         "minimum-temperature": "Temperatura mínima",
         "maximum-temperature": "Temperatura máxima",
+        "minimum-humidity": "Humedad mínima (%)",
         "maximum-humidity": "Humedad máxima (%)",
         "number-error": "Ingresa un número válido.",
-        "humidity-error": "Ingresa un valor entre 1 y 100.",
-        "temperature-range-error": "La temperatura máxima debe ser mayor que la mínima."
+        "humidity-error": "Ingresa un valor entre 0 y 100.",
+        "temperature-range-error": "La temperatura máxima debe ser mayor que la mínima.",
+        "humidity-range-error": "La humedad máxima debe ser mayor que la mínima."
       },
       "table-title": "Perfiles configurados",
       "table-subtitle": "El perfil general se usa como base; los perfiles por activo reemplazan ese rango durante las lecturas de monitoreo.",
@@ -521,15 +607,21 @@
       "name-error": "Ingresa al menos 3 caracteres.",
       "gateway": "Gateway",
       "select-gateway": "Seleccionar gateway",
+      "select-location": "Seleccionar ubicación",
       "gateway-error": "Selecciona un gateway.",
       "capacity": "Capacidad (kg)",
       "capacity-error": "Ingresa una capacidad mayor a cero.",
       "location": "Ubicación derivada",
-      "location-derived-empty": "Selecciona un gateway para resolver la ubicación.",
+      "location-error": "Selecciona una ubicación.",
+      "location-derived-empty": "Selecciona una ubicación para resolver el almacén.",
       "description": "Descripción",
       "description-placeholder": "Notas operativas de la cámara",
+      "status": "Estado",
       "cancel": "Cancelar",
-      "creating": "Creando..."
+      "creating": "Creando...",
+      "update": "Actualizar activo",
+      "edit-title": "Editar activo",
+      "edit-subtitle": "Actualiza el activo seleccionado usando el contrato del backend."
     },
     "update": {
       "feedback-updated": "Activo actualizado correctamente."
@@ -546,11 +638,12 @@
   "monitoring": {
     "operational": {
       "title": "Página Principal",
+      "subtitle": "Resumen operativo de activos, lecturas, incidencias y mantenimiento.",
       "chart-temp-title": "Temperatura",
       "chart-temp-subtitle": "Promedio horario de activos monitoreados",
       "chart-temp-helper": "Lee de izquierda a derecha por hora. La línea está dentro de rango cuando se mantiene entre ambos límites; si sale del rango, cambia de color.",
       "cold-room-label": "Cámara Fría 01",
-      "chart-storage-title": "Distribución de almacenamiento",
+      "chart-storage-title": "Estado térmico",
       "metric-total-assets": "Total de activos",
       "metric-monitored": "Activos monitoreados",
       "metric-sensors": "Sensores activos",
@@ -583,7 +676,7 @@
       "storage-frozen": "Congelado",
       "storage-refrigerated": "Refrigerado",
       "storage-ambient": "Ambiente",
-      "storage-other": "Otro",
+      "storage-other": "Sin datos",
       "storage-cold-rooms": "Cámaras frías",
       "storage-transport": "Transporte",
       "storage-connected": "Conectados",
@@ -764,6 +857,10 @@
       "active-alerts": "alerta(s) activa(s)",
       "pending": "pendiente(s)",
       "failed": "fallida(s)",
+      "filter-active": "Activas",
+      "filter-pending": "Pendientes",
+      "filter-failed": "Fallidas",
+      "search-placeholder": "Buscar notificaciones por activo, destinatario, estado o canal...",
       "empty-title": "Sin notificaciones despachadas",
       "empty-description": "Cuando una lectura supere rangos, humedad, batería o señal, aparecerá aquí una notificación.",
       "recipient": "Destinatario:",

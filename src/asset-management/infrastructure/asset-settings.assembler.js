@@ -9,8 +9,11 @@ import {AssetSettings} from '@/asset-management/domain/model/asset-settings-enti
  * @property {*} [iotDeviceTypes]
  * @property {*} [minimumTemperature]
  * @property {*} [maximumTemperature]
+ * @property {*} [minimumHumidity]
  * @property {*} [maximumHumidity]
  * @property {*} [calibrationFrequencyDays]
+ * @property {*} [readingFrequencySeconds]
+ * @property {*} [alertThresholdMinutes]
  * @property {*} [temperatureUnit]
  * @property {*} [humidityUnit]
  * @property {*} [weightUnit]
@@ -58,8 +61,11 @@ export class AssetSettingsAssembler {
             iotDeviceTypes: entity.iotDeviceTypes,
             minimumTemperature: entity.minimumTemperature,
             maximumTemperature: entity.maximumTemperature,
+            minimumHumidity: entity.minimumHumidity,
             maximumHumidity: entity.maximumHumidity,
             calibrationFrequencyDays: entity.calibrationFrequencyDays,
+            readingFrequencySeconds: entity.readingFrequencySeconds,
+            alertThresholdMinutes: entity.alertThresholdMinutes,
             temperatureUnit: entity.temperatureUnit,
             humidityUnit: entity.humidityUnit,
             weightUnit: entity.weightUnit,

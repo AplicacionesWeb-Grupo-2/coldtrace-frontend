@@ -26,7 +26,17 @@ export class MaintenanceManagementApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getMaintenanceSchedules() {
-        return this.#maintenanceSchedulesEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests maintenance schedules from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getMaintenanceSchedulesForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, maintenanceSchedulesEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
     }
 
     /**
@@ -35,8 +45,11 @@ export class MaintenanceManagementApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    createMaintenanceSchedule(resource) {
-        return this.#maintenanceSchedulesEndpoint.create(resource);
+    createMaintenanceSchedule(organizationId, resource) {
+        const endpoint = this.#endpointForOrganization(organizationId, maintenanceSchedulesEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to create a maintenance schedule.'));
+
+        return endpoint.create(this.#maintenanceScheduleRequestFrom(resource));
     }
 
     /**
@@ -45,8 +58,11 @@ export class MaintenanceManagementApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    updateMaintenanceSchedule(resource) {
-        return this.#maintenanceSchedulesEndpoint.update(resource.id, resource);
+    updateMaintenanceSchedule(organizationId, resource) {
+        const endpointPath = this.organizationScopedPath(organizationId, `${maintenanceSchedulesEndpointPath}/${resource.id}`);
+        if (!endpointPath) return Promise.reject(new Error('Organization is required to update a maintenance schedule.'));
+
+        return this.http.patch(endpointPath, {status: resource.status});
     }
 
     /**
@@ -55,7 +71,17 @@ export class MaintenanceManagementApi extends BaseApi {
      * @returns {Promise<*>}
      */
     getTechnicalServiceRequests() {
-        return this.#technicalServiceRequestsEndpoint.getAll();
+        return this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests technical service requests from the API.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getTechnicalServiceRequestsForOrganization(organizationId) {
+        return this.#endpointForOrganization(organizationId, technicalServiceRequestsEndpointPath)?.getAll() ?? this.emptyCollectionResponse();
     }
 
     /**
@@ -64,8 +90,11 @@ export class MaintenanceManagementApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    createTechnicalServiceRequest(resource) {
-        return this.#technicalServiceRequestsEndpoint.create(resource);
+    createTechnicalServiceRequest(organizationId, resource) {
+        const endpoint = this.#endpointForOrganization(organizationId, technicalServiceRequestsEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to create a technical service request.'));
+
+        return endpoint.create(this.#technicalServiceRequestFrom(resource));
     }
 
     /**
@@ -74,7 +103,70 @@ export class MaintenanceManagementApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    updateTechnicalServiceRequest(resource) {
-        return this.#technicalServiceRequestsEndpoint.update(resource.id, resource);
+    updateTechnicalServiceRequest(organizationId, resource) {
+        const endpointPath = this.organizationScopedPath(organizationId, `${technicalServiceRequestsEndpointPath}/${resource.id}`);
+        if (!endpointPath) return Promise.reject(new Error('Organization is required to update a technical service request.'));
+
+        return this.http.patch(endpointPath, this.#technicalServiceStatusRequestFrom(resource));
+    }
+
+    /**
+     * Builds an endpoint helper for an organization-scoped resource.
+     *
+     * @param {number|string} organizationId
+     * @param {string} endpointPath
+     * @returns {BaseEndpoint|null}
+     */
+    #endpointForOrganization(organizationId, endpointPath) {
+        const scopedPath = this.organizationScopedPath(organizationId, endpointPath);
+        return scopedPath ? new BaseEndpoint(this, scopedPath) : null;
+    }
+
+    /**
+     * Maps schedule data to backend create request.
+     *
+     * @param {*} resource
+     * @returns {*}
+     */
+    #maintenanceScheduleRequestFrom(resource) {
+        return {
+            assetId: resource.assetId,
+            scheduledDate: resource.scheduledDate,
+            frequencyDays: resource.frequencyDays ?? 30,
+            responsibleUserId: resource.responsibleUserId ?? null,
+            observations: resource.observations,
+            status: resource.status,
+        };
+    }
+
+    /**
+     * Maps technical service data to backend create request.
+     *
+     * @param {*} resource
+     * @returns {*}
+     */
+    #technicalServiceRequestFrom(resource) {
+        return {
+            assetId: resource.assetId,
+            incidentId: resource.incidentId ?? null,
+            issueDescription: resource.issueDescription,
+            priority: resource.priority,
+            requestedBy: resource.requestedBy ?? null,
+        };
+    }
+
+    /**
+     * Maps technical service lifecycle data to backend patch request.
+     *
+     * @param {*} resource
+     * @returns {*}
+     */
+    #technicalServiceStatusRequestFrom(resource) {
+        return {
+            status: resource.status,
+            closureSummary: resource.resultNotes ?? resource.interventionNotes ?? null,
+            evidence: resource.resultNotes ?? resource.interventionNotes ?? null,
+            closedBy: resource.status === 'closed' ? 'ColdTrace' : null,
+        };
     }
 }

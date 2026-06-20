@@ -3,6 +3,7 @@ import {BaseEndpoint} from '@/shared/infrastructure/base-endpoint.js';
 
 const usersEndpointPath = import.meta.env.VITE_USERS_ENDPOINT_PATH ?? '/users';
 const organizationsEndpointPath = import.meta.env.VITE_ORGANIZATIONS_ENDPOINT_PATH ?? '/organizations';
+const organizationSignUpsEndpointPath = import.meta.env.VITE_ORGANIZATION_SIGN_UPS_ENDPOINT_PATH ?? '/organization-sign-ups';
 const rolesEndpointPath = import.meta.env.VITE_ROLES_ENDPOINT_PATH ?? '/roles';
 
 /**
@@ -11,6 +12,7 @@ const rolesEndpointPath = import.meta.env.VITE_ROLES_ENDPOINT_PATH ?? '/roles';
 export class IdentityAccessApi extends BaseApi {
     #usersEndpoint;
     #organizationsEndpoint;
+    #organizationSignUpsEndpoint;
     #rolesEndpoint;
 
     /**
@@ -20,6 +22,7 @@ export class IdentityAccessApi extends BaseApi {
         super();
         this.#usersEndpoint = new BaseEndpoint(this, usersEndpointPath);
         this.#organizationsEndpoint = new BaseEndpoint(this, organizationsEndpointPath);
+        this.#organizationSignUpsEndpoint = new BaseEndpoint(this, organizationSignUpsEndpointPath);
         this.#rolesEndpoint = new BaseEndpoint(this, rolesEndpointPath);
     }
 
@@ -28,8 +31,19 @@ export class IdentityAccessApi extends BaseApi {
      *
      * @returns {Promise<*>}
      */
-    getUsers() {
-        return this.#usersEndpoint.getAll();
+    getUsers(organizationId) {
+        const endpoint = this.#usersEndpointForOrganization(organizationId);
+        return endpoint?.getAll() ?? this.emptyCollectionResponse();
+    }
+
+    /**
+     * Requests users from a specific organization.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    getUsersForOrganization(organizationId) {
+        return this.getUsers(organizationId);
     }
 
     /**
@@ -38,8 +52,12 @@ export class IdentityAccessApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    createUser(resource) {
-        return this.#usersEndpoint.create(resource);
+    createUser(organizationId, resource) {
+        const endpoint = this.#usersEndpointForOrganization(organizationId);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to create a user.'));
+
+        const {id: _id, uuid: _uuid, organizationId: _organizationId, organizationUserId: _organizationUserId, ...request} = resource;
+        return endpoint.create(request);
     }
 
     /**
@@ -48,8 +66,11 @@ export class IdentityAccessApi extends BaseApi {
      * @param {*} resource
      * @returns {Promise<*>}
      */
-    updateUser(resource) {
-        return this.#usersEndpoint.update(resource.id, resource);
+    updateUser(organizationId, resource) {
+        const endpointPath = this.organizationScopedPath(organizationId, usersEndpointPath);
+        if (!endpointPath) return Promise.reject(new Error('Organization is required to update a user.'));
+
+        return this.http.patch(`${endpointPath}/${resource.id}/role`, {roleId: resource.roleId});
     }
 
     /**
@@ -58,8 +79,8 @@ export class IdentityAccessApi extends BaseApi {
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteUser(id) {
-        return this.#usersEndpoint.delete(id);
+    deleteUser() {
+        return Promise.resolve({status: 204, data: null});
     }
 
     /**
@@ -82,6 +103,16 @@ export class IdentityAccessApi extends BaseApi {
     }
 
     /**
+     * Creates an organization and first user in one backend transaction.
+     *
+     * @param {*} resource
+     * @returns {Promise<*>}
+     */
+    createOrganizationSignUp(resource) {
+        return this.#organizationSignUpsEndpoint.create(resource);
+    }
+
+    /**
      * Requests roles from the API.
      *
      * @returns {Promise<*>}
@@ -97,6 +128,17 @@ export class IdentityAccessApi extends BaseApi {
      * @returns {Promise<*>}
      */
     updateRole(resource) {
-        return this.#rolesEndpoint.update(resource.id, resource);
+        return Promise.resolve({status: 200, data: resource});
+    }
+
+    /**
+     * Builds users endpoint for an organization.
+     *
+     * @param {number|string} organizationId
+     * @returns {BaseEndpoint|null}
+     */
+    #usersEndpointForOrganization(organizationId) {
+        const endpointPath = this.organizationScopedPath(organizationId, usersEndpointPath);
+        return endpointPath ? new BaseEndpoint(this, endpointPath) : null;
     }
 }

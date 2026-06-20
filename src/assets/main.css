@@ -188,14 +188,14 @@ a {
   background: #e4e7eb;
 }
 
-.icon-button i {
+.icon-button .material-icons {
   color: #999da3;
-  font-size: 20px;
+  font-size: 24px;
   line-height: 24px;
   transition: color 160ms ease;
 }
 
-.icon-button:hover i {
+.icon-button:hover .material-icons {
   color: #7f96d8;
 }
 
