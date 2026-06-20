@@ -33,8 +33,14 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
      *
      * @returns {Promise<*>}
      */
-    async function fetchMaintenanceSchedules() {
-        const response = await maintenanceManagementApi.getMaintenanceSchedules();
+    async function fetchMaintenanceSchedules(organizationId) {
+        if (!organizationId) {
+            maintenanceSchedules.value = [];
+            maintenanceSchedulesLoaded.value = false;
+            return maintenanceSchedules.value;
+        }
+
+        const response = await maintenanceManagementApi.getMaintenanceSchedulesForOrganization(organizationId);
         maintenanceSchedules.value = MaintenanceScheduleAssembler.toEntitiesFromResponse(response);
         maintenanceSchedulesLoaded.value = true;
         return maintenanceSchedules.value;
@@ -45,8 +51,14 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
      *
      * @returns {Promise<*>}
      */
-    async function fetchTechnicalServiceRequests() {
-        const response = await maintenanceManagementApi.getTechnicalServiceRequests();
+    async function fetchTechnicalServiceRequests(organizationId) {
+        if (!organizationId) {
+            technicalServiceRequests.value = [];
+            technicalServiceRequestsLoaded.value = false;
+            return technicalServiceRequests.value;
+        }
+
+        const response = await maintenanceManagementApi.getTechnicalServiceRequestsForOrganization(organizationId);
         technicalServiceRequests.value = TechnicalServiceRequestAssembler.toEntitiesFromResponse(response);
         technicalServiceRequestsLoaded.value = true;
         return technicalServiceRequests.value;
@@ -57,14 +69,23 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
      *
      * @returns {Promise<*>}
      */
-    async function fetchMaintenanceManagementData() {
+    async function fetchMaintenanceManagementData(organizationId) {
         loading.value = true;
         errors.value = [];
 
         try {
+            if (!organizationId) {
+                maintenanceSchedules.value = [];
+                technicalServiceRequests.value = [];
+                return {
+                    maintenanceSchedules: maintenanceSchedules.value,
+                    technicalServiceRequests: technicalServiceRequests.value,
+                };
+            }
+
             await Promise.all([
-                fetchMaintenanceSchedules(),
-                fetchTechnicalServiceRequests(),
+                fetchMaintenanceSchedules(organizationId),
+                fetchTechnicalServiceRequests(organizationId),
             ]);
             return {
                 maintenanceSchedules: maintenanceSchedules.value,
@@ -86,6 +107,7 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
      */
     async function createMaintenanceSchedule(maintenanceSchedule) {
         const response = await maintenanceManagementApi.createMaintenanceSchedule(
+            maintenanceSchedule.organizationId,
             MaintenanceScheduleAssembler.toResourceFromEntity(maintenanceSchedule),
         );
         const createdSchedule = MaintenanceScheduleAssembler.toEntityFromResource(response.data);
@@ -101,6 +123,7 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
      */
     async function updateMaintenanceSchedule(maintenanceSchedule) {
         const response = await maintenanceManagementApi.updateMaintenanceSchedule(
+            maintenanceSchedule.organizationId,
             MaintenanceScheduleAssembler.toResourceFromEntity(maintenanceSchedule),
         );
         const updatedSchedule = MaintenanceScheduleAssembler.toEntityFromResource(response.data);
@@ -118,6 +141,7 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
      */
     async function createTechnicalServiceRequest(technicalServiceRequest) {
         const response = await maintenanceManagementApi.createTechnicalServiceRequest(
+            technicalServiceRequest.organizationId,
             TechnicalServiceRequestAssembler.toResourceFromEntity(technicalServiceRequest),
         );
         const createdRequest = TechnicalServiceRequestAssembler.toEntityFromResource(response.data);
@@ -133,6 +157,7 @@ const useMaintenanceManagementStore = defineStore('maintenance-management', () =
      */
     async function updateTechnicalServiceRequest(technicalServiceRequest) {
         const response = await maintenanceManagementApi.updateTechnicalServiceRequest(
+            technicalServiceRequest.organizationId,
             TechnicalServiceRequestAssembler.toResourceFromEntity(technicalServiceRequest),
         );
         const updatedRequest = TechnicalServiceRequestAssembler.toEntityFromResource(response.data);

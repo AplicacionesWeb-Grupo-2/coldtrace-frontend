@@ -20,6 +20,7 @@ const closureForm = reactive({
 
 const canResolveAlerts = computed(() => alertsStore.canResolveAlerts());
 const profileUserName = computed(() => identityStore.currentUserNameFrom());
+const activeOrganizationId = computed(() => identityStore.currentOrganizationIdFrom());
 const activeIncidents = computed(() => alertsStore.organizationIncidents.filter(incident => !incident.isClosed));
 const paginatedIncidents = computed(() => {
     const start = (currentPage.value - 1) * pageSize;
@@ -41,7 +42,7 @@ watch(pendingClosureIncidents, (pendingIncidents) => {
 }, {immediate: true});
 
 onMounted(() => {
-    alertsStore.loadIncidents().catch(() => undefined);
+    alertsStore.loadIncidents({organizationId: activeOrganizationId.value}).catch(() => undefined);
 });
 
 /**

@@ -10,26 +10,52 @@ const alertsStore = useAlertsStore();
 const identityAccessStore = useIdentityAccessStore();
 const feedbackDismissDelayMs = 3000;
 const currentPage = ref(1);
+const searchTerm = ref('');
+const selectedNotificationFilter = ref('active');
 const pageSize = 10;
 let feedbackDismissTimeoutId = null;
 
 const notifications = computed(() =>
     [...alertsStore.activeNotifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
 );
+const filteredNotifications = computed(() => {
+    const normalizedSearch = searchTerm.value.trim().toLowerCase();
+    const filteredByStatus = notifications.value.filter(notification => matchesNotificationFilter(notification));
+
+    if (!normalizedSearch) return filteredByStatus;
+
+    return filteredByStatus.filter(notification => {
+        const incident = incidentForNotification(notification);
+
+        return [
+            notification.assetName,
+            notification.message,
+            notification.recipient,
+            notification.channel,
+            notification.status,
+            incident?.severity ?? '',
+            incident?.escalationStatus ?? '',
+        ]
+            .join(' ')
+            .toLowerCase()
+            .includes(normalizedSearch);
+    });
+});
 const paginatedNotifications = computed(() => {
     const start = (currentPage.value - 1) * pageSize;
-    return notifications.value.slice(start, start + pageSize);
+    return filteredNotifications.value.slice(start, start + pageSize);
 });
 const canAttendNotifications = computed(() => alertsStore.canResolveAlerts());
+const activeOrganizationId = computed(() => identityAccessStore.currentOrganizationIdFrom());
 
-watch(notifications, () => {
-    const maxPage = Math.max(1, Math.ceil(notifications.value.length / pageSize));
+watch(filteredNotifications, () => {
+    const maxPage = Math.max(1, Math.ceil(filteredNotifications.value.length / pageSize));
     if (currentPage.value > maxPage) currentPage.value = maxPage;
 });
 
 onMounted(() => {
     alertsStore.clearFeedback();
-    alertsStore.loadIncidents().catch(() => undefined);
+    alertsStore.loadIncidents({organizationId: activeOrganizationId.value}).catch(() => undefined);
 });
 
 onUnmounted(() => {
@@ -74,6 +100,16 @@ function notificationStatusLabelKey(notification) {
 }
 
 /**
+ * Handles notification title behavior in the alerts context.
+ *
+ * @param {*} notification
+ * @returns {string}
+ */
+function notificationTitle(notification) {
+    return incidentForNotification(notification)?.assetName || notification.message;
+}
+
+/**
  * Handles incident for notification behavior in the alerts context.
  *
  * @param {*} notification
@@ -112,6 +148,47 @@ function severityLabelKey(incident) {
 function isAttending(notification) {
     const incident = incidentForNotification(notification);
     return Boolean(incident && alertsStore.recognizingId === incident.id);
+}
+
+/**
+ * Selects notification filter in the current view state.
+ *
+ * @param {'active'|'pending'|'failed'} filter
+ * @returns {void}
+ */
+function selectNotificationFilter(filter) {
+    selectedNotificationFilter.value = filter;
+    currentPage.value = 1;
+}
+
+/**
+ * Updates notification search term in the current view state.
+ *
+ * @param {string} value
+ * @returns {void}
+ */
+function updateSearchTerm(value) {
+    searchTerm.value = value;
+    currentPage.value = 1;
+}
+
+/**
+ * Determines whether notification matches the selected filter.
+ *
+ * @param {*} notification
+ * @returns {boolean}
+ */
+function matchesNotificationFilter(notification) {
+    switch (selectedNotificationFilter.value) {
+        case 'active':
+            return Boolean(incidentForNotification(notification)?.isOpen);
+        case 'pending':
+            return notification.isPending;
+        case 'failed':
+            return notification.isFailed;
+        default:
+            return true;
+    }
 }
 
 /**
@@ -187,6 +264,42 @@ function clearFeedbackDismissTimeout() {
       </div>
     </div>
 
+    <div class="notification-toolbar">
+      <nav class="notification-filter-tabs" aria-label="Notification filters">
+        <button
+          type="button"
+          :class="{active: selectedNotificationFilter === 'active'}"
+          @click="selectNotificationFilter('active')"
+        >
+          {{ t('alerts.notification-list.filter-active') }}
+        </button>
+        <button
+          type="button"
+          :class="{active: selectedNotificationFilter === 'pending'}"
+          @click="selectNotificationFilter('pending')"
+        >
+          {{ t('alerts.notification-list.filter-pending') }}
+        </button>
+        <button
+          type="button"
+          :class="{active: selectedNotificationFilter === 'failed'}"
+          @click="selectNotificationFilter('failed')"
+        >
+          {{ t('alerts.notification-list.filter-failed') }}
+        </button>
+      </nav>
+
+      <label class="search-box">
+        <span class="material-icons search-icon" aria-hidden="true">search</span>
+        <input
+          type="search"
+          :value="searchTerm"
+          :placeholder="t('alerts.notification-list.search-placeholder')"
+          @input="updateSearchTerm($event.target.value)"
+        />
+      </label>
+    </div>
+
     <div v-if="alertsStore.loading" class="loading-container">
       <span class="loading-spinner"></span>
     </div>
@@ -236,7 +349,7 @@ function clearFeedbackDismissTimeout() {
 
           <div class="notification-content">
             <div class="notification-title-line">
-              <span>{{ notification.assetName }}</span>
+              <span>{{ notificationTitle(notification) }}</span>
               <small>{{ t(notificationChannelLabelKey(notification)) }}</small>
               <template v-if="incidentForNotification(notification)">
                 <small
@@ -298,7 +411,7 @@ function clearFeedbackDismissTimeout() {
           </div>
         </div>
 
-        <div v-if="notifications.length === 0" class="notification-empty">
+        <div v-if="filteredNotifications.length === 0" class="notification-empty">
           <span class="material-icons">notifications_off</span>
           <p>{{ t('alerts.notification-list.empty-title') }}</p>
           <small>{{ t('alerts.notification-list.empty-description') }}</small>
@@ -307,7 +420,7 @@ function clearFeedbackDismissTimeout() {
 
       <list-pagination
         v-model="currentPage"
-        :total="notifications.length"
+        :total="filteredNotifications.length"
         :page-size="pageSize"
       />
     </div>
@@ -362,6 +475,73 @@ function clearFeedbackDismissTimeout() {
   display: flex;
   flex-direction: column;
   padding: 22px 28px;
+}
+
+.notification-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 40px;
+}
+
+.notification-filter-tabs {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notification-filter-tabs button {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #667085;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.notification-filter-tabs button.active,
+.notification-filter-tabs button:hover {
+  background: #eff4ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.search-box {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #98a2b3;
+  display: flex;
+  gap: 10px;
+  min-height: 38px;
+  min-width: min(460px, 100%);
+  padding: 0 12px;
+}
+
+.search-icon {
+  color: #98a2b3;
+  font-size: 20px;
+  height: 20px;
+  line-height: 20px;
+  width: 20px;
+}
+
+.search-box input {
+  background: transparent;
+  border: 0;
+  color: #263348;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  outline: 0;
+  width: 100%;
 }
 
 .card-header {

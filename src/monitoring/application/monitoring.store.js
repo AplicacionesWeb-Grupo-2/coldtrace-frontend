@@ -51,8 +51,15 @@ const useMonitoringStore = defineStore('monitoring', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchReadings() {
-        const response = await monitoringApi.getSensorReadings();
+    async function fetchReadings(organizationId) {
+        if (!organizationId) {
+            readings.value = [];
+            readingsLoaded.value = false;
+            initOfflineReadings(readings.value);
+            return readings.value;
+        }
+
+        const response = await monitoringApi.getSensorReadingsForOrganization(organizationId);
         readings.value = SensorReadingAssembler.toEntitiesFromResponse(response);
         readingsLoaded.value = true;
         initOfflineReadings(readings.value);
@@ -64,8 +71,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchIncidents() {
-        const response = await monitoringApi.getIncidents();
+    async function fetchIncidents(organizationId) {
+        if (!organizationId) {
+            incidents.value = [];
+            incidentsLoaded.value = false;
+            return incidents.value;
+        }
+
+        const response = await monitoringApi.getIncidentsForOrganization(organizationId);
         incidents.value = IncidentAssembler.toEntitiesFromResponse(response);
         incidentsLoaded.value = true;
         return incidents.value;
@@ -78,7 +91,7 @@ const useMonitoringStore = defineStore('monitoring', () => {
      * @returns {Promise<*>}
      */
     async function createIncident(incident) {
-        const response = await monitoringApi.createIncident(IncidentAssembler.toResourceFromEntity(incident));
+        const response = await monitoringApi.createIncident(incident.organizationId, IncidentAssembler.toResourceFromEntity(incident));
         const createdIncident = IncidentAssembler.toEntityFromResource(response.data);
         incidents.value.push(createdIncident);
         return createdIncident;
@@ -91,7 +104,7 @@ const useMonitoringStore = defineStore('monitoring', () => {
      * @returns {Promise<*>}
      */
     async function updateIncident(incident) {
-        const response = await monitoringApi.updateIncident(incident.id, IncidentAssembler.toResourceFromEntity(incident));
+        const response = await monitoringApi.updateIncident(incident.organizationId, incident.id, IncidentAssembler.toResourceFromEntity(incident));
         const updatedIncident = IncidentAssembler.toEntityFromResource(response.data);
         incidents.value = incidents.value.map(currentIncident => currentIncident.id === updatedIncident.id ? updatedIncident : currentIncident);
         return updatedIncident;
@@ -102,8 +115,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchMaintenanceSchedules() {
-        const response = await monitoringApi.getMaintenanceSchedules();
+    async function fetchMaintenanceSchedules(organizationId) {
+        if (!organizationId) {
+            maintenanceSchedules.value = [];
+            maintenanceSchedulesLoaded.value = false;
+            return maintenanceSchedules.value;
+        }
+
+        const response = await monitoringApi.getMaintenanceSchedulesForOrganization(organizationId);
         maintenanceSchedules.value = MaintenanceScheduleAssembler.toEntitiesFromResponse(response);
         maintenanceSchedulesLoaded.value = true;
         return maintenanceSchedules.value;
@@ -114,8 +133,14 @@ const useMonitoringStore = defineStore('monitoring', () => {
      *
      * @returns {Promise<*>}
      */
-    async function fetchTechnicalServiceRequests() {
-        const response = await monitoringApi.getTechnicalServiceRequests();
+    async function fetchTechnicalServiceRequests(organizationId) {
+        if (!organizationId) {
+            technicalServiceRequests.value = [];
+            technicalServiceRequestsLoaded.value = false;
+            return technicalServiceRequests.value;
+        }
+
+        const response = await monitoringApi.getTechnicalServiceRequestsForOrganization(organizationId);
         technicalServiceRequests.value = TechnicalServiceRequestAssembler.toEntitiesFromResponse(response);
         technicalServiceRequestsLoaded.value = true;
         return technicalServiceRequests.value;
@@ -127,14 +152,31 @@ const useMonitoringStore = defineStore('monitoring', () => {
      * @param {Object} options
      * @returns {Promise<*>}
      */
-    async function fetchMonitoringData({includeDependencies = true} = {}) {
+    async function fetchMonitoringData({organizationId, includeDependencies = true} = {}) {
         loading.value = true;
         errors.value = [];
 
         try {
-            const requests = [fetchReadings()];
+            if (!organizationId) {
+                readings.value = [];
+                incidents.value = [];
+                maintenanceSchedules.value = [];
+                technicalServiceRequests.value = [];
+                return {
+                    readings: readings.value,
+                    incidents: incidents.value,
+                    maintenanceSchedules: maintenanceSchedules.value,
+                    technicalServiceRequests: technicalServiceRequests.value,
+                };
+            }
+
+            const requests = [fetchReadings(organizationId)];
             if (includeDependencies) {
-                requests.push(fetchIncidents(), fetchMaintenanceSchedules(), fetchTechnicalServiceRequests());
+                requests.push(
+                    fetchIncidents(organizationId),
+                    fetchMaintenanceSchedules(organizationId),
+                    fetchTechnicalServiceRequests(organizationId),
+                );
             }
             await Promise.all(requests);
             return {
@@ -157,8 +199,8 @@ const useMonitoringStore = defineStore('monitoring', () => {
      * @param {*} sensorReading
      * @returns {Promise<*>}
      */
-    async function createSensorReading(sensorReading) {
-        const response = await monitoringApi.createSensorReading(SensorReadingAssembler.toResourceFromEntity(sensorReading));
+    async function createSensorReading(sensorReading, organizationId = null) {
+        const response = await monitoringApi.createSensorReading(organizationId, SensorReadingAssembler.toResourceFromEntity(sensorReading));
         const createdReading = SensorReadingAssembler.toEntityFromResource(response.data);
         readings.value.push(createdReading);
         return createdReading;
@@ -399,7 +441,7 @@ const useMonitoringStore = defineStore('monitoring', () => {
         const reading = buildSensorReading(asset, iotDevice, settings, connectivity);
 
         if (reading) {
-            await createSensorReading(reading).catch(() => undefined);
+            await createSensorReading(reading, organizationId).catch(() => undefined);
         }
     }
 
@@ -483,7 +525,7 @@ const useMonitoringStore = defineStore('monitoring', () => {
                 recordedAt.setHours(recordedAt.getHours() - (8 - index));
                 const settings = assetManagementStore.settingsForAsset(organizationId, asset.id);
                 const reading = buildSensorReading(asset, iotDevice, settings, ConnectivityStatus.Online, index, recordedAt);
-                return reading ? createSensorReading(reading).catch(() => undefined) : null;
+                return reading ? createSensorReading(reading, organizationId).catch(() => undefined) : null;
             })
             .filter(Boolean);
 
@@ -830,7 +872,7 @@ const useMonitoringStore = defineStore('monitoring', () => {
      * @returns {*}
      */
     function incidentWithCurrentEscalation(incident, now) {
-        if (incident.isClosed || incident.escalationStatus === 'reviewed') return null;
+        if (incident.isClosed || incident.isEscalated || incident.escalationStatus === 'reviewed') return null;
 
         if (!incident.isOpen) {
             return incident.escalationStatus === 'pending-configuration'

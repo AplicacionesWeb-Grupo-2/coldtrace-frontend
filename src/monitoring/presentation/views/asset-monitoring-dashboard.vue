@@ -53,18 +53,25 @@ watch([searchTerm, activeType], () => {
 });
 
 onMounted(() => {
-    const accessRequest = identityStore.usersLoaded && identityStore.rolesLoaded && identityStore.organizationsLoaded
-        ? Promise.resolve()
-        : identityStore.fetchAccessData();
-    const assetRequest = assetStore.assetsLoaded && assetStore.iotDevicesLoaded && assetStore.gatewaysLoaded && assetStore.assetSettingsLoaded
-        ? Promise.resolve()
-        : assetStore.fetchAssetManagementData();
-    const monitoringRequest = monitoringStore.readingsLoaded
-        ? Promise.resolve()
-        : monitoringStore.fetchMonitoringData({includeDependencies: false});
-
-    Promise.all([accessRequest, assetRequest, monitoringRequest]).catch(() => undefined);
+    loadMonitoringDashboardData().catch(() => undefined);
 });
+
+/**
+ * Loads monitoring dashboard data for the active organization.
+ *
+ * @returns {Promise<void>}
+ */
+async function loadMonitoringDashboardData() {
+    if (!identityStore.usersLoaded || !identityStore.rolesLoaded || !identityStore.organizationsLoaded) {
+        await identityStore.fetchAccessData();
+    }
+
+    const organizationId = activeOrganizationId.value;
+    await Promise.all([
+        assetStore.fetchAssetManagementData({organizationId}),
+        monitoringStore.fetchMonitoringData({organizationId, includeDependencies: false}),
+    ]);
+}
 
 /**
  * Builds monitoring item for presentation or reporting.
@@ -182,19 +189,19 @@ function assetLocationFor(asset) {
         <p class="page-subtitle">{{ t('monitoring.asset-monitoring.subtitle') }}</p>
       </div>
 
-      <nav v-if="canMonitorAssets" class="monitoring-tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.type"
-          type="button"
-          :class="{active: activeType === tab.type}"
-          @click="activeType = tab.type"
-        >
-          {{ t(tab.labelKey) }}
-        </button>
-      </nav>
+      <div v-if="canMonitorAssets" class="assets-toolbar monitoring-workbar" aria-label="Monitoring filters and status">
+        <nav class="monitoring-tabs" aria-label="Monitoring asset sections">
+          <button
+            v-for="tab in tabs"
+            :key="tab.type"
+            type="button"
+            :class="{active: activeType === tab.type}"
+            @click="activeType = tab.type"
+          >
+            {{ t(tab.labelKey) }}
+          </button>
+        </nav>
 
-      <div v-if="canMonitorAssets" class="assets-toolbar">
         <label class="search-box">
           <span class="material-icons search-icon">search</span>
           <input
@@ -281,8 +288,7 @@ function assetLocationFor(asset) {
 .monitoring-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
-  margin-top: 10px;
+  gap: 16px;
 }
 
 .monitoring-tabs button {
@@ -310,6 +316,13 @@ function assetLocationFor(asset) {
   gap: 12px;
   justify-content: space-between;
   margin-top: 8px;
+}
+
+.monitoring-workbar {
+  background: #ffffff;
+  border: 1px solid #e5eaf1;
+  border-radius: 8px;
+  padding: 10px 12px;
 }
 
 .search-box {

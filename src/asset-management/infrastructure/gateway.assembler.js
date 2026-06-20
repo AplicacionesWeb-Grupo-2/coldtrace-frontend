@@ -4,6 +4,7 @@ import {Gateway} from '@/asset-management/domain/model/gateway-entity.js';
  * @typedef {Object} GatewayApiResource
  * @property {*} [id]
  * @property {*} [organizationId]
+ * @property {*} [locationId]
  * @property {*} [uuid]
  * @property {*} [name]
  * @property {*} [location]
@@ -47,6 +48,7 @@ export class GatewayAssembler {
         return {
             id: entity.id,
             organizationId: entity.organizationId,
+            locationId: entity.locationId,
             uuid: entity.uuid,
             name: entity.name,
             location: entity.location,

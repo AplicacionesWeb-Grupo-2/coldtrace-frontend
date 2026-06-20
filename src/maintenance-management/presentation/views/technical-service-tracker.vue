@@ -88,10 +88,11 @@ async function loadPageData() {
     feedback.value = 'idle';
 
     try {
+        await identityAccessStore.fetchAccessData();
+        const organizationId = activeOrganizationId.value;
         await Promise.all([
-            identityAccessStore.fetchAccessData(),
-            assetManagementStore.fetchAssetManagementData({includeSettings: false}),
-            maintenanceStore.fetchTechnicalServiceRequests(),
+            assetManagementStore.fetchAssetManagementData({organizationId, includeSettings: false}),
+            maintenanceStore.fetchTechnicalServiceRequests(organizationId),
         ]);
         resetRequestForm();
         resetClosureForm();

@@ -22,7 +22,10 @@ export class ReportAssembler {
      * @returns {Report}
      */
     static toEntityFromResource(resource) {
-        return new Report({...resource});
+        return new Report({
+            ...resource,
+            periodDate: periodDateFrom(resource),
+        });
     }
 
     /**
@@ -54,4 +57,20 @@ export class ReportAssembler {
             generatedAt: entity.generatedAt,
         };
     }
+}
+
+/**
+ * Normalizes backend report period labels to the UI range format.
+ *
+ * @param {*} resource
+ * @returns {string}
+ */
+function periodDateFrom(resource) {
+    const periodDate = resource.periodDate ?? '';
+    if (periodDate.includes('/')) return periodDate.replace('/', ' - ');
+    if (periodDate) return periodDate;
+    if (resource.periodStart && resource.periodEnd) {
+        return `${String(resource.periodStart).slice(0, 10)} - ${String(resource.periodEnd).slice(0, 10)}`;
+    }
+    return '';
 }

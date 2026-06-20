@@ -42,7 +42,7 @@ export class IncidentAssembler {
      * @returns {Incident}
      */
     static toEntityFromResource(resource) {
-        return new Incident({...resource});
+        return new Incident(this.normalizedResource(resource));
     }
 
     /**
@@ -93,5 +93,27 @@ export class IncidentAssembler {
         if (response.status !== 200) return [];
         const resources = response.data instanceof Array ? response.data : response.data.incidents;
         return (resources ?? []).map(resource => this.toEntityFromResource(resource));
+    }
+
+    /**
+     * Normalizes backend incident fields into the frontend incident contract.
+     *
+     * @param {IncidentApiResource} resource
+     * @returns {IncidentApiResource}
+     */
+    static normalizedResource(resource) {
+        const status = String(resource.status ?? '').toLowerCase();
+        const normalizedStatus = status === 'resolved' ? 'closed' : status === 'acknowledged' ? 'recognized' : status || 'open';
+
+        return {
+            ...resource,
+            status: normalizedStatus,
+            source: resource.source ?? (resource.readingId ? 'sensor-reading' : 'manual'),
+            sourceReadingId: resource.sourceReadingId ?? resource.readingId ?? null,
+            closedAt: resource.closedAt ?? resource.resolvedAt ?? null,
+            closedBy: resource.closedBy ?? resource.resolvedBy ?? null,
+            closureEvidence: resource.closureEvidence ?? resource.resolutionNotes ?? null,
+            escalationStatus: resource.escalationStatus || (resource.escalatedAt ? 'escalated' : 'none'),
+        };
     }
 }

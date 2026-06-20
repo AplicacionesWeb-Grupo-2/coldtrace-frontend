@@ -123,7 +123,7 @@ async function submit() {
               id="sign-up-password"
               v-model="form.password"
               :type="passwordVisible ? 'text' : 'password'"
-              placeholder="************"
+              placeholder="••••••••••••"
               autocomplete="new-password"
             />
             <button
@@ -132,7 +132,9 @@ async function submit() {
               :aria-label="t('sign-up.toggle-password-visibility')"
               @click="passwordVisible = !passwordVisible"
             >
-              <i :class="passwordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"/>
+              <span class="material-icons" aria-hidden="true">
+                {{ passwordVisible ? 'visibility_off' : 'visibility' }}
+              </span>
             </button>
           </div>
           <p v-if="submitted && passwordInvalid" class="field-error">
@@ -146,7 +148,7 @@ async function submit() {
             id="confirm-password"
             v-model="form.confirmPassword"
             :type="passwordVisible ? 'text' : 'password'"
-            placeholder="************"
+            placeholder="••••••••••••"
             autocomplete="new-password"
           />
           <p v-if="submitted && passwordMismatch" class="field-error">

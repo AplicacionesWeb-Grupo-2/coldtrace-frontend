@@ -101,10 +101,9 @@ async function loadPageData() {
     identityLoading.value = true;
     feedback.value = 'idle';
     try {
-        const [accessData] = await Promise.all([
-            identityAccessStore.fetchAccessData(),
-            assetManagementStore.fetchAssetManagementData({includeSettings: false}),
-        ]);
+        const accessData = await identityAccessStore.fetchAccessData();
+        const organizationId = identityAccessStore.currentOrganizationIdFrom(accessData.users);
+        await assetManagementStore.fetchAssetManagementData({organizationId, includeSettings: false});
         users.value = accessData.users;
         roles.value = accessData.roles;
         organizations.value = accessData.organizations;

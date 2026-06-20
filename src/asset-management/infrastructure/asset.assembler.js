@@ -6,6 +6,7 @@ import {Asset} from '@/asset-management/domain/model/asset-entity.js';
  * @property {*} [organizationId]
  * @property {*} [uuid]
  * @property {*} [type]
+ * @property {*} [locationId]
  * @property {*} [gatewayId]
  * @property {*} [name]
  * @property {*} [location]
@@ -54,6 +55,7 @@ export class AssetAssembler {
         return {
             id: entity.id,
             organizationId: entity.organizationId,
+            locationId: entity.locationId,
             uuid: entity.uuid,
             type: entity.type,
             gatewayId: entity.gatewayId,

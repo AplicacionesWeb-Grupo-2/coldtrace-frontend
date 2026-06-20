@@ -5,6 +5,7 @@ import {IoTDeviceStatus} from '@/asset-management/domain/model/iot-device-status
  * @typedef {Object} IoTDeviceProps
  * @property {number|null} [id]
  * @property {number|null} [organizationId]
+ * @property {number|null} [gatewayId]
  * @property {string} [uuid]
  * @property {string} [deviceType]
  * @property {string} [model]
@@ -28,6 +29,7 @@ export class IoTDevice {
     constructor({
         id = null,
         organizationId = null,
+        gatewayId = null,
         uuid = '',
         deviceType = '',
         model = '',
@@ -42,6 +44,7 @@ export class IoTDevice {
     }) {
         this.id = Number(id);
         this.organizationId = Number(organizationId);
+        this.gatewayId = gatewayId === null || gatewayId === undefined ? null : Number(gatewayId);
         this.uuid = uuid;
         this.deviceType = deviceType;
         this.model = model;
