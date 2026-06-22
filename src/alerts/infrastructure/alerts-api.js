@@ -40,6 +40,20 @@ export class AlertsApi extends BaseApi {
     }
 
     /**
+     * Requests one incident from the API.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @returns {Promise<*>}
+     */
+    getIncidentForOrganization(organizationId, incidentId) {
+        const endpoint = this.#endpointForOrganization(organizationId, incidentsEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to get an incident.'));
+
+        return endpoint.getById(incidentId);
+    }
+
+    /**
      * Creates incident in the alerts context.
      *
      * @param {*} resource
