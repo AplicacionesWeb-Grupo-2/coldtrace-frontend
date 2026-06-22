@@ -186,6 +186,7 @@ async function saveOperationalParameters() {
     const nextDevice = new IoTDevice({
         id: currentDevice.id,
         organizationId: currentDevice.organizationId,
+        gatewayId: currentDevice.gatewayId,
         uuid: currentDevice.uuid,
         deviceType: currentDevice.deviceType,
         model: currentDevice.model,
