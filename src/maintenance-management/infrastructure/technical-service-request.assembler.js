@@ -1,4 +1,5 @@
 import {TechnicalServiceRequest} from '@/maintenance-management/domain/model/technical-service-request-entity.js';
+import {TechnicalServiceStatus} from '@/maintenance-management/domain/model/technical-service-status.js';
 
 /**
  * @typedef {Object} TechnicalServiceRequestApiResource
@@ -27,13 +28,15 @@ export class TechnicalServiceRequestAssembler {
      * @returns {TechnicalServiceRequest}
      */
     static toEntityFromResource(resource) {
+        const status = technicalServiceStatusForUi(resource.status);
         return new TechnicalServiceRequest({
             ...resource,
             uuid: resource.uuid ?? resource.code ?? '',
             requestedDate: resource.requestedDate ?? dateKeyFrom(resource.requestedAt),
+            status,
             interventionNotes: resource.interventionNotes ?? resource.closureSummary ?? null,
             resultNotes: resource.resultNotes ?? resource.evidence ?? null,
-            functionalTestPassed: resource.functionalTestPassed ?? (resource.status === 'closed' ? true : null),
+            functionalTestPassed: resource.functionalTestPassed ?? (status === TechnicalServiceStatus.Closed ? true : null),
         });
     }
 
@@ -81,4 +84,14 @@ export class TechnicalServiceRequestAssembler {
  */
 function dateKeyFrom(value) {
     return value ? String(value).slice(0, 10) : '';
+}
+
+/**
+ * Maps backend technical service lifecycle values to UI status values.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+function technicalServiceStatusForUi(status) {
+    return status === 'in_progress' ? TechnicalServiceStatus.PendingReview : status;
 }

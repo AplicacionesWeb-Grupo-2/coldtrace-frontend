@@ -933,6 +933,7 @@
       "status": {
         "scheduled": "Scheduled",
         "pending": "Pending",
+        "in_progress": "Pending",
         "completed": "Completed",
         "canceled": "Canceled"
       }
@@ -1005,6 +1006,7 @@
       "status": {
         "open": "Open",
         "pending-review": "Pending review",
+        "in_progress": "Pending review",
         "closed": "Closed"
       }
     }
