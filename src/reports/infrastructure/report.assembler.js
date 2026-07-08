@@ -55,6 +55,11 @@ export class ReportAssembler {
             title: entity.title,
             periodDate: entity.periodDate,
             generatedAt: entity.generatedAt,
+            assetCount: entity.assetCount,
+            compliancePercentage: entity.compliancePercentage,
+            incidentCount: entity.incidentCount,
+            openIncidentCount: entity.openIncidentCount,
+            outOfRangeReadingCount: entity.outOfRangeReadingCount,
         };
     }
 }

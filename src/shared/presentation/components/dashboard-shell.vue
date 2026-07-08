@@ -114,6 +114,7 @@ const contextualLinks = computed(() => {
             {path: '/reports/monthly', labelKey: 'dashboard-shell.nav-monthly-report', visible: true},
             {path: '/reports/history', labelKey: 'dashboard-shell.nav-history', visible: true},
             {path: '/reports/compliance', labelKey: 'dashboard-shell.nav-compliance', visible: true},
+            {path: '/reports/ai-summary', labelKey: 'dashboard-shell.nav-ai-summary', visible: true},
             {path: '/reports/findings', labelKey: 'dashboard-shell.nav-findings', visible: true},
             {path: '/reports/audit-evidence', labelKey: 'dashboard-shell.nav-audit-evidence', visible: true},
         ];
@@ -408,6 +409,9 @@ function initialsFor(fullName) {
               </router-link>
               <router-link class="sub-menu-link" to="/reports/compliance" active-class="active">
                 {{ t('dashboard-shell.nav-compliance') }}
+              </router-link>
+              <router-link class="sub-menu-link" to="/reports/ai-summary" active-class="active">
+                {{ t('dashboard-shell.nav-ai-summary') }}
               </router-link>
               <router-link class="sub-menu-link" to="/reports/findings" active-class="active">
                 {{ t('dashboard-shell.nav-findings') }}
