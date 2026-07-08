@@ -1,11 +1,13 @@
 <script setup>
 import {computed, onMounted, reactive, ref, watch} from 'vue';
 import {useI18n} from 'vue-i18n';
+import {useRouter} from 'vue-router';
 import useAlertsStore from '@/alerts/application/alerts.store.js';
 import useIdentityAccessStore from '@/identity-access/application/identity-access.store.js';
 import ListPagination from '@/shared/presentation/components/list-pagination.vue';
 
 const {t} = useI18n();
+const router = useRouter();
 const alertsStore = useAlertsStore();
 const identityStore = useIdentityAccessStore();
 const closureCard = ref(null);
@@ -127,6 +129,16 @@ function selectIncidentForClosure(incident) {
     closureForm.incidentId = incident.id;
     alertsStore.clearFeedback();
     queueMicrotask(() => closureCard.value?.scrollIntoView({behavior: 'smooth', block: 'start'}));
+}
+
+/**
+ * Opens the AI guidance workflow for the selected incident.
+ *
+ * @param {*} incident
+ * @returns {void}
+ */
+function openAiGuidance(incident) {
+    router.push({name: 'alerts-ai-guidance', query: {incidentId: incident.id}});
 }
 
 /**
@@ -476,38 +488,48 @@ function formatDate(isoDate) {
                 </td>
                 <td class="recognized-by">{{ incident.recognizedBy ?? '-' }}</td>
                 <td v-if="canResolveAlerts">
-                  <button
-                    v-if="incident.isEscalated || incident.isPendingEscalationConfiguration"
-                    :id="`review-escalation-${incident.id}`"
-                    class="review-escalation-btn"
-                    :disabled="alertsStore.reviewingEscalationId === incident.id"
-                    @click="reviewEscalation(incident)"
-                  >
-                    <span v-if="alertsStore.reviewingEscalationId === incident.id" class="inline-spinner"></span>
-                    <template v-else>{{ t('alerts.incident-list.action-review-escalation') }}</template>
-                  </button>
-                  <button
-                    v-else-if="incident.isOpen"
-                    :id="`recognize-incident-${incident.id}`"
-                    class="recognize-btn"
-                    :disabled="alertsStore.recognizingId === incident.id"
-                    @click="recognize(incident)"
-                  >
-                    <span v-if="alertsStore.recognizingId === incident.id" class="inline-spinner"></span>
-                    <template v-else>{{ t('alerts.incident-list.action-recognize') }}</template>
-                  </button>
-                  <button
-                    v-else-if="!incident.isClosed"
-                    :id="`close-incident-shortcut-${incident.id}`"
-                    class="close-shortcut-btn"
-                    :disabled="alertsStore.closingId === incident.id"
-                    @click="selectIncidentForClosure(incident)"
-                  >
-                    {{ t('alerts.incident-list.action-prepare-close') }}
-                  </button>
-                  <span v-else class="action-done">
-                    <span class="material-icons">check</span>
-                  </span>
+                  <div class="incident-action-stack">
+                    <button
+                      v-if="incident.isEscalated || incident.isPendingEscalationConfiguration"
+                      :id="`review-escalation-${incident.id}`"
+                      class="review-escalation-btn"
+                      :disabled="alertsStore.reviewingEscalationId === incident.id"
+                      @click="reviewEscalation(incident)"
+                    >
+                      <span v-if="alertsStore.reviewingEscalationId === incident.id" class="inline-spinner"></span>
+                      <template v-else>{{ t('alerts.incident-list.action-review-escalation') }}</template>
+                    </button>
+                    <button
+                      v-else-if="incident.isOpen"
+                      :id="`recognize-incident-${incident.id}`"
+                      class="recognize-btn"
+                      :disabled="alertsStore.recognizingId === incident.id"
+                      @click="recognize(incident)"
+                    >
+                      <span v-if="alertsStore.recognizingId === incident.id" class="inline-spinner"></span>
+                      <template v-else>{{ t('alerts.incident-list.action-recognize') }}</template>
+                    </button>
+                    <button
+                      v-else-if="!incident.isClosed"
+                      :id="`close-incident-shortcut-${incident.id}`"
+                      class="close-shortcut-btn"
+                      :disabled="alertsStore.closingId === incident.id"
+                      @click="selectIncidentForClosure(incident)"
+                    >
+                      {{ t('alerts.incident-list.action-prepare-close') }}
+                    </button>
+                    <span v-else class="action-done">
+                      <span class="material-icons">check</span>
+                    </span>
+                    <button
+                      type="button"
+                      class="ai-guidance-action-btn"
+                      :aria-label="t('alerts.incident-list.action-ai-guidance')"
+                      @click="openAiGuidance(incident)"
+                    >
+                      <span class="material-icons" aria-hidden="true">auto_awesome</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
               <tr v-if="activeIncidents.length === 0">
@@ -812,7 +834,8 @@ function formatDate(isoDate) {
 
 .recognize-btn,
 .close-shortcut-btn,
-.review-escalation-btn {
+.review-escalation-btn,
+.ai-guidance-action-btn {
   align-items: center;
   background: transparent;
   border: 1.5px solid #3b66f5;
@@ -832,14 +855,16 @@ function formatDate(isoDate) {
 
 .recognize-btn:hover:not(:disabled),
 .close-shortcut-btn:hover:not(:disabled),
-.review-escalation-btn:hover:not(:disabled) {
+.review-escalation-btn:hover:not(:disabled),
+.ai-guidance-action-btn:hover:not(:disabled) {
   background: #3b66f5;
   color: #ffffff;
 }
 
 .recognize-btn:disabled,
 .close-shortcut-btn:disabled,
-.review-escalation-btn:disabled {
+.review-escalation-btn:disabled,
+.ai-guidance-action-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -861,6 +886,28 @@ function formatDate(isoDate) {
 
 .review-escalation-btn:hover:not(:disabled) {
   background: #d97706;
+}
+
+.incident-action-stack {
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-end;
+  min-width: 126px;
+}
+
+.ai-guidance-action-btn {
+  border-color: #c7d2fe;
+  color: #2563eb;
+  height: 32px;
+  min-width: 34px;
+  padding: 0;
+}
+
+.ai-guidance-action-btn .material-icons {
+  font-size: 17px;
+  height: 17px;
+  line-height: 17px;
+  width: 17px;
 }
 
 .action-done {

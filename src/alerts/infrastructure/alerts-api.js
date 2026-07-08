@@ -3,6 +3,7 @@ import {BaseEndpoint} from '@/shared/infrastructure/base-endpoint.js';
 
 const incidentsEndpointPath = import.meta.env.VITE_INCIDENTS_ENDPOINT_PATH ?? '/incidents';
 const notificationsEndpointPath = import.meta.env.VITE_NOTIFICATIONS_ENDPOINT_PATH ?? '/notifications';
+const aiResolutionPlansSegment = 'ai-resolution-plans';
 
 /**
  * HTTP facade for alerts resources.
@@ -120,6 +121,66 @@ export class AlertsApi extends BaseApi {
     }
 
     /**
+     * Requests the AI resolution plan history for one incident.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @returns {Promise<*>}
+     */
+    getAiResolutionPlans(organizationId, incidentId) {
+        const endpointPath = this.#aiResolutionPlansEndpointPath(organizationId, incidentId);
+        if (!endpointPath) return Promise.reject(new Error('Organization and incident are required to list AI resolution plans.'));
+
+        return this.get(endpointPath);
+    }
+
+    /**
+     * Generates an AI-assisted resolution plan for one incident.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @returns {Promise<*>}
+     */
+    generateAiResolutionPlan(organizationId, incidentId) {
+        const endpointPath = this.#aiResolutionPlansEndpointPath(organizationId, incidentId);
+        if (!endpointPath) return Promise.reject(new Error('Organization and incident are required to generate an AI resolution plan.'));
+
+        return this.http.post(endpointPath, {});
+    }
+
+    /**
+     * Approves an AI resolution plan through the backend lifecycle endpoint.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @param {number|string} planId
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    approveAiResolutionPlan(organizationId, incidentId, planId, request) {
+        const endpointPath = this.#aiResolutionPlanDecisionEndpointPath(organizationId, incidentId, planId, 'approvals');
+        if (!endpointPath) return Promise.reject(new Error('Organization, incident and plan are required to approve an AI resolution plan.'));
+
+        return this.http.post(endpointPath, request);
+    }
+
+    /**
+     * Rejects an AI resolution plan through the backend lifecycle endpoint.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @param {number|string} planId
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    rejectAiResolutionPlan(organizationId, incidentId, planId, request) {
+        const endpointPath = this.#aiResolutionPlanDecisionEndpointPath(organizationId, incidentId, planId, 'rejections');
+        if (!endpointPath) return Promise.reject(new Error('Organization, incident and plan are required to reject an AI resolution plan.'));
+
+        return this.http.post(endpointPath, request);
+    }
+
+    /**
      * Builds an endpoint helper for an organization-scoped resource.
      *
      * @param {number|string} organizationId
@@ -129,6 +190,35 @@ export class AlertsApi extends BaseApi {
     #endpointForOrganization(organizationId, endpointPath) {
         const scopedPath = this.organizationScopedPath(organizationId, endpointPath);
         return scopedPath ? new BaseEndpoint(this, scopedPath) : null;
+    }
+
+    /**
+     * Builds the organization-scoped AI resolution plans collection path.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @returns {string|null}
+     */
+    #aiResolutionPlansEndpointPath(organizationId, incidentId) {
+        if (!organizationId || !incidentId) return null;
+        return this.organizationScopedPath(
+            organizationId,
+            `${incidentsEndpointPath}/${incidentId}/${aiResolutionPlansSegment}`,
+        );
+    }
+
+    /**
+     * Builds the organization-scoped AI resolution plan decision path.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @param {number|string} planId
+     * @param {string} decisionSegment
+     * @returns {string|null}
+     */
+    #aiResolutionPlanDecisionEndpointPath(organizationId, incidentId, planId, decisionSegment) {
+        const endpointPath = this.#aiResolutionPlansEndpointPath(organizationId, incidentId);
+        return endpointPath && planId ? `${endpointPath}/${planId}/${decisionSegment}` : null;
     }
 
     /**
