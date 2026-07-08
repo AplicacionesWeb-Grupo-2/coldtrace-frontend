@@ -35,7 +35,13 @@ async function submit() {
         feedback.value = await store.signIn(form.value.email, form.value.password);
         if (feedback.value === 'success') {
             submitted.value = false;
-            await router.push({name: 'identity-access-dashboard'});
+            await router.push({
+                name: 'identity-access-dashboard',
+                query: {
+                    organizationId: store.currentUser?.organizationId,
+                    userId: store.currentUser?.id,
+                },
+            });
         }
     } catch (error) {
         feedback.value = 'server-error';

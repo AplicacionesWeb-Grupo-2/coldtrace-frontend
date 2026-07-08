@@ -4,6 +4,7 @@ import {IdentityAccessApi} from '@/identity-access/infrastructure/identity-acces
 import {OrganizationAssembler} from '@/identity-access/infrastructure/organization.assembler.js';
 import {RoleAssembler} from '@/identity-access/infrastructure/role.assembler.js';
 import {UserAssembler} from '@/identity-access/infrastructure/user.assembler.js';
+import {authSession} from '@/shared/infrastructure/auth-session.js';
 import {Organization} from '@/identity-access/domain/model/organization-entity.js';
 import {Permission} from '@/identity-access/domain/model/permission-entity.js';
 import {Role} from '@/identity-access/domain/model/role-entity.js';
@@ -46,11 +47,15 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     const usersLoaded = ref(false);
     const organizationsLoaded = ref(false);
     const rolesLoaded = ref(false);
+    const session = ref(authSession.current());
     const currentUser = ref(null);
     const currentOrganization = ref(null);
     const currentRole = ref(null);
     const rolePermissionKeysByRoleId = ref({});
     const userCount = computed(() => users.value.length);
+    const sessionToken = computed(() => session.value?.token ?? null);
+
+    restoreSessionContext();
 
     /**
      * Loads users from the API and updates application state.
@@ -145,6 +150,40 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     }
 
     /**
+     * Persists the backend session and activates the authenticated user.
+     *
+     * @param {string} token
+     * @param {*} user
+     * @returns {void}
+     */
+    function setAuthenticatedSession(token, user) {
+        session.value = authSession.set(token, {
+            id: user.id,
+            fullName: user.fullName,
+            organizationId: user.organizationId,
+            roleId: user.roleId,
+        });
+        currentUser.value = user;
+    }
+
+    /**
+     * Restores the persisted backend session into the store context.
+     *
+     * @returns {void}
+     */
+    function restoreSessionContext() {
+        const restoredUser = session.value?.user;
+        if (!restoredUser) return;
+
+        currentUser.value = {
+            id: Number(restoredUser.id),
+            fullName: restoredUser.fullName,
+            organizationId: Number(restoredUser.organizationId),
+            roleId: restoredUser.roleId === undefined ? null : Number(restoredUser.roleId),
+        };
+    }
+
+    /**
      * Handles set current context from behavior in the identity access context.
      *
      * @param {*} availableUsers
@@ -182,28 +221,13 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     }
 
     /**
-     * Finds the first organization user matching the provided email.
-     *
-     * @param {Organization[]} availableOrganizations
-     * @param {string} email
-     * @returns {Promise<{organization: Organization|null, users: User[], user: User|null}>}
-     */
-    async function findUserByEmail(availableOrganizations, email) {
-        for (const organization of availableOrganizations) {
-            const organizationUsers = await fetchUsersForOrganization(organization.id);
-            const user = organizationUsers.find(current => current.email.toLowerCase() === email);
-            if (user) return {organization, users: organizationUsers, user};
-        }
-
-        return {organization: null, users: [], user: null};
-    }
-
-    /**
      * Handles clear current user behavior in the identity access context.
      *
      * @returns {void}
      */
     function clearCurrentUser() {
+        authSession.clear();
+        session.value = null;
         currentUser.value = null;
         currentRole.value = null;
         currentOrganization.value = null;
@@ -539,37 +563,67 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      * @returns {Promise<*>}
      */
     async function signIn(email, password) {
-        const validPassword = 'ColdTrace123';
-        const revokedAccessEmail = 'revoked@coldtrace.com';
         const normalizedEmail = email.trim().toLowerCase();
-
-        if (normalizedEmail === revokedAccessEmail) {
-            return 'revoked-access';
-        }
-
         loading.value = true;
         errors.value = [];
-        let loadedRoles;
-        let loadedOrganizations;
         try {
-            [loadedRoles, loadedOrganizations] = await Promise.all([
-                fetchRoles(),
-                fetchOrganizations(),
-            ]);
+            const authenticated = await identityAccessApi.signIn({email: normalizedEmail, password});
+            await completeAuthenticatedSession(authenticated);
+            return 'success';
+        } catch (error) {
+            return signInFeedbackFromError(error);
         } finally {
             loading.value = false;
         }
+    }
 
-        const match = await findUserByEmail(loadedOrganizations, normalizedEmail);
-        const user = match.user;
-        if (!user || password !== validPassword) {
-            return 'invalid-credentials';
+    /**
+     * Completes session setup after backend authentication succeeds.
+     *
+     * @param {{token: string, user: User}} authenticated
+     * @returns {Promise<void>}
+     */
+    async function completeAuthenticatedSession(authenticated) {
+        if (!authenticated?.token || !authenticated?.user?.id) {
+            throw new Error('Invalid authentication response.');
         }
 
-        users.value = match.users;
+        setAuthenticatedSession(authenticated.token, authenticated.user);
+        const [loadedRoles, loadedOrganizations, organizationUsers] = await Promise.all([
+            fetchRoles(),
+            fetchOrganizations(),
+            fetchUsersForOrganization(authenticated.user.organizationId),
+        ]);
+        const usersWithAuthenticated = ensureAuthenticatedUser(organizationUsers, authenticated.user);
+
+        users.value = usersWithAuthenticated;
         usersLoaded.value = true;
-        setCurrentContext(user, loadedRoles, loadedOrganizations);
-        return 'success';
+        setCurrentContext(authenticated.user, loadedRoles, loadedOrganizations);
+    }
+
+    /**
+     * Ensures the authenticated user exists in the active organization users collection.
+     *
+     * @param {User[]} availableUsers
+     * @param {User} authenticatedUser
+     * @returns {User[]}
+     */
+    function ensureAuthenticatedUser(availableUsers, authenticatedUser) {
+        return availableUsers.some(user => user.id === authenticatedUser.id)
+            ? availableUsers
+            : [...availableUsers, authenticatedUser];
+    }
+
+    /**
+     * Maps backend authentication errors to sign-in feedback states.
+     *
+     * @param {*} error
+     * @returns {string}
+     */
+    function signInFeedbackFromError(error) {
+        if (error.response?.status === 401) return 'invalid-credentials';
+        if (error.response?.status === 403) return 'revoked-access';
+        return 'server-error';
     }
 
     /**
@@ -578,35 +632,31 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      * @param {Object} options
      * @returns {Promise<*>}
      */
-    async function createAccount({organizationName, fullName, email}) {
+    async function createAccount({organizationName, fullName, email, password}) {
         const normalizedEmail = email.trim().toLowerCase();
-        const [loadedRoles, loadedOrganizations] = await Promise.all([
-            fetchRoles(),
-            fetchOrganizations(),
-        ]);
-        const duplicateEmail = (await findUserByEmail(loadedOrganizations, normalizedEmail)).user !== null;
-
-        if (duplicateEmail) {
-            return {status: 'duplicate-email'};
-        }
-
         const [firstName, ...lastNameParts] = fullName.trim().replace(/\s+/g, ' ').split(' ');
-        const response = await identityAccessApi.createOrganizationSignUp({
-            legalName: organizationName,
-            commercialName: organizationName,
-            taxId: '',
-            contactEmail: normalizedEmail,
-            firstName,
-            lastName: lastNameParts.join(' '),
-            email: normalizedEmail,
-        });
-        const createdOrganization = OrganizationAssembler.toEntityFromResource(response.data.organization ?? response.data.Organization);
-        const createdUser = UserAssembler.toEntityFromResource(response.data.user ?? response.data.User);
 
-        users.value.push(createdUser);
-        organizations.value.push(createdOrganization);
-        setCurrentContext(createdUser, loadedRoles, [...loadedOrganizations, createdOrganization]);
-        return {status: 'success', user: createdUser};
+        try {
+            await identityAccessApi.createOrganizationSignUp({
+                legalName: organizationName,
+                commercialName: organizationName,
+                taxId: '',
+                contactEmail: normalizedEmail,
+                firstName,
+                lastName: lastNameParts.join(' '),
+                email: normalizedEmail,
+                password,
+            });
+            const authenticated = await identityAccessApi.signIn({
+                email: normalizedEmail,
+                password,
+            });
+            await completeAuthenticatedSession(authenticated);
+            return {status: 'success', user: authenticated.user};
+        } catch (error) {
+            if (error.response?.status === 409) return {status: 'duplicate-email'};
+            throw error;
+        }
     }
 
     /**
@@ -824,6 +874,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         usersLoaded,
         organizationsLoaded,
         rolesLoaded,
+        sessionToken,
         currentUser,
         currentOrganization,
         currentRole,
@@ -832,6 +883,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         availablePermissionKeys,
         fetchAccessData,
         signIn,
+        setAuthenticatedSession,
         createAccount,
         createOrganizationUser,
         updateUserRole,

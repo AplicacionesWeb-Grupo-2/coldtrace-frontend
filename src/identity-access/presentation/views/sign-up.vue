@@ -56,7 +56,13 @@ async function submit() {
             submitted.value = false;
             const targetRoute = selectedPlanCode.value
                 ? {name: 'identity-access-billing', query: {plan: selectedPlanCode.value}}
-                : {name: 'identity-access-dashboard'};
+                : {
+                    name: 'identity-access-dashboard',
+                    query: {
+                        organizationId: store.currentUser?.organizationId,
+                        userId: store.currentUser?.id,
+                    },
+                };
             form.value = {
                 organizationName: '',
                 fullName: '',

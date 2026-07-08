@@ -1,7 +1,9 @@
 import axios from 'axios';
+import {authSession} from '@/shared/infrastructure/auth-session.js';
 
 const coldTraceApiUrl = import.meta.env.VITE_COLDTRACE_API_URL;
 const defaultColdTraceApiUrl = 'http://localhost:3000/api/v1';
+const authenticationEndpointPath = import.meta.env.VITE_AUTHENTICATION_ENDPOINT_PATH ?? '/authentication';
 const inFlightGetRequests = new Map();
 
 /**
@@ -20,6 +22,27 @@ export class BaseApi {
                 'Content-Type': 'application/json',
             },
         });
+
+        this.#http.interceptors.request.use((config) => {
+            const token = authSession.token();
+            if (token && !isAuthenticationRequest(config.url)) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        });
+
+        this.#http.interceptors.response.use(
+            response => response,
+            (error) => {
+                if (error.response?.status === 401 && !isAuthenticationRequest(error.config?.url)) {
+                    authSession.clear();
+                    if (typeof window !== 'undefined' && window.location.pathname !== '/identity-access/sign-in') {
+                        window.location.assign('/identity-access/sign-in');
+                    }
+                }
+                return Promise.reject(error);
+            },
+        );
     }
 
     /**
@@ -84,4 +107,14 @@ export class BaseApi {
         const params = config.params ? JSON.stringify(config.params) : '';
         return `${baseUrl}|${url}|${params}`;
     }
+}
+
+/**
+ * Determines whether an HTTP request targets the authentication API.
+ *
+ * @param {string|undefined} url
+ * @returns {boolean}
+ */
+function isAuthenticationRequest(url = '') {
+    return url.startsWith(authenticationEndpointPath) || url.includes(`${authenticationEndpointPath}/`);
 }

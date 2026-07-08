@@ -1,10 +1,12 @@
 import {BaseApi} from '@/shared/infrastructure/base-api.js';
 import {BaseEndpoint} from '@/shared/infrastructure/base-endpoint.js';
+import {UserAssembler} from '@/identity-access/infrastructure/user.assembler.js';
 
 const usersEndpointPath = import.meta.env.VITE_USERS_ENDPOINT_PATH ?? '/users';
 const organizationsEndpointPath = import.meta.env.VITE_ORGANIZATIONS_ENDPOINT_PATH ?? '/organizations';
 const organizationSignUpsEndpointPath = import.meta.env.VITE_ORGANIZATION_SIGN_UPS_ENDPOINT_PATH ?? '/organization-sign-ups';
 const rolesEndpointPath = import.meta.env.VITE_ROLES_ENDPOINT_PATH ?? '/roles';
+const authenticationEndpointPath = import.meta.env.VITE_AUTHENTICATION_ENDPOINT_PATH ?? '/authentication';
 
 /**
  * HTTP facade for identity access resources.
@@ -14,6 +16,7 @@ export class IdentityAccessApi extends BaseApi {
     #organizationsEndpoint;
     #organizationSignUpsEndpoint;
     #rolesEndpoint;
+    #authenticationEndpoint;
 
     /**
      * Initializes identity access api endpoint helpers.
@@ -24,6 +27,21 @@ export class IdentityAccessApi extends BaseApi {
         this.#organizationsEndpoint = new BaseEndpoint(this, organizationsEndpointPath);
         this.#organizationSignUpsEndpoint = new BaseEndpoint(this, organizationSignUpsEndpointPath);
         this.#rolesEndpoint = new BaseEndpoint(this, rolesEndpointPath);
+        this.#authenticationEndpoint = new BaseEndpoint(this, authenticationEndpointPath);
+    }
+
+    /**
+     * Authenticates a user with email and password.
+     *
+     * @param {{email: string, password: string}} resource
+     * @returns {Promise<{token: string, user: import('@/identity-access/domain/model/user-entity.js').User}>}
+     */
+    async signIn(resource) {
+        const response = await this.#authenticationEndpoint.http.post(
+            `${authenticationEndpointPath}/sign-in`,
+            resource,
+        );
+        return this.#authenticatedUserFromResource(response.data);
     }
 
     /**
@@ -141,4 +159,59 @@ export class IdentityAccessApi extends BaseApi {
         const endpointPath = this.organizationScopedPath(organizationId, usersEndpointPath);
         return endpointPath ? new BaseEndpoint(this, endpointPath) : null;
     }
+
+    /**
+     * Maps an authentication response to the frontend session contract.
+     *
+     * @param {*} resource
+     * @returns {{token: string, user: import('@/identity-access/domain/model/user-entity.js').User}}
+     */
+    #authenticatedUserFromResource(resource) {
+        const token = read(resource, 'token') ??
+            read(resource, 'Token') ??
+            read(resource, 'accessToken') ??
+            read(resource, 'AccessToken') ??
+            read(resource, 'jwt') ??
+            read(resource, 'Jwt') ??
+            '';
+        const userResource = normalizeUserResource(read(resource, 'user') ?? read(resource, 'User') ?? resource);
+        return {
+            token,
+            user: UserAssembler.toEntityFromResource(userResource),
+        };
+    }
+}
+
+/**
+ * Safely reads an object property.
+ *
+ * @param {*} resource
+ * @param {string} key
+ * @returns {*}
+ */
+function read(resource, key) {
+    return resource && Object.prototype.hasOwnProperty.call(resource, key)
+        ? resource[key]
+        : undefined;
+}
+
+/**
+ * Accepts common ASP.NET and JavaScript response casing for user resources.
+ *
+ * @param {*} resource
+ * @returns {*}
+ */
+function normalizeUserResource(resource) {
+    const fullName = read(resource, 'fullName') ?? read(resource, 'FullName') ?? '';
+    const [firstNameFromFullName, ...lastNameParts] = String(fullName).trim().split(/\s+/).filter(Boolean);
+    return {
+        id: read(resource, 'id') ?? read(resource, 'Id'),
+        uuid: read(resource, 'uuid') ?? read(resource, 'Uuid'),
+        organizationUserId: read(resource, 'organizationUserId') ?? read(resource, 'OrganizationUserId'),
+        firstName: read(resource, 'firstName') ?? read(resource, 'FirstName') ?? firstNameFromFullName ?? '',
+        lastName: read(resource, 'lastName') ?? read(resource, 'LastName') ?? lastNameParts.join(' '),
+        email: read(resource, 'email') ?? read(resource, 'Email') ?? '',
+        organizationId: read(resource, 'organizationId') ?? read(resource, 'OrganizationId'),
+        roleId: read(resource, 'roleId') ?? read(resource, 'RoleId'),
+    };
 }
