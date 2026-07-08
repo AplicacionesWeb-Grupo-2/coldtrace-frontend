@@ -9,6 +9,7 @@ const dashboardRoutePaths = [
     '/identity-access/dashboard',
     '/identity-access/users',
     '/identity-access/roles-permissions',
+    '/identity-access/billing',
     '/asset-management',
     '/maintenance',
     '/alerts',

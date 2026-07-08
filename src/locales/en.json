@@ -180,6 +180,7 @@
     "nav-alerts": "Alerts",
     "nav-monitoring": "Monitoring",
     "nav-access": "Access",
+    "nav-billing": "Billing",
     "nav-users": "Users",
     "nav-new-user": "New user",
     "nav-permissions": "Permissions",
@@ -209,6 +210,81 @@
     "download-report": "Download Monthly Report",
     "theme-light": "Light",
     "theme-dark": "Dark"
+  },
+  "billing": {
+    "page-title": "Billing",
+    "eyebrow": "Subscription",
+    "title": "Billing and upgrades",
+    "subtitle": "Manage plan, limits, usage, checkout, and provider billing for {organization}.",
+    "reload": "Reload",
+    "loading": "Loading billing...",
+    "empty": {
+      "title": "No active organization",
+      "message": "Select or create an organization before managing billing."
+    },
+    "current": {
+      "label": "Current plan",
+      "status": "Status",
+      "provider": "Provider",
+      "period": "Renews",
+      "unknown": "Unknown",
+      "unknown-plan": "Plan unavailable",
+      "unknown-description": "Billing data is not available yet.",
+      "no-period": "No renewal date"
+    },
+    "price": {
+      "free": "Free",
+      "month": "/mo"
+    },
+    "portal": {
+      "title": "Customer Portal",
+      "description": "Open the provider-hosted portal to manage payment method, invoices, cancellation, and subscription details.",
+      "open": "Open portal",
+      "opening": "Opening...",
+      "disabled": "Portal is available after a paid Stripe subscription is active."
+    },
+    "usage": {
+      "locations": "Locations",
+      "assets": "Assets",
+      "iot-devices": "IoT devices",
+      "users": "Users",
+      "history": "History retention",
+      "unlimited": "Unlimited",
+      "unlimited-remaining": "Unlimited remaining",
+      "remaining": "{count} remaining",
+      "days": "{count} days"
+    },
+    "plans": {
+      "title": "Available plans",
+      "subtitle": "Select a paid plan to start Stripe Checkout. Payment details are handled by the provider.",
+      "current": "Current plan",
+      "free": "Included",
+      "upgrade": "Upgrade",
+      "redirecting": "Redirecting..."
+    },
+    "features": {
+      "exports": "CSV/PDF exports",
+      "maintenance": "Maintenance scheduling",
+      "ai-guidance": "AI incident guidance",
+      "ai-report-summary": "AI report summaries"
+    },
+    "entitlements": {
+      "title": "Feature access",
+      "subtitle": "Backend entitlements define which features and paid AI operations are available for the current plan.",
+      "available": "Available in this plan",
+      "locked": "Requires an upgrade",
+      "upgrade-guidance": "Some features are locked by the current plan. Upgrade to Operations or Compliance AI to enable them."
+    },
+    "feedback": {
+      "plan-selected": "{plan} is selected. Review the plan and start checkout when ready.",
+      "checkout-success": "Checkout completed. Subscription status will update after Stripe webhook synchronization.",
+      "checkout-cancel": "Checkout was canceled. No plan change was applied.",
+      "portal-return": "Returned from Customer Portal.",
+      "server-error": "Billing data is unavailable. Try reloading the page.",
+      "checkout-error": "We could not start checkout. Try again later.",
+      "portal-error": "We could not open Customer Portal. Try again later.",
+      "plan-limit-error": "The current plan blocks this action. Review available upgrades."
+    }
   },
   "asset-management": {
     "title": "Assets",

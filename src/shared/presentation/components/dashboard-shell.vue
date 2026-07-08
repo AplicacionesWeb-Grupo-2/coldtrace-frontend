@@ -353,6 +353,11 @@ function initialsFor(fullName) {
             </div>
           </div>
 
+          <router-link class="menu-item" to="/identity-access/billing" active-class="active">
+            <span class="material-icons menu-icon">credit_card</span>
+            <span class="menu-label">{{ t('dashboard-shell.nav-billing') }}</span>
+          </router-link>
+
           <div class="menu-group" :class="{open: isSettingsDropdownOpen, 'active-group': isSettingsRoute}">
             <button
               class="menu-item menu-trigger"
