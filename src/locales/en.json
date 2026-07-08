@@ -22,16 +22,26 @@
     "create-account": "Create an account",
     "toggle-password-visibility": "Toggle password visibility",
     "success": "Access granted. Opening the ColdTrace dashboard...",
+    "onboarding": {
+      "title": "Account setup required",
+      "copy": "This provider account is not linked to ColdTrace yet. Do you want to create a new organization account?",
+      "create-account": "Create account",
+      "choose-another-account": "Choose another account"
+    },
     "error": {
       "email-invalid": "Enter a valid email address.",
       "password-required": "Enter your password.",
       "invalid-credentials": "Invalid email or password.",
       "revoked-access": "Access revoked. Contact your organization administrator.",
+      "onboarding-required": "Complete organization sign-up before accessing ColdTrace.",
+      "social-unavailable": "We could not start this sign-in option. Try again later.",
+      "social-validation-failed": "Google or Apple could not validate this sign-in. Try again or use email and password.",
       "server-error": "We could not validate the account. Try again later."
     }
   },
   "sign-up": {
     "title": "Create your account",
+    "social-title": "Complete account setup",
     "organization-name": "Organization name",
     "organization-name-placeholder": "ColdTrace Market",
     "full-name": "Full name",
@@ -45,6 +55,9 @@
     "social-divider": "or sign up with",
     "continue-with-google": "Continue with Google",
     "continue-with-apple": "Continue with Apple",
+    "google-account": "Google account",
+    "apple-account": "Apple account",
+    "use-another-method": "Use another method",
     "already-have-account": "Already have an account?",
     "toggle-password-visibility": "Toggle password visibility",
     "success": "Organization and super administrator account created.",
@@ -55,6 +68,8 @@
       "password-min-length": "Use at least 8 characters.",
       "passwords-must-match": "Passwords must match.",
       "duplicate-email": "This email is already registered.",
+      "social-invalid": "We could not validate this provider account.",
+      "social-unavailable": "We could not start this sign-up option. Try again later.",
       "server-error": "We could not create the account. Try again later."
     }
   },

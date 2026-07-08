@@ -22,16 +22,26 @@
     "create-account": "Crear una cuenta",
     "toggle-password-visibility": "Alternar visibilidad de contraseña",
     "success": "Acceso concedido. Abriendo el dashboard de ColdTrace...",
+    "onboarding": {
+      "title": "Configuración de cuenta requerida",
+      "copy": "Esta cuenta del proveedor aún no está vinculada a ColdTrace. ¿Quieres crear una nueva cuenta de organización?",
+      "create-account": "Crear cuenta",
+      "choose-another-account": "Elegir otra cuenta"
+    },
     "error": {
       "email-invalid": "Ingresa un correo electrónico válido.",
       "password-required": "Ingresa tu contraseña.",
       "invalid-credentials": "Correo o contraseña inválidos.",
       "revoked-access": "Acceso revocado. Contacta al administrador de tu organización.",
+      "onboarding-required": "Completa el registro de organización antes de acceder a ColdTrace.",
+      "social-unavailable": "No se pudo iniciar esta opción de acceso. Inténtalo nuevamente.",
+      "social-validation-failed": "Google o Apple no pudo validar este inicio de sesión. Inténtalo nuevamente o usa correo y contraseña.",
       "server-error": "No se pudo validar la cuenta. Inténtalo nuevamente."
     }
   },
   "sign-up": {
     "title": "Crear cuenta",
+    "social-title": "Completar registro",
     "organization-name": "Nombre de la organización",
     "organization-name-placeholder": "ColdTrace Market",
     "full-name": "Nombre completo",
@@ -45,6 +55,9 @@
     "social-divider": "o regístrate con",
     "continue-with-google": "Continuar con Google",
     "continue-with-apple": "Continuar con Apple",
+    "google-account": "Cuenta de Google",
+    "apple-account": "Cuenta de Apple",
+    "use-another-method": "Usar otro método",
     "already-have-account": "¿Ya tienes una cuenta?",
     "toggle-password-visibility": "Alternar visibilidad de contraseña",
     "success": "Organización y cuenta super administradora creadas.",
@@ -55,6 +68,8 @@
       "password-min-length": "Usa al menos 8 caracteres.",
       "passwords-must-match": "Las contraseñas deben coincidir.",
       "duplicate-email": "Este correo ya está registrado.",
+      "social-invalid": "No se pudo validar esta cuenta del proveedor.",
+      "social-unavailable": "No se pudo iniciar esta opción de registro. Inténtalo nuevamente.",
       "server-error": "No se pudo crear la cuenta. Inténtalo nuevamente."
     }
   },

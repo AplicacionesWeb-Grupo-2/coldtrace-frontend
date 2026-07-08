@@ -1,6 +1,8 @@
 import {BaseApi} from '@/shared/infrastructure/base-api.js';
 import {BaseEndpoint} from '@/shared/infrastructure/base-endpoint.js';
+import {UserAssembler} from '@/identity-access/infrastructure/user.assembler.js';
 
+const authenticationEndpointPath = import.meta.env.VITE_AUTHENTICATION_ENDPOINT_PATH ?? '/authentication';
 const usersEndpointPath = import.meta.env.VITE_USERS_ENDPOINT_PATH ?? '/users';
 const organizationsEndpointPath = import.meta.env.VITE_ORGANIZATIONS_ENDPOINT_PATH ?? '/organizations';
 const organizationSignUpsEndpointPath = import.meta.env.VITE_ORGANIZATION_SIGN_UPS_ENDPOINT_PATH ?? '/organization-sign-ups';
@@ -113,6 +115,76 @@ export class IdentityAccessApi extends BaseApi {
     }
 
     /**
+     * Authenticates a user with a social provider authorization response.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    async signInWithProvider(provider, request) {
+        const response = await this.http.post(`${authenticationEndpointPath}/social/${provider}/token-exchange`, request);
+        return {status: response.status, data: this.#authenticatedUserFromResource(response.data)};
+    }
+
+    /**
+     * Authenticates a user with a Google authorization response.
+     *
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    signInWithGoogle(request) {
+        return this.signInWithProvider('google', request);
+    }
+
+    /**
+     * Authenticates a user with a Sign in with Apple authorization response.
+     *
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    signInWithApple(request) {
+        return this.signInWithProvider('apple', request);
+    }
+
+    /**
+     * Validates a social provider response and returns profile data for onboarding.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    getSocialIdentityProfile(provider, request) {
+        return this.http.post(`${authenticationEndpointPath}/social/${provider}/profile-preview`, request);
+    }
+
+    /**
+     * Creates an organization and authenticates the first user with a social provider.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    async createSocialOrganizationSignUp(provider, request) {
+        const response = await this.http.post(`${authenticationEndpointPath}/social/${provider}/organization-sign-up`, request);
+        return {status: response.status, data: this.#authenticatedUserFromResource(response.data)};
+    }
+
+    /**
+     * Updates authorization header for identity-access follow-up requests.
+     *
+     * @param {string|null} token
+     * @returns {void}
+     */
+    setAuthorizationToken(token) {
+        if (!token) {
+            delete this.http.defaults.headers.common.Authorization;
+            return;
+        }
+
+        this.http.defaults.headers.common.Authorization = `Bearer ${token}`;
+    }
+
+    /**
      * Requests roles from the API.
      *
      * @returns {Promise<*>}
@@ -141,4 +213,37 @@ export class IdentityAccessApi extends BaseApi {
         const endpointPath = this.organizationScopedPath(organizationId, usersEndpointPath);
         return endpointPath ? new BaseEndpoint(this, endpointPath) : null;
     }
+
+    /**
+     * Maps backend authentication resources into session data.
+     *
+     * @param {*} resource
+     * @returns {{token: string, user: *}}
+     */
+    #authenticatedUserFromResource(resource = {}) {
+        const userResource = resource.user ?? resource.User ?? resource;
+
+        return {
+            token: read(resource, ['token', 'Token', 'accessToken', 'AccessToken'], ''),
+            user: UserAssembler.toEntityFromResource(userResource),
+        };
+    }
+}
+
+/**
+ * Reads a value from a resource using possible keys.
+ *
+ * @param {*} source
+ * @param {string[]} keys
+ * @param {*} fallback
+ * @returns {*}
+ */
+function read(source, keys, fallback = undefined) {
+    if (!source || typeof source !== 'object') return fallback;
+
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) return source[key];
+    }
+
+    return fallback;
 }

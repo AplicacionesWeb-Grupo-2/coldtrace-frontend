@@ -298,6 +298,11 @@ a {
   color: #2f3b52;
 }
 
+.social-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 .social-icon {
   display: block;
   height: 30px;
@@ -314,6 +319,43 @@ a {
   line-height: 19px;
   margin-top: 0;
   text-align: center;
+}
+
+.auth-panel .secondary-action {
+  font-family: 'Varela Round', Arial, sans-serif;
+  font-size: 16px;
+  height: 48px;
+  line-height: 19px;
+  width: 100%;
+}
+
+.social-account,
+.social-onboarding-prompt {
+  color: #404040;
+  font-family: 'Inter', Arial, sans-serif;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.social-account {
+  display: grid;
+  gap: 4px;
+}
+
+.account-provider {
+  font-weight: 700;
+}
+
+.account-email {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.social-onboarding-prompt,
+.prompt-actions {
+  display: grid;
+  gap: 12px;
+  width: 100%;
 }
 
 .placeholder-page,
