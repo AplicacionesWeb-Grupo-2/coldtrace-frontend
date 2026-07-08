@@ -1,9 +1,12 @@
 <script setup>
 import {computed, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
+import {useRoute, useRouter} from 'vue-router';
 import useIdentityAccessStore from '@/identity-access/application/identity-access.store.js';
 
 const {t} = useI18n();
+const route = useRoute();
+const router = useRouter();
 const store = useIdentityAccessStore();
 const form = ref({
     organizationName: '',
@@ -23,6 +26,7 @@ const fullNameInvalid = computed(() => form.value.fullName.trim().length < 3);
 const emailInvalid = computed(() => !emailPattern.test(form.value.email.trim()));
 const passwordInvalid = computed(() => form.value.password.length < 8);
 const passwordMismatch = computed(() => form.value.password !== form.value.confirmPassword);
+const selectedPlanCode = computed(() => String(route.query.plan ?? '').trim().toLowerCase());
 
 /**
  * Handles submit behavior in the identity access context.
@@ -50,6 +54,9 @@ async function submit() {
         feedback.value = result.status;
         if (result.status === 'success') {
             submitted.value = false;
+            const targetRoute = selectedPlanCode.value
+                ? {name: 'identity-access-billing', query: {plan: selectedPlanCode.value}}
+                : {name: 'identity-access-dashboard'};
             form.value = {
                 organizationName: '',
                 fullName: '',
@@ -58,6 +65,7 @@ async function submit() {
                 confirmPassword: '',
                 acceptedTerms: true,
             };
+            await router.push(targetRoute);
         }
     } catch (error) {
         feedback.value = 'server-error';

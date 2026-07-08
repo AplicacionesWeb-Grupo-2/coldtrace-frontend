@@ -180,6 +180,7 @@
     "nav-alerts": "Alertas",
     "nav-monitoring": "Monitoreo",
     "nav-access": "Acceso",
+    "nav-billing": "Facturación",
     "nav-users": "Usuarios",
     "nav-new-user": "Nuevo usuario",
     "nav-permissions": "Permisos",
@@ -209,6 +210,81 @@
     "download-report": "Descargar reporte mensual",
     "theme-light": "Claro",
     "theme-dark": "Oscuro"
+  },
+  "billing": {
+    "page-title": "Facturación",
+    "eyebrow": "Suscripción",
+    "title": "Facturación y upgrades",
+    "subtitle": "Gestiona plan, límites, uso, checkout y facturación del proveedor para {organization}.",
+    "reload": "Recargar",
+    "loading": "Cargando facturación...",
+    "empty": {
+      "title": "Sin organización activa",
+      "message": "Selecciona o crea una organización antes de gestionar facturación."
+    },
+    "current": {
+      "label": "Plan actual",
+      "status": "Estado",
+      "provider": "Proveedor",
+      "period": "Renueva",
+      "unknown": "Desconocido",
+      "unknown-plan": "Plan no disponible",
+      "unknown-description": "La información de facturación aún no está disponible.",
+      "no-period": "Sin fecha de renovación"
+    },
+    "price": {
+      "free": "Gratis",
+      "month": "/mes"
+    },
+    "portal": {
+      "title": "Customer Portal",
+      "description": "Abre el portal alojado por el proveedor para gestionar método de pago, facturas, cancelación y detalles de suscripción.",
+      "open": "Abrir portal",
+      "opening": "Abriendo...",
+      "disabled": "El portal estará disponible cuando exista una suscripción pagada activa en Stripe."
+    },
+    "usage": {
+      "locations": "Sedes",
+      "assets": "Activos",
+      "iot-devices": "Dispositivos IoT",
+      "users": "Usuarios",
+      "history": "Retención histórica",
+      "unlimited": "Ilimitado",
+      "unlimited-remaining": "Ilimitado restante",
+      "remaining": "{count} restante(s)",
+      "days": "{count} días"
+    },
+    "plans": {
+      "title": "Planes disponibles",
+      "subtitle": "Selecciona un plan pagado para iniciar Stripe Checkout. Los datos de pago los gestiona el proveedor.",
+      "current": "Plan actual",
+      "free": "Incluido",
+      "upgrade": "Mejorar plan",
+      "redirecting": "Redirigiendo..."
+    },
+    "features": {
+      "exports": "Exportaciones CSV/PDF",
+      "maintenance": "Programación de mantenimiento",
+      "ai-guidance": "Guía de incidentes con IA",
+      "ai-report-summary": "Resúmenes de reportes con IA"
+    },
+    "entitlements": {
+      "title": "Acceso a funciones",
+      "subtitle": "Los entitlements del backend definen qué funciones y operaciones pagadas de IA están disponibles para el plan actual.",
+      "available": "Disponible en este plan",
+      "locked": "Requiere upgrade",
+      "upgrade-guidance": "Algunas funciones están bloqueadas por el plan actual. Mejora a Operations o Compliance AI para habilitarlas."
+    },
+    "feedback": {
+      "plan-selected": "{plan} está seleccionado. Revisa el plan e inicia checkout cuando esté listo.",
+      "checkout-success": "Checkout completado. El estado de suscripción se actualizará después de la sincronización del webhook de Stripe.",
+      "checkout-cancel": "Checkout fue cancelado. No se aplicó ningún cambio de plan.",
+      "portal-return": "Regresaste desde Customer Portal.",
+      "server-error": "La información de facturación no está disponible. Intenta recargar la página.",
+      "checkout-error": "No se pudo iniciar checkout. Inténtalo nuevamente.",
+      "portal-error": "No se pudo abrir Customer Portal. Inténtalo nuevamente.",
+      "plan-limit-error": "El plan actual bloquea esta acción. Revisa los upgrades disponibles."
+    }
   },
   "asset-management": {
     "title": "Activos",
