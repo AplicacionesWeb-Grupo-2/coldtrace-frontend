@@ -7,7 +7,8 @@
     "dev": "vite",
     "server": "json-server --watch server/db.json --routes server/routes.json --port 3000",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.5",
