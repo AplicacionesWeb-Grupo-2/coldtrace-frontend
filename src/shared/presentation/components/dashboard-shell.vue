@@ -78,6 +78,7 @@ const isAccessRoute = computed(() =>
 const isReportsRoute = computed(() =>
     route.path.includes('/reports') || route.path.includes('/identity-access/reports'),
 );
+const isAlertsRoute = computed(() => route.path.includes('/alerts'));
 const isSettingsRoute = computed(() =>
     route.path.includes('/asset-management/safety-ranges') ||
     route.path.includes('/asset-management/operational-parameters') ||
@@ -91,6 +92,13 @@ const contextQueryParams = computed(() => {
     return organizationId ? {organizationId} : {};
 });
 const contextualLinks = computed(() => {
+    if (isAlertsRoute.value) {
+        return [
+            {path: '/alerts/incidents', labelKey: 'dashboard-shell.nav-incidents', visible: true},
+            {path: '/alerts/ai-guidance', labelKey: 'dashboard-shell.nav-ai-guidance', visible: true},
+        ];
+    }
+
     if (isAccessRoute.value) {
         return [
             {path: '/identity-access/users', labelKey: 'dashboard-shell.nav-users', visible: true},

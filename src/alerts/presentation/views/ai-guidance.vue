@@ -36,9 +36,12 @@ const rejectionForm = reactive({
 });
 
 const activeOrganizationId = computed(() => identityStore.currentOrganizationIdFrom());
-const activeIncidents = computed(() => alertsStore.organizationIncidents.filter(incident => !incident.isClosed));
+const reviewableIncidents = computed(() => [...alertsStore.organizationIncidents].sort((first, second) => {
+    if (first.isClosed !== second.isClosed) return first.isClosed ? 1 : -1;
+    return new Date(second.detectedAt).getTime() - new Date(first.detectedAt).getTime();
+}));
 const selectedIncident = computed(() =>
-    activeIncidents.value.find(incident => incident.id === selectedIncidentId.value) ?? activeIncidents.value[0] ?? null,
+    reviewableIncidents.value.find(incident => incident.id === selectedIncidentId.value) ?? reviewableIncidents.value[0] ?? null,
 );
 const sortedPlans = computed(() =>
     [...plans.value].sort(
@@ -113,6 +116,11 @@ async function generatePlan() {
 
     if (!incident) {
         feedback.value = {key: 'alerts.ai-guidance.feedback-no-incident', kind: 'error'};
+        return;
+    }
+
+    if (incident.isClosed) {
+        feedback.value = {key: 'alerts.ai-guidance.feedback-no-pending-plan', kind: 'error'};
         return;
     }
 
@@ -535,6 +543,7 @@ function feedbackKeyFromError(error) {
         case 422:
             return 'alerts.ai-guidance.feedback-invalid-output';
         case 502:
+        case 503:
         case 504:
             return 'alerts.ai-guidance.feedback-provider-error';
         default:
@@ -612,7 +621,7 @@ function numberFrom(value) {
           <label class="search-box ai-incident-select">
             <span class="material-icons search-icon" aria-hidden="true">warning</span>
             <select :value="selectedIncident?.id ?? 0" @change="selectIncident($event.target.value)">
-              <option v-for="incident in activeIncidents" :key="incident.id" :value="incident.id">
+              <option v-for="incident in reviewableIncidents" :key="incident.id" :value="incident.id">
                 INC-{{ incident.id }} - {{ incident.assetName }}
               </option>
             </select>
@@ -626,7 +635,8 @@ function numberFrom(value) {
               loadingPlans ||
               subscriptionLoading ||
               aiGuidanceLocked ||
-              !selectedIncident
+              !selectedIncident ||
+              selectedIncident.isClosed
             "
             @click="generatePlan"
           >
