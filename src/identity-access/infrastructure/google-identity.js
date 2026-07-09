@@ -1,5 +1,6 @@
 const googleScriptUrl = 'https://accounts.google.com/gsi/client';
 const defaultGoogleOAuthClientId = '458208617776-jdce9bkfp960sd01v9d9tgj6ns3ca9j3.apps.googleusercontent.com';
+const googlePromptTimeoutMs = 60000;
 
 /**
  * Starts the Google Identity Services prompt and returns a backend-ready token exchange request.
@@ -30,25 +31,37 @@ export class GoogleIdentityService {
 
         return new Promise((resolve, reject) => {
             let settled = false;
-            const rejectOnce = () => {
+            const timeoutId = window.setTimeout(
+                () => rejectOnce('social-provider-unavailable'),
+                googlePromptTimeoutMs,
+            );
+            const rejectOnce = (reason = 'social-provider-unavailable') => {
                 if (settled) return;
                 settled = true;
-                reject(new Error('social-provider-unavailable'));
+                window.clearTimeout(timeoutId);
+                reject(new Error(reason));
             };
 
             googleIdentity.initialize({
                 client_id: this.#clientId,
                 callback: (response) => {
+                    if (settled) return;
                     if (!response?.credential) {
                         rejectOnce();
                         return;
                     }
 
                     settled = true;
+                    window.clearTimeout(timeoutId);
                     resolve({idToken: response.credential});
                 },
             });
             googleIdentity.prompt((notification) => {
+                if (notification.isDismissedMoment?.()) {
+                    rejectOnce('social-sign-in-cancelled');
+                    return;
+                }
+
                 if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
                     rejectOnce();
                 }
