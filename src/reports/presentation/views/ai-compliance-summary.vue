@@ -260,6 +260,8 @@ function feedbackKeyFromError(error) {
     case 404:
         return 'reports.ai-summary.feedback-report-not-found';
     case 409:
+        return 'reports.ai-summary.feedback-plan-locked';
+    case 500:
         return 'reports.ai-summary.feedback-context-error';
     case 502:
         return 'reports.ai-summary.feedback-invalid-output';
