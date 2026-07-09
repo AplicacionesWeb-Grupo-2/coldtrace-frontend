@@ -99,10 +99,14 @@ function restore() {
  */
 function isValidSession(session) {
     return (
-        !!session?.token &&
-        Number.isFinite(Number(session.user?.id)) &&
-        Number.isFinite(Number(session.user?.organizationId)) &&
-        !!String(session.user?.fullName ?? '').trim()
+        typeof session?.token === 'string' &&
+        !!session.token.trim() &&
+        Number.isFinite(session.user?.id) &&
+        session.user.id > 0 &&
+        Number.isFinite(session.user?.organizationId) &&
+        session.user.organizationId > 0 &&
+        typeof session.user?.fullName === 'string' &&
+        !!session.user.fullName.trim()
     );
 }
 
