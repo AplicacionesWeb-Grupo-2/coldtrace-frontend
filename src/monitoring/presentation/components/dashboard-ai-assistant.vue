@@ -22,7 +22,6 @@ const expanded = ref(false);
 const loading = ref(false);
 const failure = ref('none');
 const chatTurns = ref([]);
-const initialRequested = ref(false);
 let nextChatTurnId = 1;
 
 const latestInterpretation = computed(() => [...chatTurns.value].reverse().find(turn => turn.answer)?.answer ?? null);
@@ -59,16 +58,12 @@ const suggestedQuestions = computed(() => [
 ]);
 
 /**
- * Opens the assistant and requests the initial dashboard interpretation once.
+ * Opens the assistant and preserves the empty prompt state until the operator asks a question.
  *
  * @returns {void}
  */
 function openPanel() {
   expanded.value = true;
-  if (!initialRequested.value) {
-    initialRequested.value = true;
-    askQuestion(t('monitoring.operational.ai-initial-question'), {requestQuestion: ''});
-  }
 }
 
 /**
