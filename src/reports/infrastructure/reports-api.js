@@ -69,12 +69,26 @@ export class ReportsApi extends BaseApi {
     #reportRequestFrom(resource) {
         const period = periodRangeFrom(resource.periodDate);
         return {
-            type: resource.type,
+            type: backendReportTypeFrom(resource.type),
             title: resource.title,
             periodStart: period.start,
             periodEnd: period.end,
         };
     }
+}
+
+/**
+ * Maps presentation report types to the shared backend contract.
+ *
+ * @param {string} type
+ * @returns {string}
+ */
+function backendReportTypeFrom(type) {
+    return {
+        'daily-log': 'DAILY_LOG',
+        compliance: 'COMPLIANCE',
+        'monthly-summary': 'MONTHLY_SUMMARY',
+    }[type];
 }
 
 /**
@@ -108,7 +122,7 @@ function periodRangeFrom(periodDate) {
  * @returns {string}
  */
 function startOfDay(date) {
-    return `${date}T00:00:00.000Z`;
+    return `${date}T00:00:00Z`;
 }
 
 /**
@@ -118,5 +132,5 @@ function startOfDay(date) {
  * @returns {string}
  */
 function endOfDay(date) {
-    return `${date}T23:59:59.999Z`;
+    return `${date}T23:59:59Z`;
 }
