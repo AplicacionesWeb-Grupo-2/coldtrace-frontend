@@ -1,5 +1,5 @@
 <script setup>
-import {computed, ref} from 'vue';
+import {computed, nextTick, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import useMonitoringStore from '@/monitoring/application/monitoring.store.js';
 
@@ -22,7 +22,11 @@ const expanded = ref(false);
 const loading = ref(false);
 const failure = ref('none');
 const chatTurns = ref([]);
+const launcher = ref(null);
+const panel = ref(null);
+const closeButton = ref(null);
 let nextChatTurnId = 1;
+let previouslyFocusedElement = null;
 
 const latestInterpretation = computed(() => [...chatTurns.value].reverse().find(turn => turn.answer)?.answer ?? null);
 const currentTone = computed(() => latestInterpretation.value ? toneFromAttentionLevel(latestInterpretation.value.attentionLevel) : insightTone.value);
@@ -63,7 +67,9 @@ const suggestedQuestions = computed(() => [
  * @returns {void}
  */
 function openPanel() {
+  previouslyFocusedElement = document.activeElement;
   expanded.value = true;
+  nextTick(() => closeButton.value?.focus());
 }
 
 /**
@@ -73,6 +79,48 @@ function openPanel() {
  */
 function closePanel() {
   expanded.value = false;
+  nextTick(() => {
+    const focusTarget = launcher.value ?? previouslyFocusedElement;
+    focusTarget?.focus?.();
+    previouslyFocusedElement = null;
+  });
+}
+
+/**
+ * Keeps keyboard focus inside the modal and closes it with Escape.
+ *
+ * @param {KeyboardEvent} event
+ * @returns {void}
+ */
+function handlePanelKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closePanel();
+    return;
+  }
+
+  if (event.key !== 'Tab') return;
+
+  const focusableElements = panel.value
+    ? [...panel.value.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), details > summary, [tabindex]:not([tabindex="-1"])',
+    )].filter(element => !element.hasAttribute('hidden'))
+    : [];
+
+  if (focusableElements.length === 0) {
+    event.preventDefault();
+    return;
+  }
+
+  const firstElement = focusableElements[0];
+  const lastElement = focusableElements.at(-1);
+  if (event.shiftKey && document.activeElement === firstElement) {
+    event.preventDefault();
+    lastElement.focus();
+  } else if (!event.shiftKey && document.activeElement === lastElement) {
+    event.preventDefault();
+    firstElement.focus();
+  }
 }
 
 /**
@@ -432,6 +480,7 @@ function currentLocale() {
 <template>
   <button
     v-if="!expanded"
+    ref="launcher"
     class="ai-launcher"
     type="button"
     :class="currentTone"
@@ -445,7 +494,14 @@ function currentLocale() {
   <template v-else>
     <div class="ai-backdrop" aria-hidden="true" @click="closePanel"></div>
 
-    <section class="ai-panel" aria-labelledby="dashboard-ai-title" role="dialog" aria-modal="true">
+    <section
+      ref="panel"
+      class="ai-panel"
+      aria-labelledby="dashboard-ai-title"
+      role="dialog"
+      aria-modal="true"
+      @keydown="handlePanelKeydown"
+    >
       <div class="ai-header">
         <div class="ai-mark" aria-hidden="true">
           <span class="material-icons">auto_awesome</span>
@@ -457,7 +513,7 @@ function currentLocale() {
           <p>{{ t('monitoring.operational.ai-subtitle') }}</p>
         </div>
 
-        <button class="ai-close" type="button" :aria-label="t('monitoring.operational.ai-close')" @click="closePanel">
+        <button ref="closeButton" class="ai-close" type="button" :aria-label="t('monitoring.operational.ai-close')" @click="closePanel">
           <span class="material-icons" aria-hidden="true">close</span>
         </button>
       </div>
