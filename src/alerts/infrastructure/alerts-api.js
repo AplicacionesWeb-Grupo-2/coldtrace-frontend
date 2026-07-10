@@ -111,6 +111,24 @@ export class AlertsApi extends BaseApi {
     }
 
     /**
+     * Requests notifications linked to one incident.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @returns {Promise<*>}
+     */
+    getNotificationsByIncidentId(organizationId, incidentId) {
+        if (!organizationId || !incidentId) {
+            return Promise.reject(new Error('Organization and incident are required to list notifications.'));
+        }
+
+        return this.get(this.organizationScopedPath(
+            organizationId,
+            `${incidentsEndpointPath}/${incidentId}/notifications`,
+        ));
+    }
+
+    /**
      * Creates notification in the alerts context.
      *
      * @param {*} resource
