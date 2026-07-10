@@ -61,11 +61,31 @@
   "password-recovery": {
     "title": "Recover password",
     "subtitle": "Enter your account email to continue.",
-    "back-to-login": "Back to login"
+    "email": "Email address",
+    "request-link": "Request link",
+    "requesting": "Requesting link...",
+    "continue-reset": "Continue to reset password",
+    "back-to-login": "Back to login",
+    "success": "If an account exists, recovery instructions will be sent to its email.",
+    "error": {
+      "email-invalid": "Enter a valid email address.",
+      "server-error": "We could not request recovery. Try again later."
+    }
   },
   "reset-password": {
     "title": "Reset password",
-    "back-to-login": "Back to login"
+    "password": "New password",
+    "confirm-password": "Confirm password",
+    "change-password": "Change password",
+    "request-new-link": "Request a new link",
+    "back-to-login": "Back to login",
+    "toggle-password-visibility": "Toggle password visibility",
+    "success": "Password changed successfully for this demonstration.",
+    "error": {
+      "password-min-length": "Use at least 8 characters.",
+      "passwords-must-match": "Passwords must match.",
+      "expired": "This recovery link expired."
+    }
   },
   "roles-permissions": {
     "dashboard": "Dashboard",

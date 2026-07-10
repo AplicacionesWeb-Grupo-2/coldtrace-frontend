@@ -61,11 +61,31 @@
   "password-recovery": {
     "title": "Recuperar contraseña",
     "subtitle": "Ingresa el correo de tu cuenta para continuar.",
-    "back-to-login": "Volver al login"
+    "email": "Correo electrónico",
+    "request-link": "Solicitar enlace",
+    "requesting": "Solicitando enlace...",
+    "continue-reset": "Continuar para restablecer contraseña",
+    "back-to-login": "Volver al login",
+    "success": "Si la cuenta existe, las instrucciones de recuperación se enviarán a su correo.",
+    "error": {
+      "email-invalid": "Ingresa un correo electrónico válido.",
+      "server-error": "No se pudo solicitar la recuperación. Inténtalo nuevamente."
+    }
   },
   "reset-password": {
     "title": "Restablecer contraseña",
-    "back-to-login": "Volver al login"
+    "password": "Nueva contraseña",
+    "confirm-password": "Confirmar contraseña",
+    "change-password": "Cambiar contraseña",
+    "request-new-link": "Solicitar nuevo enlace",
+    "back-to-login": "Volver al login",
+    "toggle-password-visibility": "Alternar visibilidad de contraseña",
+    "success": "Contraseña cambiada correctamente para esta demostración.",
+    "error": {
+      "password-min-length": "Usa al menos 8 caracteres.",
+      "passwords-must-match": "Las contraseñas deben coincidir.",
+      "expired": "Este enlace de recuperación expiró."
+    }
   },
   "roles-permissions": {
     "dashboard": "Dashboard",

@@ -573,6 +573,20 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     }
 
     /**
+     * Requests a generic backend-owned password recovery response.
+     *
+     * @param {string} email
+     * @returns {Promise<*>}
+     */
+    async function requestPasswordReset(email) {
+        const response = await identityAccessApi.requestPasswordReset(email.trim().toLowerCase());
+        if (response.status !== 202 || response.data?.accepted === false) {
+            throw new Error('Password reset request was not accepted.');
+        }
+        return response.data;
+    }
+
+    /**
      * Creates account in the identity access context.
      *
      * @param {Object} options
@@ -832,6 +846,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         availablePermissionKeys,
         fetchAccessData,
         signIn,
+        requestPasswordReset,
         createAccount,
         createOrganizationUser,
         updateUserRole,

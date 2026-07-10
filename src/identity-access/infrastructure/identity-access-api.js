@@ -5,6 +5,7 @@ const usersEndpointPath = import.meta.env.VITE_USERS_ENDPOINT_PATH ?? '/users';
 const organizationsEndpointPath = import.meta.env.VITE_ORGANIZATIONS_ENDPOINT_PATH ?? '/organizations';
 const organizationSignUpsEndpointPath = import.meta.env.VITE_ORGANIZATION_SIGN_UPS_ENDPOINT_PATH ?? '/organization-sign-ups';
 const rolesEndpointPath = import.meta.env.VITE_ROLES_ENDPOINT_PATH ?? '/roles';
+const passwordResetRequestsEndpointPath = import.meta.env.VITE_PASSWORD_RESET_REQUESTS_ENDPOINT_PATH ?? '/password-reset-requests';
 
 /**
  * HTTP facade for identity access resources.
@@ -14,6 +15,7 @@ export class IdentityAccessApi extends BaseApi {
     #organizationsEndpoint;
     #organizationSignUpsEndpoint;
     #rolesEndpoint;
+    #passwordResetRequestsEndpoint;
 
     /**
      * Initializes identity access api endpoint helpers.
@@ -24,6 +26,17 @@ export class IdentityAccessApi extends BaseApi {
         this.#organizationsEndpoint = new BaseEndpoint(this, organizationsEndpointPath);
         this.#organizationSignUpsEndpoint = new BaseEndpoint(this, organizationSignUpsEndpointPath);
         this.#rolesEndpoint = new BaseEndpoint(this, rolesEndpointPath);
+        this.#passwordResetRequestsEndpoint = new BaseEndpoint(this, passwordResetRequestsEndpointPath);
+    }
+
+    /**
+     * Requests password recovery without exposing account existence.
+     *
+     * @param {string} email
+     * @returns {Promise<*>}
+     */
+    requestPasswordReset(email) {
+        return this.#passwordResetRequestsEndpoint.create({email});
     }
 
     /**

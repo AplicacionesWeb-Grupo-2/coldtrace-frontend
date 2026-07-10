@@ -74,12 +74,22 @@ a {
   width: 1px;
 }
 
+.auth-form,
 .sign-in-form,
 .sign-up-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
   width: 100%;
+}
+
+.screen-copy {
+  color: #999da3;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  margin: -6px 0 0;
+  text-align: center;
 }
 
 .field-group {
@@ -108,10 +118,22 @@ a {
 }
 
 .field-link,
+.primary-link,
 .secondary-link {
   color: #9aaee7;
   font-family: 'Varela Round', Arial, sans-serif;
   text-decoration: none;
+}
+
+.primary-link,
+.secondary-link {
+  font-size: 16px;
+  line-height: 19px;
+  text-align: center;
+}
+
+.primary-link {
+  color: #404040;
 }
 
 .field-link {
@@ -120,6 +142,7 @@ a {
 }
 
 .field-link:hover,
+.primary-link:hover,
 .secondary-link:hover {
   text-decoration: underline;
 }
