@@ -22,16 +22,26 @@
     "create-account": "Create an account",
     "toggle-password-visibility": "Toggle password visibility",
     "success": "Access granted. Opening the ColdTrace dashboard...",
+    "onboarding": {
+      "title": "Account setup required",
+      "copy": "This provider account is not linked to ColdTrace yet. Do you want to create a new organization account?",
+      "create-account": "Create account",
+      "choose-another-account": "Choose another account"
+    },
     "error": {
       "email-invalid": "Enter a valid email address.",
       "password-required": "Enter your password.",
       "invalid-credentials": "Invalid email or password.",
       "revoked-access": "Access revoked. Contact your organization administrator.",
+      "onboarding-required": "Complete organization sign-up before accessing ColdTrace.",
+      "social-unavailable": "We could not start this sign-in option. Try again later.",
+      "social-validation-failed": "Google or Apple could not validate this sign-in. Try again or use email and password.",
       "server-error": "We could not validate the account. Try again later."
     }
   },
   "sign-up": {
     "title": "Create your account",
+    "social-title": "Complete account setup",
     "organization-name": "Organization name",
     "organization-name-placeholder": "ColdTrace Market",
     "full-name": "Full name",
@@ -45,6 +55,9 @@
     "social-divider": "or sign up with",
     "continue-with-google": "Continue with Google",
     "continue-with-apple": "Continue with Apple",
+    "google-account": "Google account",
+    "apple-account": "Apple account",
+    "use-another-method": "Use another method",
     "already-have-account": "Already have an account?",
     "toggle-password-visibility": "Toggle password visibility",
     "success": "Organization and super administrator account created.",
@@ -55,17 +68,39 @@
       "password-min-length": "Use at least 8 characters.",
       "passwords-must-match": "Passwords must match.",
       "duplicate-email": "This email is already registered.",
+      "social-invalid": "We could not validate this provider account.",
+      "social-unavailable": "We could not start this sign-up option. Try again later.",
       "server-error": "We could not create the account. Try again later."
     }
   },
   "password-recovery": {
     "title": "Recover password",
     "subtitle": "Enter your account email to continue.",
-    "back-to-login": "Back to login"
+    "email": "Email address",
+    "request-link": "Request link",
+    "requesting": "Requesting link...",
+    "continue-reset": "Continue to reset password",
+    "back-to-login": "Back to login",
+    "success": "If an account exists, recovery instructions will be sent to its email.",
+    "error": {
+      "email-invalid": "Enter a valid email address.",
+      "server-error": "We could not request recovery. Try again later."
+    }
   },
   "reset-password": {
     "title": "Reset password",
-    "back-to-login": "Back to login"
+    "password": "New password",
+    "confirm-password": "Confirm password",
+    "change-password": "Change password",
+    "request-new-link": "Request a new link",
+    "back-to-login": "Back to login",
+    "toggle-password-visibility": "Toggle password visibility",
+    "success": "Password changed successfully for this demonstration.",
+    "error": {
+      "password-min-length": "Use at least 8 characters.",
+      "passwords-must-match": "Passwords must match.",
+      "expired": "This recovery link expired."
+    }
   },
   "roles-permissions": {
     "dashboard": "Dashboard",
@@ -146,8 +181,13 @@
       "email": "Email address",
       "email-placeholder": "user{'@'}coldtrace.com",
       "email-error": "Enter a valid email.",
+      "password": "Temporary password",
+      "password-placeholder": "At least 8 characters",
+      "password-error": "Use at least 8 characters.",
       "role": "Role",
       "role-error": "Select a valid role.",
+      "role-assignment-title": "Role assignment",
+      "role-assignment-description": "The selected role defines what this user can review or update inside the active organization.",
       "cancel": "Cancel",
       "create": "Create user",
       "creating": "Creating..."
