@@ -627,6 +627,78 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     }
 
     /**
+     * Handles social provider sign-in through the backend.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} credential
+     * @returns {Promise<string>}
+     */
+    async function signInWithSocialProvider(provider, credential) {
+        loading.value = true;
+        errors.value = [];
+
+        try {
+            const response = provider === 'google'
+                ? await identityAccessApi.signInWithGoogle(credential)
+                : await identityAccessApi.signInWithApple(credential);
+            await completeAuthenticatedSession(response.data);
+            return 'success';
+        } catch (error) {
+            return socialSignInFeedbackFromError(error);
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    /**
+     * Validates a social provider profile for organization onboarding.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} credential
+     * @returns {Promise<*>}
+     */
+    async function previewSocialIdentityProfile(provider, credential) {
+        const response = await identityAccessApi.getSocialIdentityProfile(provider, credential);
+        const resource = response.data ?? {};
+
+        return {
+            idToken: read(resource, ['idToken', 'IdToken'], credential.idToken ?? ''),
+            email: read(resource, ['email', 'Email'], ''),
+            fullName: read(resource, ['fullName', 'FullName'], ''),
+        };
+    }
+
+    /**
+     * Creates an organization and first user with a social provider.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} credential
+     * @param {*} account
+     * @returns {Promise<{status: string, user?: *}>}
+     */
+    async function createSocialAccount(provider, credential, account) {
+        loading.value = true;
+        errors.value = [];
+
+        try {
+            const response = await identityAccessApi.createSocialOrganizationSignUp(provider, {
+                ...(credential.idToken ? {idToken: credential.idToken} : {}),
+                ...(credential.authorizationCode ? {authorizationCode: credential.authorizationCode} : {}),
+                ...(credential.redirectUri ? {redirectUri: credential.redirectUri} : {}),
+                ...(credential.nonce ? {nonce: credential.nonce} : {}),
+                organizationName: account.organizationName.trim(),
+                fullName: account.fullName.trim(),
+            });
+            await completeAuthenticatedSession(response.data);
+            return {status: 'success', user: response.data.user};
+        } catch (error) {
+            return {status: socialSignUpFeedbackFromError(error)};
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    /**
      * Creates account in the identity access context.
      *
      * @param {Object} options
@@ -842,6 +914,72 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
     }
 
     /**
+     * Maps backend social sign-in errors to UI feedback.
+     *
+     * @param {*} error
+     * @returns {string}
+     */
+    function socialSignInFeedbackFromError(error) {
+        const code = error?.response?.data?.code ?? error?.response?.data?.Code;
+
+        if (error?.response?.status === 401 || code === 'PROVIDER_VALIDATION_FAILED') {
+            return 'social-validation-failed';
+        }
+
+        if (error?.response?.status === 422 || code === 'SOCIAL_IDENTITY_REQUIRES_ONBOARDING') {
+            return 'onboarding-required';
+        }
+
+        if (error?.response?.status === 503 || code === 'SOCIAL_PROVIDER_CONFIGURATION_MISSING') {
+            return 'social-unavailable';
+        }
+
+        return 'server-error';
+    }
+
+    /**
+     * Maps backend social sign-up errors to UI feedback.
+     *
+     * @param {*} error
+     * @returns {string}
+     */
+    function socialSignUpFeedbackFromError(error) {
+        const code = error?.response?.data?.code ?? error?.response?.data?.Code;
+
+        if (error?.response?.status === 409 || code?.endsWith('_CONFLICT')) {
+            return 'duplicate-email';
+        }
+
+        if (error?.response?.status === 401 || code === 'PROVIDER_VALIDATION_FAILED') {
+            return 'social-invalid';
+        }
+
+        if (error?.response?.status === 503 || code === 'SOCIAL_PROVIDER_CONFIGURATION_MISSING') {
+            return 'social-unavailable';
+        }
+
+        return 'server-error';
+    }
+
+    /**
+     * Reads a value from a resource using possible keys.
+     *
+     * @param {*} source
+     * @param {string[]} keys
+     * @param {*} fallback
+     * @returns {*}
+     */
+    function read(source, keys, fallback = undefined) {
+        if (!source || typeof source !== 'object') return fallback;
+
+        for (const key of keys) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) return source[key];
+        }
+
+        return fallback;
+    }
+
+    /**
      * Handles set permission keys for role behavior in the identity access context.
      *
      * @param {number|string} roleId
@@ -883,12 +1021,15 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         availablePermissionKeys,
         fetchAccessData,
         signIn,
-        setAuthenticatedSession,
+        signInWithSocialProvider,
+        previewSocialIdentityProfile,
         createAccount,
+        createSocialAccount,
         createOrganizationUser,
         updateUserRole,
         deleteUser,
         toggleRolePermission,
+        setAuthenticatedSession,
         setCurrentContext,
         setCurrentContextFrom,
         clearCurrentUser,

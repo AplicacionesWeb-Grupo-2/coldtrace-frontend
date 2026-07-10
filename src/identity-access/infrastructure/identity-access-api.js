@@ -2,11 +2,11 @@ import {BaseApi} from '@/shared/infrastructure/base-api.js';
 import {BaseEndpoint} from '@/shared/infrastructure/base-endpoint.js';
 import {UserAssembler} from '@/identity-access/infrastructure/user.assembler.js';
 
+const authenticationEndpointPath = import.meta.env.VITE_AUTHENTICATION_ENDPOINT_PATH ?? '/authentication';
 const usersEndpointPath = import.meta.env.VITE_USERS_ENDPOINT_PATH ?? '/users';
 const organizationsEndpointPath = import.meta.env.VITE_ORGANIZATIONS_ENDPOINT_PATH ?? '/organizations';
 const organizationSignUpsEndpointPath = import.meta.env.VITE_ORGANIZATION_SIGN_UPS_ENDPOINT_PATH ?? '/organization-sign-ups';
 const rolesEndpointPath = import.meta.env.VITE_ROLES_ENDPOINT_PATH ?? '/roles';
-const authenticationEndpointPath = import.meta.env.VITE_AUTHENTICATION_ENDPOINT_PATH ?? '/authentication';
 
 /**
  * HTTP facade for identity access resources.
@@ -131,6 +131,61 @@ export class IdentityAccessApi extends BaseApi {
     }
 
     /**
+     * Authenticates a user with a social provider authorization response.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    async signInWithProvider(provider, request) {
+        const response = await this.http.post(`${authenticationEndpointPath}/social/${provider}/token-exchange`, request);
+        return {status: response.status, data: this.#authenticatedUserFromResource(response.data)};
+    }
+
+    /**
+     * Authenticates a user with a Google authorization response.
+     *
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    signInWithGoogle(request) {
+        return this.signInWithProvider('google', request);
+    }
+
+    /**
+     * Authenticates a user with a Sign in with Apple authorization response.
+     *
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    signInWithApple(request) {
+        return this.signInWithProvider('apple', request);
+    }
+
+    /**
+     * Validates a social provider response and returns profile data for onboarding.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    getSocialIdentityProfile(provider, request) {
+        return this.http.post(`${authenticationEndpointPath}/social/${provider}/profile-preview`, request);
+    }
+
+    /**
+     * Creates an organization and authenticates the first user with a social provider.
+     *
+     * @param {'google'|'apple'} provider
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    async createSocialOrganizationSignUp(provider, request) {
+        const response = await this.http.post(`${authenticationEndpointPath}/social/${provider}/organization-sign-up`, request);
+        return {status: response.status, data: this.#authenticatedUserFromResource(response.data)};
+    }
+
+    /**
      * Requests roles from the API.
      *
      * @returns {Promise<*>}
@@ -161,38 +216,38 @@ export class IdentityAccessApi extends BaseApi {
     }
 
     /**
-     * Maps an authentication response to the frontend session contract.
+     * Maps backend authentication resources into session data.
      *
      * @param {*} resource
      * @returns {{token: string, user: import('@/identity-access/domain/model/user-entity.js').User}}
      */
-    #authenticatedUserFromResource(resource) {
-        const token = read(resource, 'token') ??
-            read(resource, 'Token') ??
-            read(resource, 'accessToken') ??
-            read(resource, 'AccessToken') ??
-            read(resource, 'jwt') ??
-            read(resource, 'Jwt') ??
-            '';
-        const userResource = normalizeUserResource(read(resource, 'user') ?? read(resource, 'User') ?? resource);
+    #authenticatedUserFromResource(resource = {}) {
+        const userResource = normalizeUserResource(read(resource, ['user', 'User'], resource));
+
         return {
-            token,
+            token: read(resource, ['token', 'Token', 'accessToken', 'AccessToken', 'jwt', 'Jwt'], ''),
             user: UserAssembler.toEntityFromResource(userResource),
         };
     }
 }
 
 /**
- * Safely reads an object property.
+ * Reads a value from a resource using possible keys.
  *
- * @param {*} resource
- * @param {string} key
+ * @param {*} source
+ * @param {string[]} keys
+ * @param {*} fallback
  * @returns {*}
  */
-function read(resource, key) {
-    return resource && Object.prototype.hasOwnProperty.call(resource, key)
-        ? resource[key]
-        : undefined;
+function read(source, keys, fallback = undefined) {
+    if (!source || typeof source !== 'object') return fallback;
+
+    const candidateKeys = Array.isArray(keys) ? keys : [keys];
+    for (const key of candidateKeys) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) return source[key];
+    }
+
+    return fallback;
 }
 
 /**
@@ -202,16 +257,16 @@ function read(resource, key) {
  * @returns {*}
  */
 function normalizeUserResource(resource) {
-    const fullName = read(resource, 'fullName') ?? read(resource, 'FullName') ?? '';
+    const fullName = read(resource, ['fullName', 'FullName'], '');
     const [firstNameFromFullName, ...lastNameParts] = String(fullName).trim().split(/\s+/).filter(Boolean);
     return {
-        id: read(resource, 'id') ?? read(resource, 'Id'),
-        uuid: read(resource, 'uuid') ?? read(resource, 'Uuid'),
-        organizationUserId: read(resource, 'organizationUserId') ?? read(resource, 'OrganizationUserId'),
-        firstName: read(resource, 'firstName') ?? read(resource, 'FirstName') ?? firstNameFromFullName ?? '',
-        lastName: read(resource, 'lastName') ?? read(resource, 'LastName') ?? lastNameParts.join(' '),
-        email: read(resource, 'email') ?? read(resource, 'Email') ?? '',
-        organizationId: read(resource, 'organizationId') ?? read(resource, 'OrganizationId'),
-        roleId: read(resource, 'roleId') ?? read(resource, 'RoleId'),
+        id: read(resource, ['id', 'Id']),
+        uuid: read(resource, ['uuid', 'Uuid']),
+        organizationUserId: read(resource, ['organizationUserId', 'OrganizationUserId']),
+        firstName: read(resource, ['firstName', 'FirstName'], firstNameFromFullName ?? ''),
+        lastName: read(resource, ['lastName', 'LastName'], lastNameParts.join(' ')),
+        email: read(resource, ['email', 'Email'], ''),
+        organizationId: read(resource, ['organizationId', 'OrganizationId']),
+        roleId: read(resource, ['roleId', 'RoleId']),
     };
 }
