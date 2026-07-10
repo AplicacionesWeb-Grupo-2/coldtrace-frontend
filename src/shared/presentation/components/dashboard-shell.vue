@@ -89,7 +89,8 @@ const isAlertsRoute = computed(() => route.path.includes('/alerts'));
 const isSettingsRoute = computed(() =>
     route.path.includes('/asset-management/safety-ranges') ||
     route.path.includes('/asset-management/operational-parameters') ||
-    route.path.includes('/maintenance'),
+    route.path.includes('/maintenance') ||
+    route.path.includes('/settings'),
 );
 const isAccessDropdownOpen = computed(() => accessDropdownTouched.value ? accessDropdownOpen.value : isAccessRoute.value);
 const isReportsDropdownOpen = computed(() => reportsDropdownTouched.value ? reportsDropdownOpen.value : isReportsRoute.value);
@@ -120,6 +121,7 @@ const contextualLinks = computed(() => {
             {path: '/asset-management/operational-parameters', labelKey: 'dashboard-shell.nav-operational-parameters', visible: true},
             {path: '/maintenance/preventive', labelKey: 'dashboard-shell.nav-preventive-maintenance', visible: true},
             {path: '/maintenance/technical-service', labelKey: 'dashboard-shell.nav-technical-service', visible: true},
+            {path: '/settings/billing', labelKey: 'dashboard-shell.nav-billing', visible: true},
         ];
     }
 
@@ -451,11 +453,6 @@ function initialsFor(fullName) {
             </div>
           </div>
 
-          <router-link class="menu-item" to="/identity-access/billing" active-class="active" :aria-label="t('dashboard-shell.nav-billing')">
-            <span class="material-icons menu-icon" aria-hidden="true">credit_card</span>
-            <span class="menu-label">{{ t('dashboard-shell.nav-billing') }}</span>
-          </router-link>
-
           <div class="menu-group" :class="{open: isSettingsDropdownOpen, 'active-group': isSettingsRoute}">
             <button
               class="menu-item menu-trigger"
@@ -480,6 +477,9 @@ function initialsFor(fullName) {
               </router-link>
               <router-link class="sub-menu-link" to="/maintenance/technical-service" active-class="active">
                 {{ t('dashboard-shell.nav-technical-service') }}
+              </router-link>
+              <router-link class="sub-menu-link" to="/settings/billing" active-class="active">
+                {{ t('dashboard-shell.nav-billing') }}
               </router-link>
             </div>
           </div>

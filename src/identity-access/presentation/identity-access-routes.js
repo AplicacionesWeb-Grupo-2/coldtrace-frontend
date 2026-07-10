@@ -1,5 +1,3 @@
-import billingRoutes from '@/billing/presentation/billing-routes.js';
-
 /**
  * Lazy-loads the sign in view component.
  *
@@ -63,7 +61,7 @@ const identityAccessRoutes = [
     {path: 'roles-permissions', name: 'identity-access-roles-permissions', component: userAccessList, meta: {title: 'Roles and permissions'}},
     {path: 'sign-in', name: 'identity-access-sign-in', component: signIn, meta: {title: 'Sign in'}},
     {path: 'sign-up', name: 'identity-access-sign-up', component: signUp, meta: {title: 'Create account'}},
-    ...billingRoutes,
+    {path: 'billing', redirect: to => ({path: '/settings/billing', query: to.query})},
     {path: '', redirect: '/identity-access/sign-in'},
 ];
 

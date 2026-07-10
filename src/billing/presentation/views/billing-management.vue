@@ -21,7 +21,6 @@ const selectedPlanCode = computed(() => normalizedPlanCode(route.query.plan));
 const selectedPlan = computed(() => billingStore.planByCode(selectedPlanCode.value));
 const canOpenPortal = computed(() =>
     subscription.value?.providerCustomerId &&
-    subscription.value?.plan?.isPaid &&
     !billingStore.portalLoading,
 );
 const usageRows = computed(() => [
@@ -70,7 +69,7 @@ async function loadBillingData() {
             }
         }
     } catch {
-        feedback.value = 'server-error';
+        feedback.value = billingStore.lastBillingError?.code ?? 'server-error';
     }
 }
 
@@ -95,7 +94,9 @@ async function startCheckout(plan) {
 
         window.location.assign(session.checkoutUrl);
     } catch {
-        feedback.value = billingStore.lastPlanProblem ? 'plan-limit-error' : 'checkout-error';
+        feedback.value = billingStore.lastPlanProblem
+            ? 'plan-limit-error'
+            : billingStore.lastBillingError?.code ?? 'checkout-error';
     }
 }
 
@@ -118,7 +119,7 @@ async function openCustomerPortal() {
 
         window.location.assign(session.portalUrl);
     } catch {
-        feedback.value = 'portal-error';
+        feedback.value = billingStore.lastBillingError?.code ?? 'portal-error';
     }
 }
 
@@ -279,7 +280,10 @@ function normalizedPlanCode(value) {
     </header>
 
     <p v-if="feedback !== 'idle'" class="feedback" :class="feedback.includes('error') ? 'error' : 'neutral'">
-      {{ t(`billing.feedback.${feedback}`, {plan: feedbackPlanName}) }}
+      {{ t(`billing.feedback.${feedback}`, {
+        plan: feedbackPlanName,
+        detail: billingStore.lastBillingError?.detail ?? '',
+      }) }}
     </p>
 
     <section v-if="billingStore.loading" class="table-card billing-loading">

@@ -287,7 +287,12 @@
       "server-error": "Billing data is unavailable. Try reloading the page.",
       "checkout-error": "We could not start checkout. Try again later.",
       "portal-error": "We could not open Customer Portal. Try again later.",
-      "plan-limit-error": "The current plan blocks this action. Review available upgrades."
+      "plan-limit-error": "The current plan blocks this action. Review available upgrades.",
+      "session-error": "Your session expired. Sign in again to manage billing.",
+      "conflict-error": "The requested billing action is not available: {detail}",
+      "provider-error": "The billing provider is unavailable or not configured for this environment.",
+      "organization-error": "Select an organization before managing billing.",
+      "request-error": "The billing request failed: {detail}"
     }
   },
   "asset-management": {

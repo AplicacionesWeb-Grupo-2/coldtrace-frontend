@@ -20,6 +20,7 @@ const useBillingStore = defineStore('billing', () => {
     const checkoutPlanCode = ref(null);
     const portalLoading = ref(false);
     const lastPlanProblem = ref(null);
+    const lastBillingError = ref(null);
     const plansLoaded = ref(false);
     const subscriptionLoaded = ref(false);
 
@@ -72,6 +73,7 @@ const useBillingStore = defineStore('billing', () => {
         loading.value = true;
         errors.value = [];
         lastPlanProblem.value = null;
+        lastBillingError.value = null;
 
         try {
             const [loadedPlans, loadedSubscription] = await Promise.all([
@@ -83,6 +85,7 @@ const useBillingStore = defineStore('billing', () => {
         } catch (error) {
             errors.value.push(error);
             lastPlanProblem.value = planProblemFromError(error);
+            lastBillingError.value = billingErrorFrom(error);
             throw error;
         } finally {
             loading.value = false;
@@ -99,6 +102,7 @@ const useBillingStore = defineStore('billing', () => {
     async function createCheckoutSession(organizationId, targetPlanCode) {
         checkoutPlanCode.value = targetPlanCode;
         lastPlanProblem.value = null;
+        lastBillingError.value = null;
 
         try {
             const response = await billingApi.createCheckoutSession(organizationId, targetPlanCode);
@@ -110,6 +114,7 @@ const useBillingStore = defineStore('billing', () => {
             };
         } catch (error) {
             lastPlanProblem.value = planProblemFromError(error);
+            lastBillingError.value = billingErrorFrom(error);
             throw error;
         } finally {
             checkoutPlanCode.value = null;
@@ -125,6 +130,7 @@ const useBillingStore = defineStore('billing', () => {
     async function createCustomerPortalSession(organizationId) {
         portalLoading.value = true;
         lastPlanProblem.value = null;
+        lastBillingError.value = null;
 
         try {
             const response = await billingApi.createCustomerPortalSession(organizationId);
@@ -136,6 +142,7 @@ const useBillingStore = defineStore('billing', () => {
             };
         } catch (error) {
             lastPlanProblem.value = planProblemFromError(error);
+            lastBillingError.value = billingErrorFrom(error);
             throw error;
         } finally {
             portalLoading.value = false;
@@ -170,6 +177,7 @@ const useBillingStore = defineStore('billing', () => {
         checkoutPlanCode,
         portalLoading,
         lastPlanProblem,
+        lastBillingError,
         plansLoaded,
         subscriptionLoaded,
         visiblePlans,
@@ -221,6 +229,44 @@ function planProblemFromError(error) {
         lockedReason: data.lockedReason,
         requiredPlanCode: data.requiredPlanCode,
     };
+}
+
+/**
+ * Normalizes billing request failures for presentation feedback.
+ *
+ * @param {*} error
+ * @returns {{code: string, status: number, detail: string}}
+ */
+function billingErrorFrom(error) {
+    const status = Number(error?.response?.status ?? 0);
+    const detail = detailFromError(error);
+
+    if (status === 401) return {code: 'session-error', status, detail};
+    if (status === 409) return {code: 'conflict-error', status, detail};
+    if (status === 502 || status === 503) return {code: 'provider-error', status, detail};
+    if (error?.message === 'Organization is required to create a checkout session.' ||
+        error?.message === 'Organization is required to create a customer portal session.') {
+        return {code: 'organization-error', status, detail};
+    }
+
+    return {code: 'request-error', status, detail};
+}
+
+/**
+ * Extracts a readable message from ProblemDetails or plain API errors.
+ *
+ * @param {*} error
+ * @returns {string}
+ */
+function detailFromError(error) {
+    const data = error?.response?.data;
+    if (typeof data === 'string' && data.trim()) return data.trim();
+
+    const detail = data?.detail ?? data?.message ?? data?.title;
+    if (typeof detail === 'string' && detail.trim()) return detail.trim();
+
+    if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim();
+    return 'Unexpected billing error.';
 }
 
 export default useBillingStore;
