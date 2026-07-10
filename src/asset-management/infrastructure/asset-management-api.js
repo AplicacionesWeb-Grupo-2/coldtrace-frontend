@@ -65,11 +65,15 @@ export class AssetManagementApi extends BaseApi {
     /**
      * Deletes asset from the asset management context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteAsset() {
-        return Promise.resolve({status: 204, data: null});
+    deleteAsset(organizationId, id) {
+        const endpoint = this.#endpointForOrganization(organizationId, assetsEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to delete an asset.'));
+
+        return endpoint.delete(id);
     }
 
     /**
