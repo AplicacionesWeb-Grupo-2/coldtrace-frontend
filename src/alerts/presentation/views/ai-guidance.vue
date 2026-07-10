@@ -224,20 +224,6 @@ async function rejectPlan() {
 }
 
 /**
- * Navigates back to the incident workflow.
- *
- * @param {string|null} panel
- * @returns {void}
- */
-function openIncidents(panel = null) {
-    const query = {...route.query};
-    if (panel) query.panel = panel;
-    delete query.incidentId;
-
-    router.push({name: 'alerts-incidents', query});
-}
-
-/**
  * Opens billing so the organization can unlock AI guidance.
  *
  * @returns {void}
@@ -605,18 +591,6 @@ function numberFrom(value) {
       </div>
 
       <div class="incident-workbar">
-        <nav class="incident-section-tabs" aria-label="Incident workflow sections">
-          <button type="button" @click="openIncidents()">
-            {{ t('dashboard-shell.nav-incidents') }}
-          </button>
-          <button type="button" @click="openIncidents('closure')">
-            {{ t('alerts.incident-list.closure-title') }}
-          </button>
-          <button type="button" class="active">
-            {{ t('dashboard-shell.nav-ai-guidance') }}
-          </button>
-        </nav>
-
         <div class="incident-toolbar">
           <label class="search-box ai-incident-select">
             <span class="material-icons search-icon" aria-hidden="true">warning</span>
@@ -967,40 +941,9 @@ function numberFrom(value) {
   align-items: center;
   display: grid;
   gap: 18px;
-  grid-template-columns: max-content minmax(260px, 400px) minmax(245px, 1fr);
+  grid-template-columns: minmax(260px, 400px) minmax(245px, 1fr);
   min-height: 42px;
   width: 100%;
-}
-
-.incident-section-tabs {
-  align-items: center;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 26px;
-  min-height: 42px;
-  min-width: max-content;
-  overflow-x: auto;
-}
-
-.incident-section-tabs button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: #98a2b3;
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 800;
-  min-height: 42px;
-  padding: 0;
-  white-space: nowrap;
-}
-
-.incident-section-tabs button.active,
-.incident-section-tabs button:hover {
-  border-bottom-color: #2563eb;
-  color: #2563eb;
 }
 
 .incident-toolbar {

@@ -109,6 +109,12 @@ const contextualLinks = computed(() => {
     if (isAlertsRoute.value) {
         return [
             {path: '/alerts/incidents', labelKey: 'dashboard-shell.nav-incidents', visible: true},
+            {
+                path: '/alerts/incidents',
+                query: {panel: 'closure'},
+                labelKey: 'alerts.incident-list.closure-title',
+                visible: alertsStore.canResolveAlerts(),
+            },
             {path: '/alerts/ai-guidance', labelKey: 'dashboard-shell.nav-ai-guidance', visible: true},
         ];
     }
@@ -298,7 +304,10 @@ function openSettings() {
  * @returns {boolean}
  */
 function isContextLinkActive(link) {
-    return route.path === link.path;
+    if (route.path !== link.path) return false;
+    if (link.query?.panel) return route.query.panel === link.query.panel;
+    if (link.path === '/alerts/incidents') return route.query.panel !== 'closure';
+    return true;
 }
 
 /**
@@ -615,8 +624,8 @@ function initialsFor(fullName) {
         <nav ref="contextNavigationElement" class="context-nav" :aria-label="t('dashboard-shell.section-navigation')">
           <router-link
             v-for="link in contextualLinks.filter(current => current.visible)"
-            :key="link.path"
-            :to="{path: link.path, query: contextQueryParams}"
+            :key="`${link.path}-${link.query?.panel ?? 'default'}`"
+            :to="{path: link.path, query: {...contextQueryParams, ...link.query}}"
             :class="{active: isContextLinkActive(link)}"
           >
             {{ t(link.labelKey) }}
