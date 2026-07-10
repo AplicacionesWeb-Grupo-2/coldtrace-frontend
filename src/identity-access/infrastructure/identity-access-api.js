@@ -68,14 +68,20 @@ export class IdentityAccessApi extends BaseApi {
      * Creates user in the identity access context.
      *
      * @param {*} resource
+     * @param {string} password
      * @returns {Promise<*>}
      */
-    createUser(organizationId, resource) {
+    createUser(organizationId, resource, password) {
         const endpoint = this.#usersEndpointForOrganization(organizationId);
         if (!endpoint) return Promise.reject(new Error('Organization is required to create a user.'));
 
-        const {id: _id, uuid: _uuid, organizationId: _organizationId, organizationUserId: _organizationUserId, ...request} = resource;
-        return endpoint.create(request);
+        return endpoint.create({
+            firstName: resource.firstName,
+            lastName: resource.lastName,
+            email: resource.email,
+            password,
+            roleId: resource.roleId,
+        });
     }
 
     /**

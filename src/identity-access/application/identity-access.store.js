@@ -737,7 +737,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
      * @param {Object} options
      * @returns {Promise<*>}
      */
-    async function createOrganizationUser({fullName, email, roleId}) {
+    async function createOrganizationUser({fullName, email, password, roleId}) {
         const organizationId = currentOrganizationIdFrom();
         const selectedRole = roles.value.find(role => role.id === Number(roleId));
 
@@ -768,7 +768,11 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
             organizationId,
             roleId: Number(roleId),
         });
-        const response = await identityAccessApi.createUser(organizationId, UserAssembler.toResourceFromEntity(user));
+        const response = await identityAccessApi.createUser(
+            organizationId,
+            UserAssembler.toResourceFromEntity(user),
+            password,
+        );
         const createdUser = UserAssembler.toEntityFromResource(response.data);
         users.value.push(createdUser);
         return {status: 'success', user: createdUser};

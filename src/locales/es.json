@@ -161,8 +161,13 @@
       "email": "Correo electrónico",
       "email-placeholder": "usuario{'@'}coldtrace.com",
       "email-error": "Ingresa un correo válido.",
+      "password": "Contraseña temporal",
+      "password-placeholder": "Al menos 8 caracteres",
+      "password-error": "Usa al menos 8 caracteres.",
       "role": "Rol",
       "role-error": "Selecciona un rol válido.",
+      "role-assignment-title": "Asignación de rol",
+      "role-assignment-description": "El rol seleccionado define lo que este usuario puede revisar o actualizar dentro de la organización activa.",
       "cancel": "Cancelar",
       "create": "Crear usuario",
       "creating": "Creando..."

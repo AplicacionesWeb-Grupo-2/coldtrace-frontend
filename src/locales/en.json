@@ -161,8 +161,13 @@
       "email": "Email address",
       "email-placeholder": "user{'@'}coldtrace.com",
       "email-error": "Enter a valid email.",
+      "password": "Temporary password",
+      "password-placeholder": "At least 8 characters",
+      "password-error": "Use at least 8 characters.",
       "role": "Role",
       "role-error": "Select a valid role.",
+      "role-assignment-title": "Role assignment",
+      "role-assignment-description": "The selected role defines what this user can review or update inside the active organization.",
       "cancel": "Cancel",
       "create": "Create user",
       "creating": "Creating..."
