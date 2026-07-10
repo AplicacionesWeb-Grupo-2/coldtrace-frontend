@@ -50,6 +50,24 @@ export class ReportsApi extends BaseApi {
     }
 
     /**
+     * Generates an AI-assisted advisory summary for a persisted report.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} reportId
+     * @returns {Promise<*>}
+     */
+    async generateAiSummary(organizationId, reportId) {
+        const endpointPath = this.organizationScopedPath(organizationId, `${reportsEndpointPath}/${reportId}/ai-summary`);
+        if (!endpointPath) return Promise.reject(new Error('Organization is required to generate an AI summary.'));
+
+        const response = await this.http.post(endpointPath, {});
+        return {
+            ...response,
+            data: aiSummaryFromResource(response.data),
+        };
+    }
+
+    /**
      * Builds an endpoint helper for an organization-scoped resource.
      *
      * @param {number|string} organizationId
@@ -133,4 +151,64 @@ function startOfDay(date) {
  */
 function endOfDay(date) {
     return `${date}T23:59:59Z`;
+}
+
+/**
+ * Normalizes backend AI summary responses to the Vue view contract.
+ *
+ * @param {*} resource
+ * @returns {*}
+ */
+function aiSummaryFromResource(resource = {}) {
+    const sourceReport = read(resource, ['sourceReport', 'SourceReport'], {});
+    const findings = read(resource, ['findings', 'Findings'], []);
+    return {
+        organizationId: read(resource, ['organizationId', 'OrganizationId'], null),
+        reportId: read(resource, ['reportId', 'ReportId'], null),
+        reportUuid: read(resource, ['reportUuid', 'ReportUuid'], ''),
+        reportType: read(resource, ['reportType', 'ReportType'], ''),
+        reportTitle: read(resource, ['reportTitle', 'ReportTitle'], ''),
+        summaryGeneratedAt: read(resource, ['summaryGeneratedAt', 'SummaryGeneratedAt'], null),
+        sourceReport,
+        executiveSummary: read(resource, ['executiveSummary', 'ExecutiveSummary'], ''),
+        findings: Array.isArray(findings) ? findings.map(findingFromResource) : [],
+        evidenceGaps: read(resource, ['evidenceGaps', 'EvidenceGaps'], []),
+        recommendedActions: read(resource, ['recommendedActions', 'RecommendedActions'], []),
+        uncertaintyNotes: read(resource, ['uncertaintyNotes', 'UncertaintyNotes'], []),
+        modelProvider: read(resource, ['modelProvider', 'ModelProvider'], ''),
+        modelName: read(resource, ['modelName', 'ModelName'], ''),
+    };
+}
+
+/**
+ * Normalizes one AI summary finding.
+ *
+ * @param {*} resource
+ * @returns {*}
+ */
+function findingFromResource(resource = {}) {
+    return {
+        area: read(resource, ['area', 'Area'], ''),
+        status: read(resource, ['status', 'Status'], ''),
+        evidence: read(resource, ['evidence', 'Evidence'], ''),
+        recommendation: read(resource, ['recommendation', 'Recommendation'], ''),
+    };
+}
+
+/**
+ * Reads a value from a resource using possible keys.
+ *
+ * @param {*} source
+ * @param {string[]} keys
+ * @param {*} fallback
+ * @returns {*}
+ */
+function read(source, keys, fallback = undefined) {
+    if (!source || typeof source !== 'object') return fallback;
+
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) return source[key];
+    }
+
+    return fallback;
 }
