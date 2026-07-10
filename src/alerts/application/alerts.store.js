@@ -320,6 +320,58 @@ const useAlertsStore = defineStore('alerts', () => {
     }
 
     /**
+     * Loads AI-assisted resolution plans for an incident.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @returns {Promise<Array<*>>}
+     */
+    async function getAiResolutionPlans(organizationId, incidentId) {
+        const response = await alertsApi.getAiResolutionPlans(organizationId, incidentId);
+        return Array.isArray(response.data) ? response.data : [];
+    }
+
+    /**
+     * Generates an AI-assisted resolution plan for an incident.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @returns {Promise<*>}
+     */
+    async function generateAiResolutionPlan(organizationId, incidentId) {
+        const response = await alertsApi.generateAiResolutionPlan(organizationId, incidentId);
+        return response.data;
+    }
+
+    /**
+     * Approves an AI-assisted resolution plan.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @param {number|string} planId
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    async function approveAiResolutionPlan(organizationId, incidentId, planId, request) {
+        const response = await alertsApi.approveAiResolutionPlan(organizationId, incidentId, planId, request);
+        return response.data;
+    }
+
+    /**
+     * Rejects an AI-assisted resolution plan.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} incidentId
+     * @param {number|string} planId
+     * @param {*} request
+     * @returns {Promise<*>}
+     */
+    async function rejectAiResolutionPlan(organizationId, incidentId, planId, request) {
+        const response = await alertsApi.rejectAiResolutionPlan(organizationId, incidentId, planId, request);
+        return response.data;
+    }
+
+    /**
      * Determines whether resolve alerts is available.
      *
      * @returns {boolean}
@@ -1089,6 +1141,10 @@ const useAlertsStore = defineStore('alerts', () => {
         closeIncident,
         stabilizeIncident,
         reviewEscalation,
+        getAiResolutionPlans,
+        generateAiResolutionPlan,
+        approveAiResolutionPlan,
+        rejectAiResolutionPlan,
         canResolveAlerts,
         clearFeedback,
         setFeedback,
