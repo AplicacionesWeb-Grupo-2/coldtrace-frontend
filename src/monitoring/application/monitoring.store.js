@@ -194,6 +194,18 @@ const useMonitoringStore = defineStore('monitoring', () => {
     }
 
     /**
+     * Requests a backend-owned AI interpretation for the operational dashboard.
+     *
+     * @param {number|string} organizationId
+     * @param {{question?: string, preferredLanguage?: string}} request
+     * @returns {Promise<*>}
+     */
+    async function generateDashboardAiInterpretation(organizationId, request = {}) {
+        const response = await monitoringApi.generateDashboardAiInterpretation(organizationId, request);
+        return response.data;
+    }
+
+    /**
      * Creates sensor reading in the monitoring context.
      *
      * @param {*} sensorReading
@@ -1110,6 +1122,7 @@ const useMonitoringStore = defineStore('monitoring', () => {
         fetchMaintenanceSchedules,
         fetchTechnicalServiceRequests,
         fetchMonitoringData,
+        generateDashboardAiInterpretation,
         createSensorReading,
         nextSensorReadingId,
         getLatestTemperatureByAsset,
