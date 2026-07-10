@@ -834,4 +834,72 @@ function clearFeedbackDismissTimeout() {
     grid-column: 2;
   }
 }
+
+@media (max-width: 720px) {
+  .notification-list-view {
+    gap: 16px;
+    padding: 22px 16px;
+  }
+
+  .notification-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .notification-filter-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .notification-filter-tabs button {
+    padding: 0 8px;
+    width: 100%;
+  }
+
+  .search-box {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .notification-card {
+    padding: 18px 14px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .notification-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .notification-count {
+    text-align: center;
+  }
+
+  .notification-row {
+    align-items: start;
+    gap: 10px;
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 12px 10px;
+  }
+
+  .notification-state {
+    align-items: flex-start;
+    grid-column: 2;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .notification-content p,
+  .notification-content small {
+    overflow-wrap: anywhere;
+  }
+}
 </style>

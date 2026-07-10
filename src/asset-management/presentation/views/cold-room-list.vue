@@ -2758,10 +2758,38 @@ function translateOrText(value) {
 }
 
 @media (max-width: 900px) {
+  .asset-tabs {
+    flex-wrap: nowrap;
+    gap: 24px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .asset-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .asset-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   .assets-toolbar,
   .section-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .search-box {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .primary-action {
+    width: 100%;
   }
 
   .cold-room-form {
@@ -2775,6 +2803,10 @@ function translateOrText(value) {
 }
 
 @media (max-width: 720px) {
+  .asset-tabs {
+    gap: 20px;
+  }
+
   .assets-table {
     min-width: 0;
   }

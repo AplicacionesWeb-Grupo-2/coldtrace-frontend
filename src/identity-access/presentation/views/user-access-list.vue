@@ -349,3 +349,68 @@ function loadAccessData() {
     </section>
   </template>
 </template>
+
+<style scoped>
+@media (max-width: 720px) {
+  .search-box {
+    box-sizing: border-box;
+    margin: 20px 0 16px;
+    width: 100%;
+  }
+
+  .summary-grid {
+    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .summary-grid article {
+    gap: 4px;
+    min-height: 72px;
+    padding: 12px 10px;
+  }
+
+  .summary-grid span {
+    font-size: 10px;
+    line-height: 14px;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .summary-grid strong {
+    font-size: 20px;
+    line-height: 24px;
+  }
+
+  .table-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .reload-action {
+    box-sizing: border-box;
+    line-height: 16px;
+    min-height: 36px;
+    padding: 8px 10px;
+    text-align: center;
+    white-space: normal;
+    width: 100%;
+  }
+
+  .access-table td {
+    overflow-wrap: anywhere;
+  }
+
+  .access-table td strong,
+  .access-table td span {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .permission-list {
+    align-items: flex-start;
+  }
+}
+</style>
