@@ -36,3 +36,9 @@ npm run dev
 ```sh
 npm run build
 ```
+
+## Environment Configuration
+
+Copy `src/.env.example` to `src/.env.local` for local development. This repository follows the Learning Center `envDir: './src'` convention. The Google OAuth client ID and Apple Services ID are public browser identifiers, but they must belong to the Aplicaciones Web provider configuration and authorize the exact Vue origin and redirect URI.
+
+Provider secrets, authorization codes, and private keys must never be added to the Vue environment. They are configured only in the ASP.NET Core backend.

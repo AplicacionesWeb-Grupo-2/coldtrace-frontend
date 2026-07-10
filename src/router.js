@@ -5,6 +5,7 @@ import monitoringRoutes from '@/monitoring/presentation/monitoring-routes.js';
 import alertsRoutes from '@/alerts/presentation/alerts-routes.js';
 import maintenanceManagementRoutes from '@/maintenance-management/presentation/maintenance-management-routes.js';
 import reportsRoutes from '@/reports/presentation/reports-routes.js';
+import {authSession} from '@/shared/infrastructure/auth-session.js';
 
 /**
  * Lazy-loads the page not found view component.
@@ -45,7 +46,29 @@ const router = createRouter({
 router.beforeEach((to) => {
     const baseTitle = 'ColdTrace';
     document.title = `${baseTitle} - ${to.meta['title'] ?? 'Access'}`;
+    if (!isPublicRoute(to) && !authSession.hasToken()) {
+        return {
+            name: 'identity-access-sign-in',
+            query: {redirect: to.fullPath},
+        };
+    }
     return true;
 });
 
 export default router;
+
+/**
+ * Determines whether a route can be opened without an authenticated backend session.
+ *
+ * @param {*} route
+ * @returns {boolean}
+ */
+function isPublicRoute(route) {
+    return [
+        'identity-access-sign-in',
+        'identity-access-sign-up',
+        'identity-access-password-recovery',
+        'identity-access-reset-password',
+        'not-found',
+    ].includes(route.name);
+}

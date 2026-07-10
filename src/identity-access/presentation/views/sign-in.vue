@@ -3,10 +3,14 @@ import {computed, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useRouter} from 'vue-router';
 import useIdentityAccessStore from '@/identity-access/application/identity-access.store.js';
+import {AppleIdentityService} from '@/identity-access/infrastructure/apple-identity.js';
+import {GoogleIdentityService} from '@/identity-access/infrastructure/google-identity.js';
 
 const {t} = useI18n();
 const router = useRouter();
 const store = useIdentityAccessStore();
+const appleIdentity = new AppleIdentityService();
+const googleIdentity = new GoogleIdentityService();
 const form = ref({
     email: '',
     password: '',
@@ -15,6 +19,7 @@ const submitted = ref(false);
 const signingIn = ref(false);
 const passwordVisible = ref(false);
 const feedback = ref('idle');
+const pendingSocialOnboardingProvider = ref(null);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const emailInvalid = computed(() => !emailPattern.test(form.value.email.trim()));
 const passwordInvalid = computed(() => !form.value.password);
@@ -27,6 +32,7 @@ const passwordInvalid = computed(() => !form.value.password);
 async function submit() {
     submitted.value = true;
     feedback.value = 'idle';
+    pendingSocialOnboardingProvider.value = null;
 
     if (emailInvalid.value || passwordInvalid.value) return;
 
@@ -35,13 +41,141 @@ async function submit() {
         feedback.value = await store.signIn(form.value.email, form.value.password);
         if (feedback.value === 'success') {
             submitted.value = false;
-            await router.push({name: 'identity-access-dashboard'});
+            await router.push({
+                name: 'identity-access-dashboard',
+                query: {
+                    organizationId: store.currentUser?.organizationId,
+                    userId: store.currentUser?.id,
+                },
+            });
         }
     } catch (error) {
         feedback.value = 'server-error';
     } finally {
         signingIn.value = false;
     }
+}
+
+/**
+ * Starts Google sign-in and exchanges the provider token through the backend.
+ *
+ * @returns {Promise<void>}
+ */
+async function signInWithGoogle() {
+    await startSocialSignIn('google');
+}
+
+/**
+ * Starts Apple sign-in and exchanges the provider token through the backend.
+ *
+ * @returns {Promise<void>}
+ */
+async function signInWithApple() {
+    await startSocialSignIn('apple');
+}
+
+/**
+ * Continues social onboarding after the backend reports that no account is linked.
+ *
+ * @returns {Promise<void>}
+ */
+async function continueWithSocialSignUp() {
+    const provider = pendingSocialOnboardingProvider.value;
+    if (!provider) return;
+
+    try {
+        signingIn.value = true;
+        const credential = provider === 'google'
+            ? await googleIdentity.signIn()
+            : await appleIdentity.signIn();
+        await openSocialSignUp(provider, credential);
+    } catch {
+        feedback.value = 'social-unavailable';
+        pendingSocialOnboardingProvider.value = null;
+    } finally {
+        signingIn.value = false;
+    }
+}
+
+/**
+ * Lets the user restart provider selection.
+ *
+ * @returns {Promise<void>}
+ */
+async function chooseAnotherSocialAccount() {
+    const provider = pendingSocialOnboardingProvider.value;
+    feedback.value = 'idle';
+    pendingSocialOnboardingProvider.value = null;
+
+    if (provider === 'google') {
+        await signInWithGoogle();
+        return;
+    }
+
+    if (provider === 'apple') {
+        await signInWithApple();
+    }
+}
+
+/**
+ * Starts a social provider sign-in.
+ *
+ * @param {'google'|'apple'} provider
+ * @returns {Promise<void>}
+ */
+async function startSocialSignIn(provider) {
+    feedback.value = 'idle';
+    pendingSocialOnboardingProvider.value = null;
+
+    try {
+        signingIn.value = true;
+        const credential = provider === 'google'
+            ? await googleIdentity.signIn()
+            : await appleIdentity.signIn();
+        const result = await store.signInWithSocialProvider(provider, credential);
+        feedback.value = result;
+
+        if (result === 'success') {
+            submitted.value = false;
+            await router.push({
+                name: 'identity-access-dashboard',
+                query: {
+                    organizationId: store.currentUser?.organizationId,
+                    userId: store.currentUser?.id,
+                },
+            });
+            return;
+        }
+
+        if (result === 'onboarding-required') {
+            pendingSocialOnboardingProvider.value = provider;
+        }
+    } catch {
+        feedback.value = 'social-unavailable';
+    } finally {
+        signingIn.value = false;
+    }
+}
+
+/**
+ * Opens the sign-up screen with the fresh provider credential.
+ *
+ * @param {'google'|'apple'} provider
+ * @param {*} credential
+ * @returns {Promise<void>}
+ */
+async function openSocialSignUp(provider, credential) {
+    feedback.value = 'idle';
+    pendingSocialOnboardingProvider.value = null;
+    await router.push({
+        name: 'identity-access-sign-up',
+        state: {
+            socialSignUp: {
+                provider,
+                credential,
+            },
+        },
+    });
 }
 </script>
 
@@ -110,28 +244,54 @@ async function submit() {
         <p v-if="feedback === 'server-error'" class="form-feedback error">
           {{ t('sign-in.error.server-error') }}
         </p>
+        <p v-if="feedback === 'onboarding-required' && !pendingSocialOnboardingProvider" class="form-feedback error">
+          {{ t('sign-in.error.onboarding-required') }}
+        </p>
+        <p v-if="feedback === 'social-unavailable'" class="form-feedback error">
+          {{ t('sign-in.error.social-unavailable') }}
+        </p>
+        <p v-if="feedback === 'social-validation-failed'" class="form-feedback error">
+          {{ t('sign-in.error.social-validation-failed') }}
+        </p>
 
         <button class="primary-action" type="submit" :disabled="signingIn">
           {{ signingIn ? t('sign-in.signing-in') : t('sign-in.login') }}
         </button>
       </form>
 
-      <div class="divider" aria-hidden="true">
-        <span>{{ t('sign-in.social-divider') }}</span>
-      </div>
+      <section v-if="feedback === 'onboarding-required' && pendingSocialOnboardingProvider" class="social-onboarding-prompt" aria-live="polite">
+        <p class="form-feedback">{{ t('sign-in.onboarding.title') }}</p>
+        <p class="form-feedback">{{ t('sign-in.onboarding.copy') }}</p>
 
-      <button class="social-action" type="button">
-        <img class="social-icon" src="/icons/google.svg" alt="" aria-hidden="true"/>
-        <span>{{ t('sign-in.continue-with-google') }}</span>
-      </button>
-      <button class="social-action" type="button">
-        <img class="social-icon" src="/icons/apple.svg" alt="" aria-hidden="true"/>
-        <span>{{ t('sign-in.continue-with-apple') }}</span>
-      </button>
+        <div class="prompt-actions">
+          <button class="primary-action" type="button" :disabled="signingIn" @click="continueWithSocialSignUp">
+            {{ t('sign-in.onboarding.create-account') }}
+          </button>
 
-      <router-link class="secondary-link" to="/identity-access/sign-up">
-        {{ t('sign-in.create-account') }}
-      </router-link>
+          <button class="secondary-action" type="button" :disabled="signingIn" @click="chooseAnotherSocialAccount">
+            {{ t('sign-in.onboarding.choose-another-account') }}
+          </button>
+        </div>
+      </section>
+
+      <template v-else>
+        <div class="divider" aria-hidden="true">
+          <span>{{ t('sign-in.social-divider') }}</span>
+        </div>
+
+        <button class="social-action" type="button" :disabled="signingIn" @click="signInWithGoogle">
+          <img class="social-icon" src="/icons/google.svg" alt="" aria-hidden="true"/>
+          <span>{{ t('sign-in.continue-with-google') }}</span>
+        </button>
+        <button class="social-action" type="button" :disabled="signingIn" @click="signInWithApple">
+          <img class="social-icon" src="/icons/apple.svg" alt="" aria-hidden="true"/>
+          <span>{{ t('sign-in.continue-with-apple') }}</span>
+        </button>
+
+        <router-link class="secondary-link" to="/identity-access/sign-up">
+          {{ t('sign-in.create-account') }}
+        </router-link>
+      </template>
     </section>
   </main>
 </template>

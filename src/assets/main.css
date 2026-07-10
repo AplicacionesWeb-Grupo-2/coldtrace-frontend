@@ -321,6 +321,11 @@ a {
   color: #2f3b52;
 }
 
+.social-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 .social-icon {
   display: block;
   height: 30px;
@@ -337,6 +342,43 @@ a {
   line-height: 19px;
   margin-top: 0;
   text-align: center;
+}
+
+.auth-panel .secondary-action {
+  font-family: 'Varela Round', Arial, sans-serif;
+  font-size: 16px;
+  height: 48px;
+  line-height: 19px;
+  width: 100%;
+}
+
+.social-account,
+.social-onboarding-prompt {
+  color: #404040;
+  font-family: 'Inter', Arial, sans-serif;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.social-account {
+  display: grid;
+  gap: 4px;
+}
+
+.account-provider {
+  font-weight: 700;
+}
+
+.account-email {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.social-onboarding-prompt,
+.prompt-actions {
+  display: grid;
+  gap: 12px;
+  width: 100%;
 }
 
 .placeholder-page,
@@ -716,7 +758,8 @@ select {
 
 .user-form {
   display: grid;
-  gap: 18px;
+  gap: 18px 20px;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
 }
 
 .form-field {
@@ -747,6 +790,41 @@ select {
   color: #b51313;
   font-size: 11px;
   font-weight: 700;
+}
+
+.form-guidance {
+  background: #f7f9fc;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  color: #526174;
+  grid-column: 1 / -1;
+  padding: 14px 16px;
+}
+
+.form-guidance div {
+  display: grid;
+  gap: 2px;
+}
+
+.form-guidance strong {
+  color: #323c4d;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+}
+
+.form-guidance span {
+  color: #697386;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.user-form .form-actions {
+  align-items: center;
+  gap: 16px;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
 }
 
 .primary-form-action {
@@ -1214,6 +1292,12 @@ select {
   .access-table td strong,
   .access-table td span {
     white-space: normal;
+  }
+}
+
+@media (max-width: 1180px) {
+  .user-form {
+    grid-template-columns: 1fr;
   }
 }
 
