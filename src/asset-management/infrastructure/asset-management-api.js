@@ -110,11 +110,15 @@ export class AssetManagementApi extends BaseApi {
     /**
      * Deletes iot device from the asset management context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteIoTDevice() {
-        return Promise.resolve({status: 204, data: null});
+    deleteIoTDevice(organizationId, id) {
+        const endpoint = this.#endpointForOrganization(organizationId, iotDevicesEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to delete an IoT device.'));
+
+        return endpoint.delete(id);
     }
 
     /**
