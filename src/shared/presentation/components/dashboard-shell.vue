@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue';
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useRoute, useRouter} from 'vue-router';
 import useAlertsStore from '@/alerts/application/alerts.store.js';
@@ -26,12 +26,14 @@ const reportsDropdownTouched = ref(false);
 const settingsDropdownOpen = ref(false);
 const settingsDropdownTouched = ref(false);
 const mobileNavigationOpen = ref(false);
+const contextNavigationElement = ref(null);
 let telemetryIntervalId = null;
 let mobileNavigationCloseTimeout = null;
 
 onMounted(() => {
     loadShellData();
     startTelemetryUpdates();
+    scrollActiveContextLinkIntoView();
 });
 
 onBeforeUnmount(() => {
@@ -43,7 +45,10 @@ onBeforeUnmount(() => {
 });
 
 watch(() => route.path, (nextPath, previousPath) => {
-    if (nextPath !== previousPath) closeMobileNavigation();
+    if (nextPath !== previousPath) {
+        closeMobileNavigation();
+        scrollActiveContextLinkIntoView();
+    }
 });
 
 const activeOrganizationId = computed(() => store.currentOrganizationIdFrom());
@@ -235,6 +240,32 @@ function clearMobileNavigationCloseTimeout() {
     if (mobileNavigationCloseTimeout === null) return;
     window.clearTimeout(mobileNavigationCloseTimeout);
     mobileNavigationCloseTimeout = null;
+}
+
+/**
+ * Keeps the active contextual tab visible in the responsive horizontal navigation.
+ *
+ * @returns {void}
+ */
+function scrollActiveContextLinkIntoView() {
+    if (typeof window === 'undefined' || !window.matchMedia('(max-width: 1100px)').matches) return;
+
+    void nextTick(() => {
+        const navigation = contextNavigationElement.value;
+        const activeLink = navigation?.querySelector('a.active');
+        if (!navigation || !activeLink) return;
+
+        let alignmentTarget = activeLink;
+        let previousLink = alignmentTarget.previousElementSibling;
+        while (previousLink) {
+            const visibleSpan = activeLink.offsetLeft + activeLink.offsetWidth - previousLink.offsetLeft;
+            if (visibleSpan > navigation.clientWidth - 20) break;
+            alignmentTarget = previousLink;
+            previousLink = alignmentTarget.previousElementSibling;
+        }
+
+        alignmentTarget.scrollIntoView({behavior: 'auto', block: 'nearest', inline: 'start'});
+    });
 }
 
 /**
@@ -579,7 +610,7 @@ function initialsFor(fullName) {
       </div>
     </aside>
 
-    <section class="workspace">
+    <section class="workspace" :inert="mobileNavigationOpen">
       <header class="topbar">
         <button
           class="mobile-nav-toggle"
@@ -592,7 +623,7 @@ function initialsFor(fullName) {
           <span class="material-icons" aria-hidden="true">{{ mobileNavigationOpen ? 'close' : 'menu' }}</span>
         </button>
 
-        <nav class="context-nav" :aria-label="t('dashboard-shell.section-navigation')">
+        <nav ref="contextNavigationElement" class="context-nav" :aria-label="t('dashboard-shell.section-navigation')">
           <router-link
             v-for="link in contextualLinks.filter(current => current.visible)"
             :key="link.path"
@@ -1386,11 +1417,17 @@ function initialsFor(fullName) {
   }
 
   .context-nav {
-    flex: 1 1 100%;
+    flex: 0 0 100%;
     gap: 18px;
     max-width: 100%;
     order: 3;
     padding-bottom: 2px;
+    scroll-padding-inline: 12px;
+  }
+
+  .context-nav::after {
+    content: '';
+    flex: 0 0 60px;
   }
 
   .context-nav a {
@@ -1505,7 +1542,13 @@ function initialsFor(fullName) {
 
 @media (max-width: 520px) {
   .topbar {
+    column-gap: 8px;
     padding: 9px 12px 11px;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+    max-width: calc(100% - 48px);
   }
 
   .profile-meta {
@@ -1518,6 +1561,15 @@ function initialsFor(fullName) {
 }
 
 @media (max-width: 390px) {
+  .topbar {
+    padding-inline: 10px;
+  }
+
+  .context-nav {
+    gap: 16px;
+    scroll-padding-inline: 0;
+  }
+
   .side-panel {
     width: 68px;
   }

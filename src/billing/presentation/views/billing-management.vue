@@ -202,6 +202,58 @@ function featureEnabledFromCurrentPlan(entitlementKey) {
 }
 
 /**
+ * Builds the explicit usage-limit comparison for a plan.
+ *
+ * @param {*} plan
+ * @returns {Array<Object>}
+ */
+function planLimitRows(plan) {
+    const limits = plan?.usageLimits ?? {};
+
+    return [
+        {key: 'locations', labelKey: 'billing.usage.locations', unitKey: 'sites', limit: limits.maxLocations},
+        {key: 'assets', labelKey: 'billing.usage.assets', unitKey: 'assets', limit: limits.maxAssets},
+        {key: 'iot-devices', labelKey: 'billing.usage.iot-devices', unitKey: 'devices', limit: limits.maxIotDevices},
+        {key: 'users', labelKey: 'billing.usage.users', unitKey: 'users', limit: limits.maxUsers},
+        {key: 'history', labelKey: 'billing.usage.history', unitKey: 'days', limit: limits.historyRetentionDays},
+    ].map(row => ({
+        ...row,
+        value: planLimitLabel(row.limit, row.unitKey),
+    }));
+}
+
+/**
+ * Builds the capability availability comparison for a plan.
+ *
+ * @param {*} plan
+ * @returns {Array<Object>}
+ */
+function planCapabilityRows(plan) {
+    const flags = plan?.featureFlags ?? {};
+
+    return [
+        {key: 'exports', labelKey: 'billing.features.exports', enabled: Boolean(flags.allowsExports)},
+        {key: 'maintenance', labelKey: 'billing.features.maintenance', enabled: Boolean(flags.allowsMaintenance)},
+        {key: 'ai-guidance', labelKey: 'billing.features.ai-guidance', enabled: Boolean(flags.allowsAiGuidance)},
+        {key: 'ai-report-summary', labelKey: 'billing.features.ai-report-summary', enabled: Boolean(flags.allowsAiReportSummary)},
+    ];
+}
+
+/**
+ * Formats one plan limit with its comparison unit.
+ *
+ * @param {number|null|undefined} limit
+ * @param {string} unitKey
+ * @returns {string}
+ */
+function planLimitLabel(limit, unitKey) {
+    const unitForm = Number(limit) === 1 ? 'one' : 'other';
+    const unit = t(`billing.plans.units.${unitKey}.${unitForm}`);
+    if (limit === null || limit === undefined) return t('billing.plans.unlimited-unit', {unit});
+    return t('billing.plans.limit-unit', {count: formatNumber(limit), unit});
+}
+
+/**
  * Formats a plan price.
  *
  * @param {*} plan
@@ -361,12 +413,47 @@ function normalizedPlanCode(value) {
               <strong>{{ priceLabel(plan) }}</strong>
               <span v-if="plan.isPaid">{{ t('billing.price.month') }}</span>
             </div>
-            <ul class="billing-plan-feature-list">
-              <li v-for="feature in plan.includedFeatures" :key="feature">
-                <span class="material-icons">check_circle</span>
-                <span>{{ feature }}</span>
-              </li>
-            </ul>
+
+            <section class="billing-plan-detail-section">
+              <h4>{{ t('billing.plans.includes') }}</h4>
+              <ul class="billing-plan-feature-list">
+                <li v-for="feature in plan.includedFeatures" :key="feature">
+                  <span class="material-icons" aria-hidden="true">check_circle</span>
+                  <span>{{ feature }}</span>
+                </li>
+              </ul>
+            </section>
+
+            <section class="billing-plan-detail-section">
+              <h4>{{ t('billing.plans.limits') }}</h4>
+              <ul class="billing-plan-detail-list billing-plan-limit-list">
+                <li v-for="limit in planLimitRows(plan)" :key="limit.key">
+                  <span class="material-icons" aria-hidden="true">tune</span>
+                  <span class="billing-plan-detail-copy">
+                    <strong>{{ t(limit.labelKey) }}</strong>
+                    <small>{{ limit.value }}</small>
+                  </span>
+                </li>
+              </ul>
+            </section>
+
+            <section class="billing-plan-detail-section billing-plan-capabilities">
+              <h4>{{ t('billing.plans.capabilities') }}</h4>
+              <ul class="billing-plan-detail-list">
+                <li
+                  v-for="capability in planCapabilityRows(plan)"
+                  :key="capability.key"
+                  :class="{'is-unavailable': !capability.enabled}"
+                >
+                  <span class="material-icons" aria-hidden="true">{{ capability.enabled ? 'check_circle' : 'block' }}</span>
+                  <span class="billing-plan-detail-copy">
+                    <strong>{{ t(capability.labelKey) }}</strong>
+                    <small>{{ t(capability.enabled ? 'billing.plans.available' : 'billing.plans.unavailable') }}</small>
+                  </span>
+                </li>
+              </ul>
+            </section>
+
             <button
               class="primary-form-action billing-plan-action"
               type="button"
@@ -412,3 +499,127 @@ function normalizedPlanCode(value) {
     </template>
   </section>
 </template>
+
+<style scoped>
+.billing-plan-detail-section {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+  min-width: 0;
+}
+
+.billing-plan-detail-section h4 {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  margin: 0;
+}
+
+.billing-plan-feature-list,
+.billing-plan-detail-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.billing-plan-feature-list li,
+.billing-plan-detail-list li {
+  align-items: flex-start;
+  color: #606c80;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 8px;
+  line-height: 18px;
+  min-width: 0;
+}
+
+.billing-plan-feature-list .material-icons,
+.billing-plan-detail-list .material-icons {
+  color: #176900;
+  flex: 0 0 17px;
+  font-size: 17px;
+  line-height: 18px;
+}
+
+.billing-plan-limit-list .material-icons {
+  color: #98a2b3;
+}
+
+.billing-plan-detail-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.billing-plan-detail-copy strong {
+  color: #606c80;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.billing-plan-detail-copy small {
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+.billing-plan-detail-list li.is-unavailable,
+.billing-plan-detail-list li.is-unavailable strong,
+.billing-plan-detail-list li.is-unavailable small {
+  color: #98a2b3;
+}
+
+.billing-plan-detail-list li.is-unavailable .material-icons {
+  color: #b51313;
+}
+
+.billing-plan-capabilities {
+  margin-bottom: 22px;
+}
+
+@media (max-width: 720px) {
+  .billing-page,
+  .billing-page > *,
+  .billing-heading > div,
+  .billing-current-panel,
+  .billing-current-card,
+  .billing-action-panel,
+  .billing-usage-grid,
+  .billing-usage-card,
+  .billing-section,
+  .billing-plan-grid,
+  .billing-plan-card,
+  .billing-entitlement-grid,
+  .billing-entitlement-row {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .billing-heading h1,
+  .billing-heading p,
+  .billing-current-card p,
+  .billing-action-panel p,
+  .billing-plan-card p,
+  .billing-plan-feature-list span,
+  .billing-current-meta span {
+    overflow-wrap: anywhere;
+  }
+
+  .billing-current-meta span {
+    max-width: 100%;
+  }
+
+  .billing-plan-price {
+    flex-wrap: wrap;
+  }
+}
+</style>

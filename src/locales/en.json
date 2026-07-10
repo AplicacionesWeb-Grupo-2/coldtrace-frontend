@@ -261,6 +261,35 @@
     "plans": {
       "title": "Available plans",
       "subtitle": "Select a paid plan to start Stripe Checkout. Payment details are handled by the provider.",
+      "includes": "Includes",
+      "limits": "Limits",
+      "capabilities": "Capabilities",
+      "available": "Available",
+      "unavailable": "Not available",
+      "limit-unit": "{count} {unit}",
+      "unlimited-unit": "Unlimited {unit}",
+      "units": {
+        "sites": {
+          "one": "site",
+          "other": "sites"
+        },
+        "assets": {
+          "one": "asset",
+          "other": "assets"
+        },
+        "devices": {
+          "one": "device",
+          "other": "devices"
+        },
+        "users": {
+          "one": "user",
+          "other": "users"
+        },
+        "days": {
+          "one": "day",
+          "other": "days"
+        }
+      },
       "current": "Current plan",
       "free": "Included",
       "upgrade": "Upgrade",

@@ -261,6 +261,35 @@
     "plans": {
       "title": "Planes disponibles",
       "subtitle": "Selecciona un plan pagado para iniciar Stripe Checkout. Los datos de pago los gestiona el proveedor.",
+      "includes": "Incluye",
+      "limits": "Límites",
+      "capabilities": "Capacidades",
+      "available": "Disponible",
+      "unavailable": "No disponible",
+      "limit-unit": "{count} {unit}",
+      "unlimited-unit": "Sin límite de {unit}",
+      "units": {
+        "sites": {
+          "one": "sede",
+          "other": "sedes"
+        },
+        "assets": {
+          "one": "activo",
+          "other": "activos"
+        },
+        "devices": {
+          "one": "dispositivo",
+          "other": "dispositivos"
+        },
+        "users": {
+          "one": "usuario",
+          "other": "usuarios"
+        },
+        "days": {
+          "one": "día",
+          "other": "días"
+        }
+      },
       "current": "Plan actual",
       "free": "Incluido",
       "upgrade": "Mejorar plan",
