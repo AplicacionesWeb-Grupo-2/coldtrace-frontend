@@ -685,7 +685,7 @@ const useIdentityAccessStore = defineStore('identity-access', () => {
         users.value = users.value.filter(current => current.id !== user.id);
 
         try {
-            await identityAccessApi.deleteUser(user.id);
+            await identityAccessApi.deleteUser(user.organizationId, user.id);
             return {status: 'success'};
         } catch (error) {
             if (await userWasDeletedRemotely(user.organizationId, user.id)) {
