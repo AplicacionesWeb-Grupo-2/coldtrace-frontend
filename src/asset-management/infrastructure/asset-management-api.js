@@ -428,6 +428,7 @@ export class AssetManagementApi extends BaseApi {
      * @returns {*}
      */
     #iotDeviceRequestFrom(resource) {
+        const now = new Date();
         return {
             gatewayId: resource.gatewayId,
             uuid: resource.uuid,
@@ -439,8 +440,8 @@ export class AssetManagementApi extends BaseApi {
             assetId: resource.assetId,
             status: resource.status,
             calibrationStatus: resource.calibrationStatus,
-            lastCalibrationDate: resource.lastCalibrationDate,
-            nextCalibrationDate: resource.nextCalibrationDate,
+            lastCalibrationDate: dateOnlyOrDefault(resource.lastCalibrationDate, now),
+            nextCalibrationDate: dateOnlyOrDefault(resource.nextCalibrationDate, addMonths(now, 6)),
         };
     }
 
@@ -467,4 +468,42 @@ export class AssetManagementApi extends BaseApi {
             alertThresholdMinutes: resource.alertThresholdMinutes,
         };
     }
+}
+
+/**
+ * Returns a valid backend DateOnly string, falling back when the UI value is blank.
+ *
+ * @param {*} value
+ * @param {Date} fallback
+ * @returns {string}
+ */
+function dateOnlyOrDefault(value, fallback) {
+    const normalized = String(value ?? '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : dateOnlyFrom(fallback);
+}
+
+/**
+ * Adds months to a date without mutating the original instance.
+ *
+ * @param {Date} date
+ * @param {number} months
+ * @returns {Date}
+ */
+function addMonths(date, months) {
+    const copy = new Date(date);
+    copy.setMonth(copy.getMonth() + months);
+    return copy;
+}
+
+/**
+ * Formats a date as yyyy-mm-dd for DateOnly backend fields.
+ *
+ * @param {Date} date
+ * @returns {string}
+ */
+function dateOnlyFrom(date) {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }

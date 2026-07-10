@@ -1220,6 +1220,7 @@
       "status": {
         "scheduled": "Programado",
         "pending": "Pendiente",
+        "in_progress": "Pendiente",
         "completed": "Completado",
         "canceled": "Cancelado"
       }
@@ -1292,6 +1293,7 @@
       "status": {
         "open": "Abierto",
         "pending-review": "Pendiente de revisión",
+        "in_progress": "Pendiente de revisión",
         "closed": "Cerrado"
       }
     }

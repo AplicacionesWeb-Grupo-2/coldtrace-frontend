@@ -1,4 +1,5 @@
 import {TechnicalServiceRequest} from '@/maintenance-management/domain/model/technical-service-request-entity.js';
+import {TechnicalServiceStatus} from '@/maintenance-management/domain/model/technical-service-status.js';
 
 /**
  * @typedef {Object} TechnicalServiceRequestApiResource
@@ -35,13 +36,15 @@ export class TechnicalServiceRequestAssembler {
      * @returns {TechnicalServiceRequest}
      */
     static toEntityFromResource(resource) {
+        const status = technicalServiceStatusForUi(resource.status);
         return new TechnicalServiceRequest({
             ...resource,
             uuid: resource.uuid ?? resource.code ?? '',
             requestedDate: resource.requestedDate ?? dateKeyFrom(resource.requestedAt),
+            status,
             interventionNotes: resource.interventionNotes ?? resource.evidence ?? null,
             resultNotes: resource.resultNotes ?? resource.closureSummary ?? null,
-            functionalTestPassed: resource.functionalTestPassed ?? functionalTestStatusFrom(resource),
+            functionalTestPassed: resource.functionalTestPassed ?? functionalTestStatusFrom(resource, status),
             assetLocationId: resource.assetLocationId ?? null,
             assetName: resource.assetName ?? null,
             incidentId: resource.incidentId ?? null,
@@ -107,10 +110,21 @@ function dateKeyFrom(value) {
  * Derives the functional test result from the backend lifecycle fields.
  *
  * @param {*} resource
+ * @param {string} status
  * @returns {boolean|null}
  */
-function functionalTestStatusFrom(resource) {
-    if (resource.status === 'closed') return true;
-    if (resource.status === 'pending-review' && (resource.closureSummary || resource.evidence)) return false;
+function functionalTestStatusFrom(resource, status) {
+    if (status === TechnicalServiceStatus.Closed) return true;
+    if (status === TechnicalServiceStatus.PendingReview && (resource.closureSummary || resource.evidence)) return false;
     return null;
+}
+
+/**
+ * Maps backend technical service lifecycle values to UI status values.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+function technicalServiceStatusForUi(status) {
+    return status === 'in_progress' ? TechnicalServiceStatus.PendingReview : status;
 }

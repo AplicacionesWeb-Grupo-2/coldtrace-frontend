@@ -138,7 +138,7 @@ async function schedulePreventiveMaintenance() {
         uuid: generatedScheduleUuid(nextScheduleId),
         assetId,
         iotDeviceId: Number(maintenanceForm.iotDeviceId) || null,
-        scheduledDate: maintenanceForm.scheduledDate,
+        scheduledDate: scheduledDateTimeFrom(maintenanceForm.scheduledDate),
         period,
         observations: maintenanceForm.observations.trim(),
         status: MaintenanceScheduleStatus.Scheduled,
@@ -295,6 +295,22 @@ function isFormInvalid() {
  */
 function periodFor(dateValue) {
     return dateValue.slice(0, 7);
+}
+
+/**
+ * Converts a date-only form value into a backend-safe scheduled timestamp.
+ *
+ * @param {string} dateValue
+ * @returns {string}
+ */
+function scheduledDateTimeFrom(dateValue) {
+    const [year, month, day] = dateValue.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+    const candidate = dateValue === today && selectedDate.getTime() < Date.now()
+        ? new Date(Date.now() + 5 * 60 * 1000)
+        : selectedDate;
+
+    return candidate.toISOString();
 }
 
 /**
