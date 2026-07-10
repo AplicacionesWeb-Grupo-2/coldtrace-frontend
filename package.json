@@ -26,6 +26,9 @@
     "json-server": "^0.17.4",
     "vite": "^8.1.4"
   },
+  "overrides": {
+    "morgan": "^1.11.0"
+  },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   }
