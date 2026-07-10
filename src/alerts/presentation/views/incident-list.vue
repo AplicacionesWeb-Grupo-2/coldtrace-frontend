@@ -66,16 +66,12 @@ watch(pendingClosureIncidents, (pendingIncidents) => {
 
 onMounted(async () => {
     await alertsStore.loadIncidents({organizationId: activeOrganizationId.value}).catch(() => undefined);
-    if (route.query.panel === 'closure' && canResolveAlerts.value) {
-        selectedIncidentPanel.value = 'closure';
-    }
+    syncIncidentPanel(route.query.panel);
 });
 
-watch(canResolveAlerts, (canResolve) => {
-    if (!canResolve && selectedIncidentPanel.value === 'closure') {
-        selectedIncidentPanel.value = 'incidents';
-    }
-});
+watch(() => route.query.panel, panel => syncIncidentPanel(panel));
+
+watch(canResolveAlerts, () => syncIncidentPanel(route.query.panel));
 
 /**
  * Updates the incident search and resets pagination.
@@ -88,14 +84,8 @@ function updateSearchTerm(value) {
     currentPage.value = 1;
 }
 
-/**
- * Selects one incident workflow section.
- *
- * @param {'incidents'|'closure'} panel
- * @returns {void}
- */
-function selectIncidentPanel(panel) {
-    selectedIncidentPanel.value = panel;
+function syncIncidentPanel(panel) {
+    selectedIncidentPanel.value = panel === 'closure' && canResolveAlerts.value ? 'closure' : 'incidents';
     currentPage.value = 1;
 }
 
@@ -408,27 +398,6 @@ function formatDate(isoDate) {
       </div>
 
       <div class="incident-workbar">
-        <nav class="incident-section-tabs" :aria-label="t('alerts.incident-list.page-title')">
-          <button
-            type="button"
-            :class="{active: selectedIncidentPanel === 'incidents'}"
-            @click="selectIncidentPanel('incidents')"
-          >
-            {{ t('dashboard-shell.nav-incidents') }}
-          </button>
-          <button
-            v-if="canResolveAlerts"
-            type="button"
-            :class="{active: selectedIncidentPanel === 'closure'}"
-            @click="selectIncidentPanel('closure')"
-          >
-            {{ t('alerts.incident-list.closure-title') }}
-          </button>
-          <button type="button" @click="openAiGuidance()">
-            {{ t('dashboard-shell.nav-ai-guidance') }}
-          </button>
-        </nav>
-
         <div class="incident-toolbar">
           <label class="search-box">
             <span class="material-icons search-icon" aria-hidden="true">search</span>
@@ -819,40 +788,9 @@ function formatDate(isoDate) {
   align-items: center;
   display: grid;
   gap: 18px;
-  grid-template-columns: max-content minmax(260px, 400px) minmax(245px, 1fr);
+  grid-template-columns: minmax(260px, 400px) minmax(245px, 1fr);
   min-height: 42px;
   width: 100%;
-}
-
-.incident-section-tabs {
-  align-items: center;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 26px;
-  min-height: 42px;
-  min-width: max-content;
-  overflow-x: auto;
-}
-
-.incident-section-tabs button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: #98a2b3;
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 800;
-  min-height: 42px;
-  padding: 0;
-  white-space: nowrap;
-}
-
-.incident-section-tabs button.active,
-.incident-section-tabs button:hover {
-  border-bottom-color: #2563eb;
-  color: #2563eb;
 }
 
 .incident-toolbar {
@@ -1574,11 +1512,6 @@ tr:last-child td {
     padding-bottom: 12px;
   }
 
-  .incident-section-tabs {
-    min-width: 0;
-    width: 100%;
-  }
-
   .incident-toolbar {
     display: grid;
     gap: 12px;
@@ -1754,14 +1687,5 @@ tr:last-child td {
     grid-template-columns: 1fr;
   }
 
-  .incident-section-tabs {
-    gap: 10px;
-    justify-content: space-between;
-    overflow-x: visible;
-  }
-
-  .incident-section-tabs button {
-    font-size: 11px;
-  }
 }
 </style>
