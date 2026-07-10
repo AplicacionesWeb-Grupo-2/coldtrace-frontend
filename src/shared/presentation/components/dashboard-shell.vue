@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useRoute, useRouter} from 'vue-router';
 import useAlertsStore from '@/alerts/application/alerts.store.js';
@@ -25,7 +25,9 @@ const reportsDropdownOpen = ref(false);
 const reportsDropdownTouched = ref(false);
 const settingsDropdownOpen = ref(false);
 const settingsDropdownTouched = ref(false);
+const mobileNavigationOpen = ref(false);
 let telemetryIntervalId = null;
+let mobileNavigationCloseTimeout = null;
 
 onMounted(() => {
     loadShellData();
@@ -37,6 +39,11 @@ onBeforeUnmount(() => {
         window.clearInterval(telemetryIntervalId);
         telemetryIntervalId = null;
     }
+    clearMobileNavigationCloseTimeout();
+});
+
+watch(() => route.path, (nextPath, previousPath) => {
+    if (nextPath !== previousPath) closeMobileNavigation();
 });
 
 const activeOrganizationId = computed(() => store.currentOrganizationIdFrom());
@@ -138,6 +145,10 @@ const contextualLinks = computed(() => {
 function toggleAccessDropdown() {
     accessDropdownOpen.value = !isAccessDropdownOpen.value;
     accessDropdownTouched.value = true;
+    reportsDropdownOpen.value = false;
+    reportsDropdownTouched.value = true;
+    settingsDropdownOpen.value = false;
+    settingsDropdownTouched.value = true;
 }
 
 /**
@@ -148,6 +159,10 @@ function toggleAccessDropdown() {
 function toggleReportsDropdown() {
     reportsDropdownOpen.value = !isReportsDropdownOpen.value;
     reportsDropdownTouched.value = true;
+    accessDropdownOpen.value = false;
+    accessDropdownTouched.value = true;
+    settingsDropdownOpen.value = false;
+    settingsDropdownTouched.value = true;
 }
 
 /**
@@ -158,6 +173,66 @@ function toggleReportsDropdown() {
 function toggleSettingsDropdown() {
     settingsDropdownOpen.value = !isSettingsDropdownOpen.value;
     settingsDropdownTouched.value = true;
+    accessDropdownOpen.value = false;
+    accessDropdownTouched.value = true;
+    reportsDropdownOpen.value = false;
+    reportsDropdownTouched.value = true;
+}
+
+/**
+ * Toggles the responsive navigation drawer.
+ *
+ * @returns {void}
+ */
+function toggleMobileNavigation() {
+    clearMobileNavigationCloseTimeout();
+    if (mobileNavigationOpen.value) {
+        closeMobileNavigation();
+        return;
+    }
+    mobileNavigationOpen.value = true;
+}
+
+/**
+ * Closes the responsive navigation and resets its grouped menus.
+ *
+ * @returns {void}
+ */
+function closeMobileNavigation() {
+    clearMobileNavigationCloseTimeout();
+    mobileNavigationOpen.value = false;
+    accessDropdownOpen.value = false;
+    accessDropdownTouched.value = false;
+    reportsDropdownOpen.value = false;
+    reportsDropdownTouched.value = false;
+    settingsDropdownOpen.value = false;
+    settingsDropdownTouched.value = false;
+}
+
+/**
+ * Closes the responsive drawer after a menu link handles navigation.
+ *
+ * @param {MouseEvent} event
+ * @returns {void}
+ */
+function closeMobileNavigationAfterNavigation(event) {
+    if (!(event.target instanceof Element) || !event.target.closest('a')) return;
+    clearMobileNavigationCloseTimeout();
+    mobileNavigationCloseTimeout = window.setTimeout(() => {
+        mobileNavigationCloseTimeout = null;
+        closeMobileNavigation();
+    }, 180);
+}
+
+/**
+ * Clears the pending responsive navigation close operation.
+ *
+ * @returns {void}
+ */
+function clearMobileNavigationCloseTimeout() {
+    if (mobileNavigationCloseTimeout === null) return;
+    window.clearTimeout(mobileNavigationCloseTimeout);
+    mobileNavigationCloseTimeout = null;
 }
 
 /**
@@ -166,6 +241,7 @@ function toggleSettingsDropdown() {
  * @returns {*}
  */
 function logout() {
+    closeMobileNavigation();
     store.clearCurrentUser();
     router.push('/identity-access/sign-in');
 }
@@ -176,6 +252,7 @@ function logout() {
  * @returns {Promise<*>}
  */
 function openSettings() {
+    closeMobileNavigation();
     return router.push({path: '/asset-management/safety-ranges', query: contextQueryParams.value});
 }
 
@@ -303,8 +380,20 @@ function initialsFor(fullName) {
 </script>
 
 <template>
-  <main class="access-page">
-    <aside class="side-panel">
+  <main class="access-page" :class="{'mobile-navigation-open': mobileNavigationOpen}">
+    <button
+      v-if="mobileNavigationOpen"
+      class="mobile-nav-backdrop"
+      type="button"
+      :aria-label="t('dashboard-shell.close-navigation')"
+      @click="closeMobileNavigation"
+    ></button>
+
+    <aside
+      id="dashboard-navigation"
+      class="side-panel"
+      :class="{'mobile-open': mobileNavigationOpen}"
+    >
       <div class="sidebar-top">
         <div class="brand-section">
           <img src="/coldtrace-icon.png" alt="ColdTrace" class="logo-img"/>
@@ -314,25 +403,25 @@ function initialsFor(fullName) {
           </div>
         </div>
 
-        <nav class="side-menu">
-          <router-link class="menu-item" to="/identity-access/dashboard" active-class="active">
-            <span class="material-icons menu-icon">dashboard</span>
+        <nav class="side-menu" @click="closeMobileNavigationAfterNavigation">
+          <router-link class="menu-item" to="/identity-access/dashboard" active-class="active" :aria-label="t('dashboard-shell.nav-main')">
+            <span class="material-icons menu-icon" aria-hidden="true">dashboard</span>
             <span class="menu-label">{{ t('dashboard-shell.nav-main') }}</span>
           </router-link>
 
-          <router-link class="menu-item" to="/asset-management/assets" active-class="active">
-            <span class="material-icons menu-icon">inventory_2</span>
+          <router-link class="menu-item" to="/asset-management/assets" active-class="active" :aria-label="t('dashboard-shell.nav-assets')">
+            <span class="material-icons menu-icon" aria-hidden="true">inventory_2</span>
             <span class="menu-label">{{ t('dashboard-shell.nav-assets') }}</span>
             <span v-if="assetIssuesCount > 0" class="counter badge-red">{{ assetIssuesCount }}</span>
           </router-link>
 
-          <router-link v-if="canMonitorAssets" class="menu-item" to="/monitoring/assets" active-class="active">
-            <span class="material-icons menu-icon">sensors</span>
+          <router-link v-if="canMonitorAssets" class="menu-item" to="/monitoring/assets" active-class="active" :aria-label="t('dashboard-shell.nav-monitoring')">
+            <span class="material-icons menu-icon" aria-hidden="true">sensors</span>
             <span class="menu-label">{{ t('dashboard-shell.nav-monitoring') }}</span>
           </router-link>
 
-          <router-link class="menu-item" to="/alerts/incidents" active-class="active">
-            <span class="material-icons menu-icon">warning</span>
+          <router-link class="menu-item" to="/alerts/incidents" active-class="active" :aria-label="t('dashboard-shell.nav-alerts')">
+            <span class="material-icons menu-icon" aria-hidden="true">warning</span>
             <span class="menu-label">{{ t('dashboard-shell.nav-alerts') }}</span>
             <span v-if="pendingAlertsCount > 0" class="counter badge-red">{{ pendingAlertsCount }}</span>
           </router-link>
@@ -341,10 +430,11 @@ function initialsFor(fullName) {
             <button
               class="menu-item menu-trigger"
               type="button"
+              :aria-label="t('dashboard-shell.nav-access')"
               :aria-expanded="isAccessDropdownOpen"
               @click="toggleAccessDropdown"
             >
-              <span class="material-icons menu-icon">admin_panel_settings</span>
+              <span class="material-icons menu-icon" aria-hidden="true">admin_panel_settings</span>
               <span class="menu-label">{{ t('dashboard-shell.nav-access') }}</span>
               <span class="material-icons dropdown-icon">expand_more</span>
             </button>
@@ -361,8 +451,8 @@ function initialsFor(fullName) {
             </div>
           </div>
 
-          <router-link class="menu-item" to="/identity-access/billing" active-class="active">
-            <span class="material-icons menu-icon">credit_card</span>
+          <router-link class="menu-item" to="/identity-access/billing" active-class="active" :aria-label="t('dashboard-shell.nav-billing')">
+            <span class="material-icons menu-icon" aria-hidden="true">credit_card</span>
             <span class="menu-label">{{ t('dashboard-shell.nav-billing') }}</span>
           </router-link>
 
@@ -370,10 +460,11 @@ function initialsFor(fullName) {
             <button
               class="menu-item menu-trigger"
               type="button"
+              :aria-label="t('dashboard-shell.nav-settings')"
               :aria-expanded="isSettingsDropdownOpen"
               @click="toggleSettingsDropdown"
             >
-              <span class="material-icons menu-icon">settings</span>
+              <span class="material-icons menu-icon" aria-hidden="true">settings</span>
               <span class="menu-label">{{ t('dashboard-shell.nav-settings') }}</span>
               <span class="material-icons dropdown-icon">expand_more</span>
             </button>
@@ -397,10 +488,11 @@ function initialsFor(fullName) {
             <button
               class="menu-item menu-trigger"
               type="button"
+              :aria-label="t('dashboard-shell.nav-reports')"
               :aria-expanded="isReportsDropdownOpen"
               @click="toggleReportsDropdown"
             >
-              <span class="material-icons menu-icon">description</span>
+              <span class="material-icons menu-icon" aria-hidden="true">description</span>
               <span class="menu-label">{{ t('dashboard-shell.nav-reports') }}</span>
               <span class="material-icons dropdown-icon">expand_more</span>
             </button>
@@ -426,14 +518,19 @@ function initialsFor(fullName) {
             </div>
           </div>
 
-          <router-link class="menu-item" to="/alerts/notifications" active-class="active">
-            <span class="material-icons menu-icon">notifications</span>
+          <router-link class="menu-item" to="/alerts/notifications" active-class="active" :aria-label="t('dashboard-shell.nav-notifications')">
+            <span class="material-icons menu-icon" aria-hidden="true">notifications</span>
             <span class="menu-label">{{ t('dashboard-shell.nav-notifications') }}</span>
             <span v-if="pendingAlertsCount > 0" class="counter badge-red">{{ pendingAlertsCount }}</span>
           </router-link>
         </nav>
 
-        <section v-if="organizationMembers.length" class="team-card" :aria-label="t('dashboard-shell.team-members-aria')">
+        <section
+          v-if="organizationMembers.length"
+          class="team-card"
+          :aria-label="t('dashboard-shell.team-members-aria')"
+          @click="closeMobileNavigationAfterNavigation"
+        >
           <div class="team-card-header">
             <span>{{ t('dashboard-shell.team-members') }}</span>
             <router-link
@@ -484,6 +581,17 @@ function initialsFor(fullName) {
 
     <section class="workspace">
       <header class="topbar">
+        <button
+          class="mobile-nav-toggle"
+          type="button"
+          aria-controls="dashboard-navigation"
+          :aria-label="t(mobileNavigationOpen ? 'dashboard-shell.close-navigation' : 'dashboard-shell.open-navigation')"
+          :aria-expanded="mobileNavigationOpen"
+          @click="toggleMobileNavigation"
+        >
+          <span class="material-icons" aria-hidden="true">{{ mobileNavigationOpen ? 'close' : 'menu' }}</span>
+        </button>
+
         <nav class="context-nav" :aria-label="t('dashboard-shell.section-navigation')">
           <router-link
             v-for="link in contextualLinks.filter(current => current.visible)"
@@ -524,6 +632,10 @@ function initialsFor(fullName) {
                 <span class="material-icons">logout</span>
               </button>
             </div>
+          </div>
+
+          <div class="topbar-language-switcher">
+            <language-switcher/>
           </div>
         </div>
       </header>
@@ -1068,96 +1180,236 @@ function initialsFor(fullName) {
   padding: 0 28px 44px;
 }
 
+.mobile-nav-backdrop,
+.mobile-nav-toggle,
+.topbar-language-switcher {
+  display: none;
+}
+
 @media (max-width: 1100px) {
   .access-page {
-    grid-template-columns: 92px minmax(0, 1fr);
+    display: block;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .side-panel {
+    background: #ffffff;
+    border-right: 1px solid #e4e7ec;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+    display: none;
+    height: 100dvh;
+    justify-content: flex-start;
+    left: 0;
+    overflow: visible;
+    padding: 14px 0;
+    position: fixed;
+    top: 0;
+    width: 76px;
+    z-index: 50;
+  }
+
+  .side-panel.mobile-open {
+    display: flex;
+  }
+
+  .mobile-nav-backdrop {
+    background: rgba(15, 23, 42, 0.28);
+    border: 0;
+    cursor: pointer;
+    display: block;
+    inset: 0;
+    padding: 0;
+    position: fixed;
+    z-index: 45;
+  }
+
+  .mobile-nav-toggle {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    color: #2563eb;
+    cursor: pointer;
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+    width: 40px;
+  }
+
+  .mobile-nav-toggle .material-icons {
+    font-size: 22px;
+  }
+
+  .sidebar-top {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .brand-section {
+    justify-content: center;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  .logo-img {
+    height: 38px;
+    width: 38px;
   }
 
   .brand-text,
   .menu-label,
-  .counter,
   .dropdown-icon,
-  .sub-menu,
   .team-card,
   .sidebar-footer {
     display: none;
   }
 
-  .brand-section,
-  .menu-item {
-    justify-content: center;
-    padding-inline: 0;
+  .side-menu {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0 10px;
+  }
+
+  .menu-group {
+    position: relative;
+  }
+
+  .menu-group.open {
+    z-index: 60;
   }
 
   .menu-item {
+    background: #f8fafc;
+    border: 1px solid #edf1f7;
+    border-radius: 8px;
     gap: 0;
+    height: 48px;
+    justify-content: center;
+    padding: 0;
+    position: relative;
+    width: 56px;
   }
 
-  .topbar {
-    align-items: flex-start;
+  .menu-item.active,
+  .menu-group.active-group > .menu-item,
+  .menu-group.open > .menu-item {
+    background: #eef4ff;
+  }
+
+  .counter {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    min-width: 18px;
+    padding: 2px 5px;
+    position: absolute;
+    right: -4px;
+    top: -5px;
+  }
+
+  .menu-group.open::after {
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid #ffffff;
+    border-top: 8px solid transparent;
+    content: '';
+    position: absolute;
+    right: -11px;
+    top: 16px;
+    z-index: 62;
+  }
+
+  .menu-group.open::before {
+    border-bottom: 9px solid transparent;
+    border-right: 9px solid #e4e7ec;
+    border-top: 9px solid transparent;
+    content: '';
+    position: absolute;
+    right: -11px;
+    top: 15px;
+    z-index: 61;
+  }
+
+  .menu-group.open .sub-menu {
+    background: #ffffff;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+    display: grid;
+    gap: 6px;
+    left: 68px;
+    max-height: min(72dvh, 420px);
+    min-width: min(244px, calc(100vw - 96px));
+    overflow-y: auto;
+    padding: 8px;
+    position: absolute;
+    top: 0;
+    z-index: 60;
+  }
+
+  .sub-menu-link {
+    border-radius: 6px;
+    color: #667085;
+    padding: 8px 10px;
+  }
+
+  .sub-menu-link.active,
+  .sub-menu-link:hover {
+    background: #eef4ff;
+  }
+
+  .workspace {
+    display: flex;
     flex-direction: column;
-    gap: 14px;
-    height: auto;
-    padding-block: 18px;
-  }
-
-  .topbar-actions {
-    flex-wrap: wrap;
-    gap: 14px;
-    justify-content: flex-end;
-    width: 100%;
-  }
-
-  .context-nav {
-    gap: 18px;
-  }
-
-  .content-scroll {
-    height: calc(100vh - 112px);
-  }
-}
-
-@media (max-width: 700px) {
-  .access-page {
-    grid-template-columns: 76px minmax(0, 1fr);
-  }
-
-  .side-panel {
-    padding: 20px 0;
-  }
-
-  .brand-section,
-  .menu-item {
-    padding-inline: 0;
-  }
-
-  .menu-item {
-    min-height: 54px;
+    height: 100dvh;
+    min-height: 0;
+    min-width: 0;
   }
 
   .topbar {
-    gap: 12px;
-    padding: 12px 14px;
+    align-items: center;
+    background: #f5f6f8;
+    border-bottom: 1px solid #e4e7ec;
+    flex: 0 0 auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    height: auto;
+    justify-content: space-between;
+    padding: 10px 14px 12px;
   }
 
   .context-nav {
-    gap: 16px;
+    flex: 1 1 100%;
+    gap: 18px;
+    max-width: 100%;
+    order: 3;
+    padding-bottom: 2px;
   }
 
   .context-nav a {
     font-size: 12px;
-    padding: 14px 0 11px;
+    padding: 8px 0 10px;
   }
 
   .topbar-actions {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: minmax(42px, auto) auto;
-    justify-content: space-between;
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-left: auto;
+    position: static;
   }
 
   .notification-shortcut {
     border-radius: 8px;
+    flex: 0 0 42px;
     gap: 0;
     justify-content: center;
     min-height: 42px;
@@ -1171,12 +1423,7 @@ function initialsFor(fullName) {
 
   .user-profile {
     gap: 8px;
-    justify-self: end;
     min-width: 0;
-  }
-
-  .profile-meta {
-    display: none;
   }
 
   .avatar-wrapper,
@@ -1199,15 +1446,117 @@ function initialsFor(fullName) {
     width: 28px;
   }
 
+  .topbar-language-switcher {
+    display: block;
+    flex: 0 0 44px;
+    height: 44px;
+    position: relative;
+    width: 44px;
+    z-index: 70;
+  }
+
+  .topbar-language-switcher :deep(.language-menu-trigger) {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e4e7ec;
+    border-radius: 999px;
+    color: #667085;
+    cursor: pointer;
+    display: flex;
+    height: 44px;
+    inset: 0;
+    justify-content: center;
+    position: absolute;
+    width: 44px;
+  }
+
+  .topbar-language-switcher :deep(.language-switcher) {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: -5px;
+    transform: scaleX(0.18);
+    transform-origin: center right;
+    transition: opacity 0.16s ease, transform 0.2s ease;
+  }
+
+  .topbar-language-switcher:focus-within :deep(.language-menu-trigger),
+  .topbar-language-switcher :deep(.language-menu-trigger[aria-expanded='true']) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .topbar-language-switcher:focus-within :deep(.language-switcher),
+  .topbar-language-switcher :deep(.language-switcher.menu-open) {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scaleX(1);
+  }
+
   .content-scroll {
+    flex: 1 1 auto;
     height: auto;
-    padding: 0 14px 32px;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 14px 34px;
   }
 }
 
-@media (max-width: 440px) {
-  .access-page {
-    grid-template-columns: 68px minmax(0, 1fr);
+@media (max-width: 520px) {
+  .topbar {
+    padding: 9px 12px 11px;
+  }
+
+  .profile-meta {
+    display: none;
+  }
+
+  .content-scroll {
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 390px) {
+  .side-panel {
+    width: 68px;
+  }
+
+  .side-menu {
+    padding-inline: 8px;
+  }
+
+  .menu-item {
+    height: 44px;
+    width: 52px;
+  }
+
+  .menu-group.open .sub-menu {
+    left: 62px;
+    min-width: min(226px, calc(100vw - 84px));
+  }
+}
+
+@media (max-width: 1100px) and (max-height: 700px) {
+  .side-panel {
+    padding-block: 8px;
+  }
+
+  .sidebar-top {
+    gap: 8px;
+  }
+
+  .logo-img {
+    height: 30px;
+    width: 30px;
+  }
+
+  .side-menu {
+    gap: 3px;
+  }
+
+  .menu-item {
+    height: 40px;
   }
 }
 </style>
