@@ -3,7 +3,7 @@ import {BaseApi} from '@/shared/infrastructure/base-api.js';
 const subscriptionPlansEndpointPath = import.meta.env.VITE_SUBSCRIPTION_PLANS_ENDPOINT_PATH ?? '/subscription-plans';
 const organizationSubscriptionEndpointPath = import.meta.env.VITE_ORGANIZATION_SUBSCRIPTION_ENDPOINT_PATH ?? '/subscription';
 const billingCheckoutSessionsEndpointPath = import.meta.env.VITE_BILLING_CHECKOUT_SESSIONS_ENDPOINT_PATH ?? '/billing/checkout-sessions';
-const billingPortalSessionsEndpointPath = import.meta.env.VITE_BILLING_PORTAL_SESSIONS_ENDPOINT_PATH ?? '/billing/customer-portal-sessions';
+const billingPortalSessionsEndpointPath = import.meta.env.VITE_BILLING_PORTAL_SESSIONS_ENDPOINT_PATH ?? '/billing/portal-sessions';
 
 /**
  * HTTP facade for billing resources.

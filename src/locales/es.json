@@ -302,6 +302,35 @@
     "plans": {
       "title": "Planes disponibles",
       "subtitle": "Selecciona un plan pagado para iniciar Stripe Checkout. Los datos de pago los gestiona el proveedor.",
+      "includes": "Incluye",
+      "limits": "Límites",
+      "capabilities": "Capacidades",
+      "available": "Disponible",
+      "unavailable": "No disponible",
+      "limit-unit": "{count} {unit}",
+      "unlimited-unit": "Sin límite de {unit}",
+      "units": {
+        "sites": {
+          "one": "sede",
+          "other": "sedes"
+        },
+        "assets": {
+          "one": "activo",
+          "other": "activos"
+        },
+        "devices": {
+          "one": "dispositivo",
+          "other": "dispositivos"
+        },
+        "users": {
+          "one": "usuario",
+          "other": "usuarios"
+        },
+        "days": {
+          "one": "día",
+          "other": "días"
+        }
+      },
       "current": "Plan actual",
       "free": "Incluido",
       "upgrade": "Mejorar plan",
@@ -328,7 +357,12 @@
       "server-error": "La información de facturación no está disponible. Intenta recargar la página.",
       "checkout-error": "No se pudo iniciar checkout. Inténtalo nuevamente.",
       "portal-error": "No se pudo abrir Customer Portal. Inténtalo nuevamente.",
-      "plan-limit-error": "El plan actual bloquea esta acción. Revisa los upgrades disponibles."
+      "plan-limit-error": "El plan actual bloquea esta acción. Revisa los upgrades disponibles.",
+      "session-error": "Tu sesión expiró. Inicia sesión nuevamente para gestionar la facturación.",
+      "conflict-error": "La acción de facturación solicitada no está disponible: {detail}",
+      "provider-error": "El proveedor de facturación no está disponible o no está configurado en este entorno.",
+      "organization-error": "Selecciona una organización antes de gestionar la facturación.",
+      "request-error": "La solicitud de facturación falló: {detail}"
     }
   },
   "asset-management": {

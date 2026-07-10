@@ -6,6 +6,7 @@ import alertsRoutes from '@/alerts/presentation/alerts-routes.js';
 import maintenanceManagementRoutes from '@/maintenance-management/presentation/maintenance-management-routes.js';
 import reportsRoutes from '@/reports/presentation/reports-routes.js';
 import {authSession} from '@/shared/infrastructure/auth-session.js';
+import billingRoutes from '@/billing/presentation/billing-routes.js';
 
 /**
  * Lazy-loads the page not found view component.
@@ -21,6 +22,7 @@ const routes = [
     {path: '/alerts', children: alertsRoutes},
     {path: '/maintenance', children: maintenanceManagementRoutes},
     {path: '/reports', children: reportsRoutes},
+    {path: '/settings', children: billingRoutes},
     {path: '/', redirect: '/identity-access/sign-in'},
     {
         path: '/:pathMatch(.*)*',
