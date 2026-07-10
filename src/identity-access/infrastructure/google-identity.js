@@ -1,5 +1,4 @@
 const googleScriptUrl = 'https://accounts.google.com/gsi/client';
-const defaultGoogleOAuthClientId = '458208617776-jdce9bkfp960sd01v9d9tgj6ns3ca9j3.apps.googleusercontent.com';
 const googlePromptTimeoutMs = 60000;
 
 /**
@@ -75,7 +74,7 @@ export class GoogleIdentityService {
      * @returns {string}
      */
     get #clientId() {
-        return import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ?? defaultGoogleOAuthClientId;
+        return import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID?.trim() ?? '';
     }
 
     /**
