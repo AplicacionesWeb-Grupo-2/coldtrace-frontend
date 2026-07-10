@@ -1,7 +1,10 @@
 import axios from 'axios';
+import {authSession} from '@/shared/infrastructure/auth-session.js';
 
 const coldTraceApiUrl = import.meta.env.VITE_COLDTRACE_API_URL;
 const defaultColdTraceApiUrl = 'http://localhost:3000/api/v1';
+const authenticationEndpointPath = import.meta.env.VITE_AUTHENTICATION_ENDPOINT_PATH ?? '/authentication';
+const passwordResetRequestsEndpointPath = import.meta.env.VITE_PASSWORD_RESET_REQUESTS_ENDPOINT_PATH ?? '/password-reset-requests';
 const inFlightGetRequests = new Map();
 
 /**
@@ -20,6 +23,27 @@ export class BaseApi {
                 'Content-Type': 'application/json',
             },
         });
+
+        this.#http.interceptors.request.use((config) => {
+            const token = authSession.token();
+            if (token && !isPublicRequest(config.url)) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        });
+
+        this.#http.interceptors.response.use(
+            response => response,
+            (error) => {
+                if (error.response?.status === 401 && !isPublicRequest(error.config?.url)) {
+                    authSession.clear();
+                    if (typeof window !== 'undefined' && window.location.pathname !== '/identity-access/sign-in') {
+                        window.location.assign('/identity-access/sign-in');
+                    }
+                }
+                return Promise.reject(error);
+            },
+        );
     }
 
     /**
@@ -84,4 +108,15 @@ export class BaseApi {
         const params = config.params ? JSON.stringify(config.params) : '';
         return `${baseUrl}|${url}|${params}`;
     }
+}
+
+/**
+ * Determines whether an HTTP request targets a public identity endpoint.
+ *
+ * @param {string|undefined} url
+ * @returns {boolean}
+ */
+function isPublicRequest(url = '') {
+    return [authenticationEndpointPath, passwordResetRequestsEndpointPath]
+        .some(path => url.startsWith(path) || url.includes(`${path}/`));
 }

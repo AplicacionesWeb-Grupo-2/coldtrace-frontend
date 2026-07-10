@@ -65,11 +65,15 @@ export class AssetManagementApi extends BaseApi {
     /**
      * Deletes asset from the asset management context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteAsset() {
-        return Promise.resolve({status: 204, data: null});
+    deleteAsset(organizationId, id) {
+        const endpoint = this.#endpointForOrganization(organizationId, assetsEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to delete an asset.'));
+
+        return endpoint.delete(id);
     }
 
     /**
@@ -110,11 +114,15 @@ export class AssetManagementApi extends BaseApi {
     /**
      * Deletes iot device from the asset management context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteIoTDevice() {
-        return Promise.resolve({status: 204, data: null});
+    deleteIoTDevice(organizationId, id) {
+        const endpoint = this.#endpointForOrganization(organizationId, iotDevicesEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to delete an IoT device.'));
+
+        return endpoint.delete(id);
     }
 
     /**
@@ -164,11 +172,15 @@ export class AssetManagementApi extends BaseApi {
     /**
      * Deletes gateway from the asset management context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteGateway() {
-        return Promise.resolve({status: 204, data: null});
+    deleteGateway(organizationId, id) {
+        const endpoint = this.#endpointForOrganization(organizationId, gatewaysEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to delete a gateway.'));
+
+        return endpoint.delete(id);
     }
 
     /**

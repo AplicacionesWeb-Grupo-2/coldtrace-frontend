@@ -131,12 +131,20 @@ export class MaintenanceManagementApi extends BaseApi {
     #maintenanceScheduleRequestFrom(resource) {
         return {
             assetId: resource.assetId,
-            scheduledDate: resource.scheduledDate,
-            frequencyDays: resource.frequencyDays ?? 30,
-            responsibleUserId: resource.responsibleUserId ?? null,
+            scheduledDate: this.#dateTimeFrom(resource.scheduledDate),
             observations: resource.observations,
             status: maintenanceScheduleStatusForApi(resource.status),
         };
+    }
+
+    /**
+     * Converts a date input value to the API DateTimeOffset contract.
+     *
+     * @param {string} value
+     * @returns {string}
+     */
+    #dateTimeFrom(value) {
+        return value.includes('T') ? value : `${value}T00:00:00Z`;
     }
 
     /**
@@ -165,9 +173,9 @@ export class MaintenanceManagementApi extends BaseApi {
         const status = technicalServiceStatusForApi(resource.status);
         return {
             status,
-            closureSummary: resource.resultNotes ?? resource.interventionNotes ?? null,
-            evidence: resource.resultNotes ?? resource.interventionNotes ?? null,
-            closedBy: status === 'closed' ? 'ColdTrace' : null,
+            closureSummary: resource.resultNotes ?? null,
+            evidence: resource.interventionNotes ?? null,
+            closedBy: resource.closedBy ?? (status === 'closed' ? 'ColdTrace' : null),
         };
     }
 }

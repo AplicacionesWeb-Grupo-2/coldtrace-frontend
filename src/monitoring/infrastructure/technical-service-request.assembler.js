@@ -7,12 +7,20 @@ import {TechnicalServiceStatus} from '@/monitoring/domain/model/technical-servic
  * @property {number|null} [organizationId]
  * @property {string} [uuid]
  * @property {number|null} [assetId]
+ * @property {number|null} [assetLocationId]
+ * @property {string|null} [assetName]
+ * @property {number|null} [incidentId]
  * @property {string} [priority]
  * @property {string} [issueDescription]
  * @property {string} [requestedDate]
+ * @property {string} [requestedAt]
+ * @property {string|null} [requestedBy]
  * @property {string} [status]
  * @property {*|null} [interventionNotes]
  * @property {*|null} [resultNotes]
+ * @property {*|null} [closureSummary]
+ * @property {*|null} [evidence]
+ * @property {*|null} [closedBy]
  * @property {*|null} [functionalTestPassed]
  * @property {*|null} [closedAt]
  */
@@ -34,9 +42,14 @@ export class TechnicalServiceRequestAssembler {
             uuid: resource.uuid ?? resource.code ?? '',
             requestedDate: resource.requestedDate ?? dateKeyFrom(resource.requestedAt),
             status,
-            interventionNotes: resource.interventionNotes ?? resource.closureSummary ?? null,
-            resultNotes: resource.resultNotes ?? resource.evidence ?? null,
-            functionalTestPassed: resource.functionalTestPassed ?? (status === TechnicalServiceStatus.Closed ? true : null),
+            interventionNotes: resource.interventionNotes ?? resource.evidence ?? null,
+            resultNotes: resource.resultNotes ?? resource.closureSummary ?? null,
+            functionalTestPassed: resource.functionalTestPassed ?? functionalTestStatusFrom(resource, status),
+            assetLocationId: resource.assetLocationId ?? null,
+            assetName: resource.assetName ?? null,
+            incidentId: resource.incidentId ?? null,
+            requestedBy: resource.requestedBy ?? null,
+            closedBy: resource.closedBy ?? null,
         });
     }
 
@@ -61,6 +74,19 @@ export class TechnicalServiceRequestAssembler {
  */
 function dateKeyFrom(value) {
     return value ? String(value).slice(0, 10) : '';
+}
+
+/**
+ * Derives the functional test result from the backend lifecycle fields.
+ *
+ * @param {*} resource
+ * @param {string} status
+ * @returns {boolean|null}
+ */
+function functionalTestStatusFrom(resource, status) {
+    if (status === TechnicalServiceStatus.Closed) return true;
+    if (status === TechnicalServiceStatus.PendingReview && (resource.closureSummary || resource.evidence)) return false;
+    return null;
 }
 
 /**

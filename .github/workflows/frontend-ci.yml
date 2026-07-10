@@ -1,0 +1,38 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests when present
+        run: npm run test --if-present
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate

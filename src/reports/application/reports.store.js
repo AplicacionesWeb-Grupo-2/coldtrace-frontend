@@ -28,6 +28,8 @@ const reportsApi = new ReportsApi();
 const useReportsStore = defineStore('reports', () => {
     const reports = ref([]);
     const loading = ref(false);
+    const aiSummaryGenerating = ref(false);
+    const aiSummary = ref(null);
     const errors = ref([]);
     const reportsLoaded = ref(false);
     const closedComplianceFindingIds = ref(new Set());
@@ -439,6 +441,29 @@ const useReportsStore = defineStore('reports', () => {
         const createdReport = ReportAssembler.toEntityFromResource(response.data);
         reports.value.push(createdReport);
         return createdReport;
+    }
+
+    /**
+     * Generates an AI-assisted summary for one persisted report.
+     *
+     * @param {number|string} organizationId
+     * @param {number|string} reportId
+     * @returns {Promise<*>}
+     */
+    async function generateAiSummary(organizationId, reportId) {
+        aiSummaryGenerating.value = true;
+        errors.value = [];
+
+        try {
+            const response = await reportsApi.generateAiSummary(organizationId, reportId);
+            aiSummary.value = response.data;
+            return aiSummary.value;
+        } catch (error) {
+            errors.value.push(error);
+            throw error;
+        } finally {
+            aiSummaryGenerating.value = false;
+        }
     }
 
     /**
@@ -1345,6 +1370,8 @@ const useReportsStore = defineStore('reports', () => {
     return {
         reports,
         loading,
+        aiSummaryGenerating,
+        aiSummary,
         errors,
         error,
         reportsLoaded,
@@ -1360,6 +1387,7 @@ const useReportsStore = defineStore('reports', () => {
         createDailyLogReport,
         createSanitaryComplianceReport,
         createMonthlySummaryReport,
+        generateAiSummary,
         closeComplianceFinding,
         sanitaryComplianceCsv,
         monthlyReportCsv,

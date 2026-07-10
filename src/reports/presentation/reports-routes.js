@@ -23,6 +23,12 @@ const operationalHistory = () => import('./views/operational-history.vue');
  */
 const sanitaryCompliance = () => import('./views/sanitary-compliance.vue');
 /**
+ * Lazy-loads the AI compliance summary view component.
+ *
+ * @returns {Promise<*>}
+ */
+const aiComplianceSummary = () => import('./views/ai-compliance-summary.vue');
+/**
  * Lazy-loads the compliance findings view component.
  *
  * @returns {Promise<*>}
@@ -40,6 +46,7 @@ const reportsRoutes = [
     {path: 'monthly', name: 'reports-monthly', component: monthlyReport, meta: {title: 'Monthly Report', titleKey: 'reports.monthly.page-title'}},
     {path: 'history', name: 'reports-history', component: operationalHistory, meta: {title: 'Operational History', titleKey: 'reports.history.page-title'}},
     {path: 'compliance', name: 'reports-compliance', component: sanitaryCompliance, meta: {title: 'Sanitary Compliance', titleKey: 'reports.compliance.page-title'}},
+    {path: 'ai-summary', name: 'reports-ai-summary', component: aiComplianceSummary, meta: {title: 'AI Summary', titleKey: 'reports.ai-summary.page-title'}},
     {path: 'findings', name: 'reports-findings', component: complianceFindings, meta: {title: 'Compliance Findings', titleKey: 'reports.findings.page-title'}},
     {path: 'audit-evidence', name: 'reports-audit-evidence', component: auditEvidence, meta: {title: 'Audit Evidence', titleKey: 'reports.audit.page-title'}},
     {path: '', redirect: '/reports/daily-log'},

@@ -36,7 +36,7 @@ export class SensorReadingAssembler {
      * @returns {SensorReading[]}
      */
     static toEntitiesFromResponse(response) {
-        if (response.status !== 200) return [];
+        if (response.status < 200 || response.status >= 300) return [];
         const resources = response.data instanceof Array ? response.data : response.data.sensorReadings;
         return (resources ?? []).map(resource => this.toEntityFromResource(resource));
     }
