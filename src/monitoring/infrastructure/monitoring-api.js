@@ -74,6 +74,23 @@ export class MonitoringApi extends BaseApi {
     }
 
     /**
+     * Requests backend-owned demo sensor readings.
+     *
+     * @param {number|string} organizationId
+     * @param {{assetId?: number|null, count?: number|null}} resource
+     * @returns {Promise<*>}
+     */
+    generateDemoSensorReadings(organizationId, resource = {}) {
+        const basePath = this.organizationScopedPath(organizationId, sensorReadingsEndpointPath);
+        if (!basePath) return Promise.reject(new Error('Organization is required to generate demo readings.'));
+
+        return this.http.post(`${basePath}/demo-generations`, {
+            assetId: resource.assetId ?? null,
+            count: resource.count ?? null,
+        });
+    }
+
+    /**
      * Requests incidents from the API.
      *
      * @returns {Promise<*>}

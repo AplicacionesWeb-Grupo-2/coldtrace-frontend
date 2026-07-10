@@ -7,7 +7,6 @@ import {GatewayAssembler} from '@/asset-management/infrastructure/gateway.assemb
 import {IoTDeviceAssembler} from '@/asset-management/infrastructure/iot-device.assembler.js';
 import {LocationAssembler} from '@/asset-management/infrastructure/location.assembler.js';
 import {AssetStatus} from '@/asset-management/domain/model/asset-status.js';
-import {CalibrationStatus} from '@/asset-management/domain/model/calibration-status.js';
 import {ConnectivityStatus} from '@/asset-management/domain/model/connectivity-status.js';
 import {GatewayStatus} from '@/asset-management/domain/model/gateway-status.js';
 import {IoTDeviceStatus} from '@/asset-management/domain/model/iot-device-status.js';
@@ -37,7 +36,6 @@ const useAssetManagementStore = defineStore('asset-management', () => {
     const locationsLoaded = ref(false);
     const assetSettingsLoaded = ref(false);
     const assetCount = computed(() => assets.value.length);
-    let telemetryUpdateStep = 0;
 
     /**
      * Loads assets from the API and updates application state.
@@ -162,6 +160,41 @@ const useAssetManagementStore = defineStore('asset-management', () => {
         } finally {
             loading.value = false;
         }
+    }
+
+    /**
+     * Refreshes backend-owned operational state without changing the loading state of the active view.
+     *
+     * @param {number|string} organizationId
+     * @returns {Promise<*>}
+     */
+    async function refreshOrganizationOperationalState(organizationId) {
+        if (!organizationId) {
+            return {
+                assets: assets.value,
+                iotDevices: iotDevices.value,
+                gateways: gateways.value,
+                locations: locations.value,
+                assetSettings: assetSettings.value,
+            };
+        }
+
+        const loadedLocations = await fetchLocations(organizationId);
+        await Promise.all([
+            fetchGateways(organizationId, loadedLocations),
+            fetchAssets(organizationId),
+            fetchIoTDevices(organizationId),
+            fetchAssetSettings(organizationId),
+        ]);
+        enrichAssetsWithGatewayData();
+
+        return {
+            assets: assets.value,
+            iotDevices: iotDevices.value,
+            gateways: gateways.value,
+            locations: locations.value,
+            assetSettings: assetSettings.value,
+        };
     }
 
     /**
@@ -597,201 +630,6 @@ const useAssetManagementStore = defineStore('asset-management', () => {
             asset.status !== AssetStatus.Active;
     }
 
-    /**
-     * Handles next asset behavior in the asset management context.
-     *
-     * @param {*} asset
-     * @param {Object} fields
-     * @returns {*}
-     */
-    function nextAsset(asset, fields) {
-        return new Asset({...asset, ...fields});
-    }
-
-    /**
-     * Handles next iot device behavior in the asset management context.
-     *
-     * @param {*} iotDevice
-     * @param {Object} fields
-     * @returns {*}
-     */
-    function nextIoTDevice(iotDevice, fields) {
-        return new IoTDevice({...iotDevice, ...fields});
-    }
-
-    /**
-     * Handles next gateway behavior in the asset management context.
-     *
-     * @param {*} gateway
-     * @param {Object} fields
-     * @returns {*}
-     */
-    function nextGateway(gateway, fields) {
-        return new Gateway({...gateway, ...fields});
-    }
-
-    /**
-     * Updates organization telemetry in the asset management context.
-     *
-     * @param {number|string} organizationId
-     * @returns {void}
-     */
-    function updateOrganizationTelemetry(organizationId) {
-        if (!organizationId) return;
-
-        const organizationAssets = assetsForOrganization(organizationId);
-        const organizationDevices = iotDevicesForOrganization(organizationId);
-        const organizationGateways = gatewaysForOrganization(organizationId);
-        const currentStep = telemetryUpdateStep % 3;
-        telemetryUpdateStep += 1;
-
-        if (currentStep === 0) {
-            const gateway = sampleOne(organizationGateways);
-            if (gateway) updateGateway(nextGateway(gateway, {status: randomGatewayStatus()})).catch(() => undefined);
-            return;
-        }
-
-        if (currentStep === 1) {
-            const iotDevice = sampleOne(organizationDevices);
-            if (iotDevice) {
-                updateIoTDevice(nextIoTDevice(iotDevice, {
-                    status: randomIoTDeviceStatus(iotDevice),
-                    calibrationStatus: randomCalibrationStatus(),
-                })).catch(() => undefined);
-            }
-            return;
-        }
-
-        const asset = sampleOne(organizationAssets);
-        if (!asset) return;
-
-        const gateway = organizationGateways.find(current => current.id === asset.gatewayId);
-        const iotDevice = organizationDevices.find(current => current.assetId === asset.id);
-        const settings = settingsForAsset(organizationId, asset.id);
-        const connectivity = randomConnectivity(gateway ?? null, iotDevice ?? null);
-        const currentTemperature = randomTemperature(connectivity, settings);
-
-        updateAsset(nextAsset(asset, {
-            lastIncident: incidentFor(currentTemperature, connectivity, settings),
-            currentTemperature,
-            connectivity,
-        })).catch(() => undefined);
-    }
-
-    /**
-     * Handles random temperature behavior in the asset management context.
-     *
-     * @param {*} connectivity
-     * @param {*} settings
-     * @returns {*}
-     */
-    function randomTemperature(connectivity, settings) {
-        if (connectivity === ConnectivityStatus.Offline || !settings) return '—';
-        const anomalyRoll = Math.random();
-        let temperature;
-        if (anomalyRoll < 0.94) temperature = randomNumber(settings.minimumTemperature, settings.maximumTemperature);
-        else if (anomalyRoll < 0.97) temperature = randomNumber(settings.minimumTemperature - 2, settings.minimumTemperature - 0.2);
-        else temperature = randomNumber(settings.maximumTemperature + 0.2, settings.maximumTemperature + 3);
-        return `${temperature.toFixed(1)}${settings.temperatureUnit}`;
-    }
-
-    /**
-     * Handles incident for behavior in the asset management context.
-     *
-     * @param {*} currentTemperature
-     * @param {*} connectivity
-     * @param {*} settings
-     * @returns {*}
-     */
-    function incidentFor(currentTemperature, connectivity, settings) {
-        if (connectivity === ConnectivityStatus.Offline) return 'connection-lost';
-        if (!settings) return 'none';
-        const temperature = Number(currentTemperature.replace(/[^\d.-]/g, ''));
-        if (temperature > settings.maximumTemperature) return 'high-temperature';
-        if (temperature < settings.minimumTemperature) return 'low-temperature';
-        return 'none';
-    }
-
-    /**
-     * Handles random connectivity behavior in the asset management context.
-     *
-     * @param {*} gateway
-     * @param {*} iotDevice
-     * @returns {*}
-     */
-    function randomConnectivity(gateway, iotDevice) {
-        if (!iotDevice || gateway?.status === GatewayStatus.Offline || iotDevice.status === IoTDeviceStatus.Offline) {
-            return ConnectivityStatus.Offline;
-        }
-        if (gateway?.status === GatewayStatus.Maintenance) {
-            return Math.random() < 0.75 ? ConnectivityStatus.Online : ConnectivityStatus.Unstable;
-        }
-        const randomValue = Math.random();
-        if (randomValue < 0.92) return ConnectivityStatus.Online;
-        if (randomValue < 0.98) return ConnectivityStatus.Unstable;
-        return ConnectivityStatus.Offline;
-    }
-
-    /**
-     * Handles random iot device status behavior in the asset management context.
-     *
-     * @param {*} iotDevice
-     * @returns {string}
-     */
-    function randomIoTDeviceStatus(iotDevice) {
-        if (!iotDevice.assetId) {
-            return Math.random() < 0.96 ? IoTDeviceStatus.Available : IoTDeviceStatus.Offline;
-        }
-        return Math.random() < 0.96 ? IoTDeviceStatus.Linked : IoTDeviceStatus.Offline;
-    }
-
-    /**
-     * Handles random calibration status behavior in the asset management context.
-     *
-     * @returns {string}
-     */
-    function randomCalibrationStatus() {
-        const randomValue = Math.random();
-        if (randomValue < 0.76) return CalibrationStatus.Compliant;
-        if (randomValue < 0.93) return CalibrationStatus.DueSoon;
-        if (randomValue < 0.98) return CalibrationStatus.Expired;
-        return CalibrationStatus.Unknown;
-    }
-
-    /**
-     * Handles random gateway status behavior in the asset management context.
-     *
-     * @returns {string}
-     */
-    function randomGatewayStatus() {
-        const randomValue = Math.random();
-        if (randomValue < 0.92) return GatewayStatus.Active;
-        if (randomValue < 0.98) return GatewayStatus.Maintenance;
-        return GatewayStatus.Offline;
-    }
-
-    /**
-     * Handles random number behavior in the asset management context.
-     *
-     * @param {number|string} minimum
-     * @param {number|string} maximum
-     * @returns {number}
-     */
-    function randomNumber(minimum, maximum) {
-        return minimum + Math.random() * (maximum - minimum);
-    }
-
-    /**
-     * Handles sample one behavior in the asset management context.
-     *
-     * @param {Array<*>} items
-     * @returns {*}
-     */
-    function sampleOne(items) {
-        if (!items.length) return null;
-        return items[Math.floor(Math.random() * items.length)];
-    }
-
     return {
         assets,
         iotDevices,
@@ -812,6 +650,7 @@ const useAssetManagementStore = defineStore('asset-management', () => {
         fetchLocations,
         fetchAssetSettings,
         fetchAssetManagementData,
+        refreshOrganizationOperationalState,
         createAsset,
         updateAsset,
         deleteAsset,
@@ -841,7 +680,6 @@ const useAssetManagementStore = defineStore('asset-management', () => {
         settingsForAsset,
         nextAssetSettingsId,
         operationalSummaryFor,
-        updateOrganizationTelemetry,
     };
 });
 

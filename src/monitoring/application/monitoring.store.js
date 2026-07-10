@@ -2,10 +2,7 @@ import {defineStore} from 'pinia';
 import {computed, ref} from 'vue';
 import useAssetManagementStore from '@/asset-management/application/asset-management.store.js';
 import {CalibrationStatus} from '@/asset-management/domain/model/calibration-status.js';
-import {ConnectivityStatus} from '@/asset-management/domain/model/connectivity-status.js';
-import {GatewayStatus} from '@/asset-management/domain/model/gateway-status.js';
 import {IoTDeviceStatus} from '@/asset-management/domain/model/iot-device-status.js';
-import {SensorReading} from '@/monitoring/domain/model/sensor-reading-entity.js';
 import {OfflineReading} from '@/monitoring/domain/model/offline-reading-entity.js';
 import {SyncStatus} from '@/monitoring/domain/model/sync-status.js';
 import {Incident} from '@/monitoring/domain/model/incident-entity.js';
@@ -219,16 +216,6 @@ const useMonitoringStore = defineStore('monitoring', () => {
     }
 
     /**
-     * Handles next sensor reading id behavior in the monitoring context.
-     *
-     * @param {*} offset
-     * @returns {*}
-     */
-    function nextSensorReadingId(offset = 0) {
-        return Math.max(...readings.value.map(reading => reading.id ?? 0), 0) + 1 + offset;
-    }
-
-    /**
      * Handles get latest temperature by asset behavior in the monitoring context.
      *
      * @param {number|string} assetId
@@ -432,208 +419,59 @@ const useMonitoringStore = defineStore('monitoring', () => {
      * @returns {Promise<*>}
      */
     async function updateOrganizationTelemetry(organizationId) {
-        if (!organizationId) return;
+        if (!organizationId) return [];
 
         const assetManagementStore = useAssetManagementStore();
         const assets = assetManagementStore.assetsForOrganization(organizationId);
-        const iotDevices = assetManagementStore.iotDevicesForOrganization(organizationId);
-        const gateways = assetManagementStore.gatewaysForOrganization(organizationId);
+        const monitoredAssets = assets.filter(asset =>
+            assetManagementStore
+                .iotDevicesForAsset(asset.id)
+                .some(iotDevice => iotDevice.status !== IoTDeviceStatus.Offline),
+        );
+        if (!monitoredAssets.length) return [];
 
-        await ensureRecentReadingsForOrganization(organizationId, assets, iotDevices);
-
-        const monitoredAssets = assets.filter(asset => iotDevices.some(iotDevice => iotDevice.assetId === asset.id));
-        const asset = sampleOne(monitoredAssets.length ? monitoredAssets : assets);
-
-        if (!asset) return;
-
-        const iotDevice = iotDevices.find(device => device.assetId === asset.id) ?? null;
-        const gateway = gateways.find(currentGateway => currentGateway.id === asset.gatewayId) ?? null;
-        const connectivity = randomConnectivity(gateway, iotDevice);
-        const settings = assetManagementStore.settingsForAsset(organizationId, asset.id);
-        const reading = buildSensorReading(asset, iotDevice, settings, connectivity);
-
-        if (reading) {
-            await createSensorReading(reading, organizationId).catch(() => undefined);
-        }
+        const count = demoReadingCountForOrganization(
+            organizationId,
+            monitoredAssets.map(asset => asset.id),
+        );
+        const response = await monitoringApi.generateDemoSensorReadings(organizationId, {count});
+        const generatedReadings = SensorReadingAssembler.toEntitiesFromResponse(response);
+        mergeReadings(generatedReadings);
+        return generatedReadings;
     }
 
     /**
-     * Builds sensor reading for presentation or reporting.
-     *
-     * @param {*} asset
-     * @param {*} iotDevice
-     * @param {*} settings
-     * @param {*} connectivity
-     * @param {*} offset
-     * @param {*} recordedAt
-     * @returns {*}
-     */
-    function buildSensorReading(asset, iotDevice, settings, connectivity, offset = 0, recordedAt = new Date()) {
-        if (!iotDevice || connectivity === ConnectivityStatus.Offline) return null;
-
-        const parameters = iotDevice.measurementParameters;
-        const temperature = parameters.includes('temperature') && settings
-            ? randomTemperatureReading(settings.minimumTemperature, settings.maximumTemperature)
-            : null;
-        const humidity = parameters.includes('humidity') && settings
-            ? randomHumidityReading(settings.maximumHumidity)
-            : null;
-        const motionDetected = parameters.includes('motion') ? Math.random() < 0.18 : null;
-        const imageCaptured = parameters.includes('image') ? Math.random() < 0.35 : null;
-        const batteryLevel = parameters.includes('battery') ? randomBatteryLevel() : null;
-        const signalStrength = parameters.includes('signal') ? randomSignalStrength() : null;
-        const environmentOutOfRange = settings
-            ? (temperature !== null && (temperature < settings.minimumTemperature || temperature > settings.maximumTemperature)) ||
-                (humidity !== null && humidity > settings.maximumHumidity)
-            : false;
-        const isOutOfRange = environmentOutOfRange ||
-            (batteryLevel !== null && batteryLevel < 15) ||
-            (signalStrength !== null && signalStrength < 35);
-
-        return new SensorReading({
-            id: nextSensorReadingId(offset),
-            assetId: asset.id,
-            iotDeviceId: iotDevice.id,
-            temperature,
-            humidity,
-            isOutOfRange,
-            recordedAt: recordedAt.toISOString(),
-            motionDetected,
-            imageCaptured,
-            batteryLevel,
-            signalStrength,
-        });
-    }
-
-    /**
-     * Handles ensure recent readings for organization behavior in the monitoring context.
+     * Determines how many backend-owned readings are needed for the next demo refresh.
      *
      * @param {number|string} organizationId
-     * @param {Array<*>} assets
-     * @param {*} iotDevices
-     * @returns {Promise<*>}
-     */
-    async function ensureRecentReadingsForOrganization(organizationId, assets, iotDevices) {
-        if (seededOrganizationIds.has(organizationId)) return;
-
-        const assetIds = assets.map(asset => asset.id);
-        const since = new Date();
-        since.setHours(since.getHours() - 24);
-
-        if (readingsForAssetIdsSince(assetIds, since).length) {
-            seededOrganizationIds.add(organizationId);
-            return;
-        }
-
-        const assetManagementStore = useAssetManagementStore();
-        const seedRequests = iotDevices
-            .filter(iotDevice => iotDevice.assetId !== null)
-            .slice(0, 8)
-            .map((iotDevice, index) => {
-                const asset = assets.find(currentAsset => currentAsset.id === iotDevice.assetId);
-                if (!asset) return null;
-
-                const recordedAt = new Date();
-                recordedAt.setHours(recordedAt.getHours() - (8 - index));
-                const settings = assetManagementStore.settingsForAsset(organizationId, asset.id);
-                const reading = buildSensorReading(asset, iotDevice, settings, ConnectivityStatus.Online, index, recordedAt);
-                return reading ? createSensorReading(reading, organizationId).catch(() => undefined) : null;
-            })
-            .filter(Boolean);
-
-        await Promise.all(seedRequests);
-        seededOrganizationIds.add(organizationId);
-    }
-
-    /**
-     * Handles random connectivity behavior in the monitoring context.
-     *
-     * @param {*} gateway
-     * @param {*} iotDevice
-     * @returns {*}
-     */
-    function randomConnectivity(gateway, iotDevice) {
-        if (!iotDevice || gateway?.status === GatewayStatus.Offline || iotDevice.status === IoTDeviceStatus.Offline) {
-            return ConnectivityStatus.Offline;
-        }
-
-        if (gateway?.status === GatewayStatus.Maintenance) {
-            return Math.random() < 0.75 ? ConnectivityStatus.Online : ConnectivityStatus.Unstable;
-        }
-
-        const randomValue = Math.random();
-        if (randomValue < 0.92) return ConnectivityStatus.Online;
-        if (randomValue < 0.98) return ConnectivityStatus.Unstable;
-        return ConnectivityStatus.Offline;
-    }
-
-    /**
-     * Handles random temperature reading behavior in the monitoring context.
-     *
-     * @param {number|string} minimumTemperature
-     * @param {number|string} maximumTemperature
-     * @returns {*}
-     */
-    function randomTemperatureReading(minimumTemperature, maximumTemperature) {
-        const anomalyRoll = Math.random();
-
-        if (anomalyRoll < 0.94) return Number(randomNumber(minimumTemperature, maximumTemperature).toFixed(1));
-        if (anomalyRoll < 0.97) return Number(randomNumber(minimumTemperature - 2, minimumTemperature - 0.2).toFixed(1));
-        return Number(randomNumber(maximumTemperature + 0.2, maximumTemperature + 3).toFixed(1));
-    }
-
-    /**
-     * Handles random humidity reading behavior in the monitoring context.
-     *
-     * @param {number|string} maximumHumidity
-     * @returns {*}
-     */
-    function randomHumidityReading(maximumHumidity) {
-        const normalMinimum = Math.max(0, maximumHumidity - 30);
-        if (Math.random() < 0.94) return Math.round(randomNumber(normalMinimum, maximumHumidity));
-        return Math.round(randomNumber(maximumHumidity + 1, maximumHumidity + 8));
-    }
-
-    /**
-     * Handles random battery level behavior in the monitoring context.
-     *
-     * @returns {*}
-     */
-    function randomBatteryLevel() {
-        if (Math.random() < 0.96) return Math.round(randomNumber(20, 100));
-        return Math.round(randomNumber(8, 14));
-    }
-
-    /**
-     * Handles random signal strength behavior in the monitoring context.
-     *
-     * @returns {*}
-     */
-    function randomSignalStrength() {
-        if (Math.random() < 0.96) return Math.round(randomNumber(40, 100));
-        return Math.round(randomNumber(28, 34));
-    }
-
-    /**
-     * Handles random number behavior in the monitoring context.
-     *
-     * @param {number|string} minimum
-     * @param {number|string} maximum
+     * @param {number[]} assetIds
      * @returns {number}
      */
-    function randomNumber(minimum, maximum) {
-        return minimum + Math.random() * (maximum - minimum);
+    function demoReadingCountForOrganization(organizationId, assetIds) {
+        if (seededOrganizationIds.has(organizationId)) return 1;
+
+        seededOrganizationIds.add(organizationId);
+        const since = new Date();
+        since.setHours(since.getHours() - 24);
+        return readingsForAssetIdsSince(assetIds, since).length ? 1 : 8;
     }
 
     /**
-     * Handles sample one behavior in the monitoring context.
+     * Merges backend-generated readings into local application state.
      *
-     * @param {Array<*>} items
-     * @returns {*}
+     * @param {Array<*>} generatedReadings
+     * @returns {void}
      */
-    function sampleOne(items) {
-        if (!items.length) return null;
-        return items[Math.floor(Math.random() * items.length)];
+    function mergeReadings(generatedReadings) {
+        if (!generatedReadings.length) return;
+
+        const readingsById = new Map(readings.value.map(reading => [reading.id, reading]));
+        generatedReadings.forEach(reading => readingsById.set(reading.id, reading));
+        readings.value = [...readingsById.values()].sort(
+            (left, right) => new Date(right.recordedAt).getTime() - new Date(left.recordedAt).getTime(),
+        );
+        readingsLoaded.value = true;
+        initOfflineReadings(readings.value);
     }
 
     /**
@@ -1124,7 +962,6 @@ const useMonitoringStore = defineStore('monitoring', () => {
         fetchMonitoringData,
         generateDashboardAiInterpretation,
         createSensorReading,
-        nextSensorReadingId,
         getLatestTemperatureByAsset,
         getLatestHumidityByAsset,
         getReadingsByAsset,

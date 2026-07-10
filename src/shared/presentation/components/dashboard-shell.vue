@@ -7,9 +7,8 @@ import useAssetManagementStore from '@/asset-management/application/asset-manage
 import useIdentityAccessStore from '@/identity-access/application/identity-access.store.js';
 import useMonitoringStore from '@/monitoring/application/monitoring.store.js';
 import useReportsStore from '@/reports/application/reports.store.js';
+import {createOperationalDataPoller} from '@/shared/application/operational-data-poller.js';
 import LanguageSwitcher from '@/shared/presentation/components/language-switcher.vue';
-
-const telemetryPollingIntervalMs = 12000;
 
 const {t} = useI18n();
 const route = useRoute();
@@ -25,19 +24,6 @@ const reportsDropdownOpen = ref(false);
 const reportsDropdownTouched = ref(false);
 const settingsDropdownOpen = ref(false);
 const settingsDropdownTouched = ref(false);
-let telemetryIntervalId = null;
-
-onMounted(() => {
-    loadShellData();
-    startTelemetryUpdates();
-});
-
-onBeforeUnmount(() => {
-    if (telemetryIntervalId !== null) {
-        window.clearInterval(telemetryIntervalId);
-        telemetryIntervalId = null;
-    }
-});
 
 const activeOrganizationId = computed(() => store.currentOrganizationIdFrom());
 const activeOrganizationName = computed(() => store.currentOrganizationNameFrom());
@@ -52,6 +38,20 @@ const canDownloadReports = computed(() =>
         .permissionKeysForRole(currentRole.value)
         .includes('roles-permissions.permissions.view-reports'),
 );
+const operationalDataPoller = createOperationalDataPoller({
+    getOrganizationId: () => activeOrganizationId.value,
+    refreshAssets: organizationId => assetManagementStore.refreshOrganizationOperationalState(organizationId),
+    refreshIncidents: organizationId => alertsStore.fetchIncidentsOnly(organizationId),
+    scheduler: window,
+});
+
+onMounted(() => {
+    loadShellData();
+    operationalDataPoller.start();
+});
+
+onBeforeUnmount(() => operationalDataPoller.stop());
+
 const assetIssuesCount = computed(() => assetManagementStore.assetIssueCountFor(activeOrganizationId.value));
 const pendingAlertsCount = computed(() => alertsStore.openIncidentsCount);
 const organizationMembers = computed(() => {
@@ -197,27 +197,11 @@ function isContextLinkActive(link) {
  */
 async function loadShellData() {
     try {
-        const accessData = await store.fetchAccessData();
-        const organizationId = store.currentOrganizationIdFrom(accessData.users);
-        await Promise.all([
-            assetManagementStore.fetchAssets(organizationId),
-            alertsStore.fetchIncidentsOnly(organizationId),
-        ]);
+        await store.fetchAccessData();
+        await operationalDataPoller.refresh();
     } catch {
         // Keep the shell usable when the local data service is unavailable.
     }
-}
-
-/**
- * Handles start telemetry updates behavior in the shared context.
- *
- * @returns {string}
- */
-function startTelemetryUpdates() {
-    telemetryIntervalId = window.setInterval(() => {
-        assetManagementStore.updateOrganizationTelemetry(activeOrganizationId.value);
-        alertsStore.fetchIncidentsOnly(activeOrganizationId.value).catch(() => {});
-    }, telemetryPollingIntervalMs);
 }
 
 /**
