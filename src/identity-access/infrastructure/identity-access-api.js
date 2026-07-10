@@ -113,11 +113,15 @@ export class IdentityAccessApi extends BaseApi {
     /**
      * Deletes user from the identity access context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteUser() {
-        return Promise.resolve({status: 204, data: null});
+    deleteUser(organizationId, id) {
+        const endpoint = this.#usersEndpointForOrganization(organizationId);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to delete a user.'));
+
+        return endpoint.delete(id);
     }
 
     /**
