@@ -62,7 +62,7 @@ export class MaintenanceManagementApi extends BaseApi {
         const endpointPath = this.organizationScopedPath(organizationId, `${maintenanceSchedulesEndpointPath}/${resource.id}`);
         if (!endpointPath) return Promise.reject(new Error('Organization is required to update a maintenance schedule.'));
 
-        return this.http.patch(endpointPath, {status: resource.status});
+        return this.http.patch(endpointPath, {status: maintenanceScheduleStatusForApi(resource.status)});
     }
 
     /**
@@ -133,7 +133,7 @@ export class MaintenanceManagementApi extends BaseApi {
             assetId: resource.assetId,
             scheduledDate: this.#dateTimeFrom(resource.scheduledDate),
             observations: resource.observations,
-            status: resource.status,
+            status: maintenanceScheduleStatusForApi(resource.status),
         };
     }
 
@@ -170,11 +170,32 @@ export class MaintenanceManagementApi extends BaseApi {
      * @returns {*}
      */
     #technicalServiceStatusRequestFrom(resource) {
+        const status = technicalServiceStatusForApi(resource.status);
         return {
-            status: resource.status,
+            status,
             closureSummary: resource.resultNotes ?? null,
             evidence: resource.interventionNotes ?? null,
-            closedBy: resource.closedBy ?? null,
+            closedBy: resource.closedBy ?? (status === 'closed' ? 'ColdTrace' : null),
         };
     }
+}
+
+/**
+ * Maps frontend schedule status labels to backend lifecycle values.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+function maintenanceScheduleStatusForApi(status) {
+    return status === 'pending' ? 'in_progress' : status;
+}
+
+/**
+ * Maps frontend technical service status labels to backend lifecycle values.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+function technicalServiceStatusForApi(status) {
+    return status === 'pending-review' ? 'in_progress' : status;
 }

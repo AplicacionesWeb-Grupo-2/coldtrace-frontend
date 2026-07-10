@@ -476,8 +476,17 @@ const useAlertsStore = defineStore('alerts', () => {
      */
     async function updateIncidentWithRetry(incident) {
         return retryRequest(async () => {
-            const response = await alertsApi.updateIncident(incident.organizationId, IncidentAssembler.toResourceFromEntity(incident));
-            return IncidentAssembler.toEntityFromResource(response.data);
+            try {
+                const response = await alertsApi.updateIncident(incident.organizationId, IncidentAssembler.toResourceFromEntity(incident));
+                return IncidentAssembler.toEntityFromResource(response.data);
+            } catch (error) {
+                if (shouldRefreshIncidentAfterConflict(error, incident)) {
+                    const response = await alertsApi.getIncidentForOrganization(incident.organizationId, incident.id);
+                    return IncidentAssembler.toEntityFromResource(response.data);
+                }
+
+                throw error;
+            }
         });
     }
 
@@ -508,10 +517,33 @@ const useAlertsStore = defineStore('alerts', () => {
                 return await request();
             } catch (error) {
                 lastError = error;
+                if (!isRetryableRequestError(error)) break;
                 if (attempt < attempts - 1) await delay(250);
             }
         }
         throw lastError;
+    }
+
+    /**
+     * Determines whether an incident should be refreshed after a conflict response.
+     *
+     * @param {*} error
+     * @param {*} incident
+     * @returns {boolean}
+     */
+    function shouldRefreshIncidentAfterConflict(error, incident) {
+        return error?.response?.status === 409 && incident.escalationStatus === 'escalated';
+    }
+
+    /**
+     * Determines whether a request error can be retried safely.
+     *
+     * @param {*} error
+     * @returns {boolean}
+     */
+    function isRetryableRequestError(error) {
+        const status = error?.response?.status;
+        return !status || status === 408 || status === 429 || status >= 500;
     }
 
     /**

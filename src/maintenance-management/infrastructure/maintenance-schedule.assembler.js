@@ -1,4 +1,5 @@
 import {MaintenanceSchedule} from '@/maintenance-management/domain/model/maintenance-schedule-entity.js';
+import {MaintenanceScheduleStatus} from '@/maintenance-management/domain/model/maintenance-schedule-status.js';
 
 /**
  * @typedef {Object} MaintenanceScheduleApiResource
@@ -28,6 +29,7 @@ export class MaintenanceScheduleAssembler {
         return new MaintenanceSchedule({
             ...resource,
             period: resource.period ?? dateKeyFrom(resource.scheduledDate),
+            status: maintenanceScheduleStatusForUi(resource.status),
             createdAt: resource.createdAt ?? '',
         });
     }
@@ -74,4 +76,14 @@ export class MaintenanceScheduleAssembler {
  */
 function dateKeyFrom(value) {
     return value ? String(value).slice(0, 7) : '';
+}
+
+/**
+ * Maps backend schedule lifecycle values to UI status values.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+function maintenanceScheduleStatusForUi(status) {
+    return status === 'in_progress' ? MaintenanceScheduleStatus.Pending : status;
 }
