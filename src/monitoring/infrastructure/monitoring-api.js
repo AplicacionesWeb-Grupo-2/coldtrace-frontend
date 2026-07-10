@@ -5,6 +5,7 @@ const sensorReadingsEndpointPath = import.meta.env.VITE_SENSOR_READINGS_ENDPOINT
 const incidentsEndpointPath = import.meta.env.VITE_INCIDENTS_ENDPOINT_PATH ?? '/incidents';
 const maintenanceSchedulesEndpointPath = import.meta.env.VITE_MAINTENANCE_SCHEDULES_ENDPOINT_PATH ?? '/maintenance-schedules';
 const technicalServiceRequestsEndpointPath = import.meta.env.VITE_TECHNICAL_SERVICE_REQUESTS_ENDPOINT_PATH ?? '/technical-service-requests';
+const dashboardAiInterpretationEndpointPath = import.meta.env.VITE_DASHBOARD_AI_INTERPRETATION_ENDPOINT_PATH ?? '/dashboard/ai-interpretation';
 
 /**
  * HTTP facade for monitoring resources.
@@ -24,6 +25,20 @@ export class MonitoringApi extends BaseApi {
         this.#incidentsEndpoint = new BaseEndpoint(this, incidentsEndpointPath);
         this.#maintenanceSchedulesEndpoint = new BaseEndpoint(this, maintenanceSchedulesEndpointPath);
         this.#technicalServiceRequestsEndpoint = new BaseEndpoint(this, technicalServiceRequestsEndpointPath);
+    }
+
+    /**
+     * Generates an AI interpretation for the active organization's dashboard.
+     *
+     * @param {number|string} organizationId
+     * @param {{question?: string, preferredLanguage?: string}} request
+     * @returns {Promise<*>}
+     */
+    generateDashboardAiInterpretation(organizationId, request = {}) {
+        const endpointPath = this.organizationScopedPath(organizationId, dashboardAiInterpretationEndpointPath);
+        if (!endpointPath) return Promise.reject(new Error('organization-scope-required'));
+
+        return this.http.post(endpointPath, request);
     }
 
     /**
@@ -56,6 +71,23 @@ export class MonitoringApi extends BaseApi {
         if (!endpoint) return Promise.reject(new Error('Organization is required to create a sensor reading.'));
 
         return endpoint.create(this.#sensorReadingRequestFrom(resource));
+    }
+
+    /**
+     * Requests backend-owned demo sensor readings.
+     *
+     * @param {number|string} organizationId
+     * @param {{assetId?: number|null, count?: number|null}} resource
+     * @returns {Promise<*>}
+     */
+    generateDemoSensorReadings(organizationId, resource = {}) {
+        const basePath = this.organizationScopedPath(organizationId, sensorReadingsEndpointPath);
+        if (!basePath) return Promise.reject(new Error('Organization is required to generate demo readings.'));
+
+        return this.http.post(`${basePath}/demo-generations`, {
+            assetId: resource.assetId ?? null,
+            count: resource.count ?? null,
+        });
     }
 
     /**

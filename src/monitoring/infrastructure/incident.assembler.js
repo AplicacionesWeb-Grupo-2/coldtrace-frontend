@@ -13,11 +13,16 @@ import {Incident} from '@/monitoring/domain/model/incident-entity.js';
  * @property {*} [status]
  * @property {*} [recognizedBy]
  * @property {*} [recognizedAt]
+ * @property {*} [acknowledgedBy]
+ * @property {*} [acknowledgedAt]
  * @property {*} [conditionStable]
  * @property {*} [correctiveAction]
  * @property {*} [closureEvidence]
  * @property {*} [closedBy]
  * @property {*} [closedAt]
+ * @property {*} [resolvedBy]
+ * @property {*} [resolvedAt]
+ * @property {*} [resolutionNotes]
  * @property {*} [conditionKey]
  * @property {*} [source]
  * @property {*} [sourceReadingId]
@@ -27,6 +32,7 @@ import {Incident} from '@/monitoring/domain/model/incident-entity.js';
  * @property {*} [escalationPolicyMinutes]
  * @property {*} [escalatedAt]
  * @property {*} [escalatedTo]
+ * @property {*} [escalatedBy]
  * @property {*} [escalationReviewedBy]
  * @property {*} [escalationReviewedAt]
  */
@@ -108,12 +114,16 @@ export class IncidentAssembler {
         return {
             ...resource,
             status: normalizedStatus,
+            recognizedBy: resource.recognizedBy ?? resource.acknowledgedBy ?? null,
+            recognizedAt: resource.recognizedAt ?? resource.acknowledgedAt ?? null,
             source: resource.source ?? (resource.readingId ? 'sensor-reading' : 'manual'),
             sourceReadingId: resource.sourceReadingId ?? resource.readingId ?? null,
             closedAt: resource.closedAt ?? resource.resolvedAt ?? null,
             closedBy: resource.closedBy ?? resource.resolvedBy ?? null,
+            correctiveAction: resource.correctiveAction ?? null,
             closureEvidence: resource.closureEvidence ?? resource.resolutionNotes ?? null,
             escalationStatus: resource.escalationStatus || (resource.escalatedAt ? 'escalated' : 'none'),
+            escalatedTo: resource.escalatedTo ?? resource.escalatedBy ?? null,
         };
     }
 }

@@ -11,6 +11,7 @@ const feedback = ref('idle');
 const form = ref({
     fullName: '',
     email: '',
+    password: '',
     roleId: 0,
 });
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,6 +19,7 @@ const assignableRoles = computed(() => store.roles.filter(role => store.canAssig
 const canManageAccess = computed(() => store.canManageUsers());
 const fullNameInvalid = computed(() => form.value.fullName.trim().length < 3);
 const emailInvalid = computed(() => !emailPattern.test(form.value.email.trim()));
+const passwordInvalid = computed(() => form.value.password.length < 8);
 const roleInvalid = computed(() => !Number(form.value.roleId));
 
 onMounted(async () => {
@@ -58,7 +60,7 @@ async function submit() {
     submitted.value = true;
     feedback.value = 'idle';
 
-    if (fullNameInvalid.value || emailInvalid.value || roleInvalid.value) return;
+    if (fullNameInvalid.value || emailInvalid.value || passwordInvalid.value || roleInvalid.value) return;
 
     creating.value = true;
     try {
@@ -69,6 +71,7 @@ async function submit() {
             form.value = {
                 fullName: '',
                 email: '',
+                password: '',
                 roleId: assignableRoles.value[0]?.id ?? 0,
             };
         }
@@ -137,6 +140,19 @@ async function submit() {
       </label>
 
       <label class="form-field">
+        <span>{{ t('roles-permissions.form.password') }}</span>
+        <input
+          v-model="form.password"
+          type="password"
+          :placeholder="t('roles-permissions.form.password-placeholder')"
+          autocomplete="new-password"
+        />
+        <small v-if="submitted && passwordInvalid">
+          {{ t('roles-permissions.form.password-error') }}
+        </small>
+      </label>
+
+      <label class="form-field">
         <span>{{ t('roles-permissions.form.role') }}</span>
         <select v-model.number="form.roleId">
           <option v-for="role in assignableRoles" :key="role.id" :value="role.id">
@@ -147,6 +163,13 @@ async function submit() {
           {{ t('roles-permissions.form.role-error') }}
         </small>
       </label>
+
+      <div class="form-guidance">
+        <div>
+          <strong>{{ t('roles-permissions.form.role-assignment-title') }}</strong>
+          <span>{{ t('roles-permissions.form.role-assignment-description') }}</span>
+        </div>
+      </div>
 
       <div class="form-actions">
         <router-link class="secondary-action" to="/identity-access/roles-permissions">

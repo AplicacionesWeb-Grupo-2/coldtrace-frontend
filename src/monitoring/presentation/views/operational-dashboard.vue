@@ -17,6 +17,7 @@ import {StorageDistributionItem} from '@/monitoring/domain/model/storage-distrib
 import {TechnicalServiceStatus} from '@/monitoring/domain/model/technical-service-request-entity.js';
 import {TemperaturePoint} from '@/monitoring/domain/model/temperature-point-entity.js';
 import IncidentsChart from '@/monitoring/presentation/components/incidents-chart.vue';
+import DashboardAiAssistant from '@/monitoring/presentation/components/dashboard-ai-assistant.vue';
 import MaintenanceList from '@/monitoring/presentation/components/maintenance-list.vue';
 import RecentAlerts from '@/monitoring/presentation/components/recent-alerts.vue';
 import StatCard from '@/monitoring/presentation/components/stat-card.vue';
@@ -854,6 +855,18 @@ function kpi(config) {
     </header>
 
     <div v-if="hasOperationalData" class="dashboard-board">
+      <dashboard-ai-assistant
+        :organization-id="activeOrganizationId"
+        :thermal-compliance="Number(thermalComplianceKpi.value.replace('%', ''))"
+        :active-incidents="activeIncidents.length"
+        :critical-incidents="activeCriticalIncidents.length"
+        :monitored-assets="assetSummary.monitoredAssets"
+        :active-sensors="organizationIoTDevices.length"
+        :readings-count="organizationReadings.length"
+        :maintenance-completion="maintenanceCompletionRate"
+        :asset-issue-count="assetSummary.assetsWithIssues"
+      />
+
       <section class="primary-column">
         <div class="temp-chart-container dashboard-card-slot">
           <temperature-chart
