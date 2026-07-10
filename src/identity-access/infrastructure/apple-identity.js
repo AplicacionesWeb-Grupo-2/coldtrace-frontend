@@ -1,5 +1,4 @@
 const appleScriptUrl = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
-const defaultAppleOAuthClientId = 'com.coldtrace.web';
 
 /**
  * Loads Apple JS and starts the Sign in with Apple popup flow.
@@ -61,7 +60,7 @@ export class AppleIdentityService {
      * @returns {string}
      */
     get #clientId() {
-        return import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID ?? defaultAppleOAuthClientId;
+        return import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID?.trim() ?? '';
     }
 
     /**
