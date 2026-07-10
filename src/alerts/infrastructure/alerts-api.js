@@ -1,5 +1,6 @@
 import {BaseApi} from '@/shared/infrastructure/base-api.js';
 import {BaseEndpoint} from '@/shared/infrastructure/base-endpoint.js';
+import {IncidentLifecycleApiEndpoint} from '@/alerts/infrastructure/incident-lifecycle-api-endpoint.js';
 
 const incidentsEndpointPath = import.meta.env.VITE_INCIDENTS_ENDPOINT_PATH ?? '/incidents';
 const notificationsEndpointPath = import.meta.env.VITE_NOTIFICATIONS_ENDPOINT_PATH ?? '/notifications';
@@ -60,35 +61,10 @@ export class AlertsApi extends BaseApi {
      * @returns {Promise<*>}
      */
     updateIncident(organizationId, resource) {
-        const basePath = this.organizationScopedPath(organizationId, `${incidentsEndpointPath}/${resource.id}`);
-        if (!basePath) return Promise.reject(new Error('Organization is required to update an incident.'));
+        const endpointPath = this.organizationScopedPath(organizationId, incidentsEndpointPath);
+        if (!endpointPath) return Promise.reject(new Error('Organization is required to update an incident.'));
 
-        if (resource.status === 'recognized' && resource.recognizedBy) {
-            return this.http.post(`${basePath}/acknowledgements`, {acknowledgedBy: resource.recognizedBy});
-        }
-
-        if (resource.status === 'closed' && resource.closedBy) {
-            return this.http.post(`${basePath}/resolutions`, {
-                resolvedBy: resource.closedBy,
-                resolutionNotes: resource.closureEvidence ?? resource.correctiveAction ?? 'Resolved from ColdTrace.',
-            });
-        }
-
-        if (resource.escalationStatus === 'escalated') {
-            return this.http.patch(`${basePath}/escalation`, {
-                escalatedBy: resource.escalatedTo ?? 'ColdTrace',
-                escalationReason: resource.conditionKey ?? resource.type ?? 'Incident escalation threshold reached.',
-            });
-        }
-
-        if (resource.correctiveAction) {
-            return this.http.patch(`${basePath}/corrective-action`, {
-                correctiveAction: resource.correctiveAction,
-                registeredBy: resource.recognizedBy ?? resource.closedBy ?? 'ColdTrace',
-            });
-        }
-
-        return Promise.resolve({status: 200, data: resource});
+        return new IncidentLifecycleApiEndpoint(this, endpointPath).updateLifecycle(resource);
     }
 
     /**
