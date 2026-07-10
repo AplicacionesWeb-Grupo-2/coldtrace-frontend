@@ -113,6 +113,21 @@ const useAlertsStore = defineStore('alerts', () => {
     }
 
     /**
+     * Loads notifications linked to one incident without replacing list state.
+     *
+     * @param {number|string} incidentId
+     * @param {number|string} organizationId
+     * @returns {Promise<Array<*>>}
+     */
+    async function notificationsForIncident(
+        incidentId,
+        organizationId = identityStore.currentOrganizationIdFrom(),
+    ) {
+        const response = await alertsApi.getNotificationsByIncidentId(organizationId, incidentId);
+        return NotificationAssembler.toEntitiesFromResponse(response);
+    }
+
+    /**
      * Loads incidents data for the current view or use case.
      *
      * @param {Object} options
@@ -1136,6 +1151,7 @@ const useAlertsStore = defineStore('alerts', () => {
         pendingEscalationConfigurationCount,
         fetchIncidentsOnly,
         fetchNotificationsOnly,
+        notificationsForIncident,
         loadIncidents,
         recognizeIncident,
         closeIncident,
