@@ -244,6 +244,8 @@
     "nav-settings-aria": "Navegación de configuración",
     "nav-reports-aria": "Navegación de reportes",
     "section-navigation": "Navegación de sección",
+    "open-navigation": "Abrir navegación",
+    "close-navigation": "Cerrar navegación",
     "notification-shortcut": "Alertas pendientes: {count}",
     "team-members": "Miembros del equipo",
     "team-members-aria": "Miembros de la organización",

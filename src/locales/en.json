@@ -244,6 +244,8 @@
     "nav-settings-aria": "Settings navigation",
     "nav-reports-aria": "Reports navigation",
     "section-navigation": "Section navigation",
+    "open-navigation": "Open navigation",
+    "close-navigation": "Close navigation",
     "notification-shortcut": "Pending alerts: {count}",
     "team-members": "Team members",
     "team-members-aria": "Organization members",
