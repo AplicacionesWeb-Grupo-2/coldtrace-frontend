@@ -4,6 +4,7 @@ import {authSession} from '@/shared/infrastructure/auth-session.js';
 const coldTraceApiUrl = import.meta.env.VITE_COLDTRACE_API_URL;
 const defaultColdTraceApiUrl = 'http://localhost:3000/api/v1';
 const authenticationEndpointPath = import.meta.env.VITE_AUTHENTICATION_ENDPOINT_PATH ?? '/authentication';
+const passwordResetRequestsEndpointPath = import.meta.env.VITE_PASSWORD_RESET_REQUESTS_ENDPOINT_PATH ?? '/password-reset-requests';
 const inFlightGetRequests = new Map();
 
 /**
@@ -25,7 +26,7 @@ export class BaseApi {
 
         this.#http.interceptors.request.use((config) => {
             const token = authSession.token();
-            if (token && !isAuthenticationRequest(config.url)) {
+            if (token && !isPublicRequest(config.url)) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
             return config;
@@ -34,7 +35,7 @@ export class BaseApi {
         this.#http.interceptors.response.use(
             response => response,
             (error) => {
-                if (error.response?.status === 401 && !isAuthenticationRequest(error.config?.url)) {
+                if (error.response?.status === 401 && !isPublicRequest(error.config?.url)) {
                     authSession.clear();
                     if (typeof window !== 'undefined' && window.location.pathname !== '/identity-access/sign-in') {
                         window.location.assign('/identity-access/sign-in');
@@ -110,11 +111,12 @@ export class BaseApi {
 }
 
 /**
- * Determines whether an HTTP request targets the authentication API.
+ * Determines whether an HTTP request targets a public identity endpoint.
  *
  * @param {string|undefined} url
  * @returns {boolean}
  */
-function isAuthenticationRequest(url = '') {
-    return url.startsWith(authenticationEndpointPath) || url.includes(`${authenticationEndpointPath}/`);
+function isPublicRequest(url = '') {
+    return [authenticationEndpointPath, passwordResetRequestsEndpointPath]
+        .some(path => url.startsWith(path) || url.includes(`${path}/`));
 }
