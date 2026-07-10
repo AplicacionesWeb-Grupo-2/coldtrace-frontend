@@ -172,11 +172,15 @@ export class AssetManagementApi extends BaseApi {
     /**
      * Deletes gateway from the asset management context.
      *
+     * @param {number|string} organizationId
      * @param {number|string} id
      * @returns {Promise<*>}
      */
-    deleteGateway() {
-        return Promise.resolve({status: 204, data: null});
+    deleteGateway(organizationId, id) {
+        const endpoint = this.#endpointForOrganization(organizationId, gatewaysEndpointPath);
+        if (!endpoint) return Promise.reject(new Error('Organization is required to delete a gateway.'));
+
+        return endpoint.delete(id);
     }
 
     /**
