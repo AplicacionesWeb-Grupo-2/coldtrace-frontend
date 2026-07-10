@@ -172,9 +172,9 @@ export class MaintenanceManagementApi extends BaseApi {
     #technicalServiceStatusRequestFrom(resource) {
         return {
             status: resource.status,
-            closureSummary: resource.resultNotes ?? resource.interventionNotes ?? null,
-            evidence: resource.resultNotes ?? resource.interventionNotes ?? null,
-            closedBy: resource.status === 'closed' ? 'ColdTrace' : null,
+            closureSummary: resource.resultNotes ?? null,
+            evidence: resource.interventionNotes ?? null,
+            closedBy: resource.closedBy ?? null,
         };
     }
 }

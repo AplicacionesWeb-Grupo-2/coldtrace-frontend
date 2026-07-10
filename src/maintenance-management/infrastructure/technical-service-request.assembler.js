@@ -6,12 +6,20 @@ import {TechnicalServiceRequest} from '@/maintenance-management/domain/model/tec
  * @property {*} [organizationId]
  * @property {*} [uuid]
  * @property {*} [assetId]
+ * @property {*} [assetLocationId]
+ * @property {*} [assetName]
+ * @property {*} [incidentId]
  * @property {*} [priority]
  * @property {*} [issueDescription]
  * @property {*} [requestedDate]
+ * @property {*} [requestedAt]
+ * @property {*} [requestedBy]
  * @property {*} [status]
  * @property {*} [interventionNotes]
  * @property {*} [resultNotes]
+ * @property {*} [closureSummary]
+ * @property {*} [evidence]
+ * @property {*} [closedBy]
  * @property {*} [functionalTestPassed]
  * @property {*} [closedAt]
  */
@@ -31,9 +39,14 @@ export class TechnicalServiceRequestAssembler {
             ...resource,
             uuid: resource.uuid ?? resource.code ?? '',
             requestedDate: resource.requestedDate ?? dateKeyFrom(resource.requestedAt),
-            interventionNotes: resource.interventionNotes ?? resource.closureSummary ?? null,
-            resultNotes: resource.resultNotes ?? resource.evidence ?? null,
-            functionalTestPassed: resource.functionalTestPassed ?? (resource.status === 'closed' ? true : null),
+            interventionNotes: resource.interventionNotes ?? resource.evidence ?? null,
+            resultNotes: resource.resultNotes ?? resource.closureSummary ?? null,
+            functionalTestPassed: resource.functionalTestPassed ?? functionalTestStatusFrom(resource),
+            assetLocationId: resource.assetLocationId ?? null,
+            assetName: resource.assetName ?? null,
+            incidentId: resource.incidentId ?? null,
+            requestedBy: resource.requestedBy ?? null,
+            closedBy: resource.closedBy ?? null,
         });
     }
 
@@ -69,6 +82,13 @@ export class TechnicalServiceRequestAssembler {
             resultNotes: entity.resultNotes,
             functionalTestPassed: entity.functionalTestPassed,
             closedAt: entity.closedAt,
+            assetLocationId: entity.assetLocationId,
+            assetName: entity.assetName,
+            incidentId: entity.incidentId,
+            requestedBy: entity.requestedBy,
+            closureSummary: entity.resultNotes,
+            evidence: entity.interventionNotes,
+            closedBy: entity.closedBy,
         };
     }
 }
@@ -81,4 +101,16 @@ export class TechnicalServiceRequestAssembler {
  */
 function dateKeyFrom(value) {
     return value ? String(value).slice(0, 10) : '';
+}
+
+/**
+ * Derives the functional test result from the backend lifecycle fields.
+ *
+ * @param {*} resource
+ * @returns {boolean|null}
+ */
+function functionalTestStatusFrom(resource) {
+    if (resource.status === 'closed') return true;
+    if (resource.status === 'pending-review' && (resource.closureSummary || resource.evidence)) return false;
+    return null;
 }

@@ -145,6 +145,7 @@ async function requestTechnicalService() {
         resultNotes: null,
         functionalTestPassed: null,
         closedAt: null,
+        requestedBy: identityAccessStore.currentUserNameFrom(),
     });
 
     saving.value = true;
@@ -192,6 +193,7 @@ async function closeTechnicalService() {
     const nextStatus = functionalTestPassed
         ? TechnicalServiceStatus.Closed
         : TechnicalServiceStatus.PendingReview;
+    const closedBy = functionalTestPassed ? identityAccessStore.currentUserNameFrom() : null;
     const updatedRequest = new TechnicalServiceRequest({
         id: request.id,
         organizationId: request.organizationId,
@@ -205,6 +207,11 @@ async function closeTechnicalService() {
         resultNotes: closureForm.resultNotes.trim(),
         functionalTestPassed,
         closedAt: functionalTestPassed ? today : null,
+        assetLocationId: request.assetLocationId,
+        assetName: request.assetName,
+        incidentId: request.incidentId,
+        requestedBy: request.requestedBy,
+        closedBy,
     });
 
     saving.value = true;

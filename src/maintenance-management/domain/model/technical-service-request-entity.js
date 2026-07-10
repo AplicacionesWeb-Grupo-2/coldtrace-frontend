@@ -14,6 +14,11 @@ import {TechnicalServiceStatus} from '@/maintenance-management/domain/model/tech
  * @property {*|null} [resultNotes]
  * @property {*|null} [functionalTestPassed]
  * @property {*|null} [closedAt]
+ * @property {number|null} [assetLocationId]
+ * @property {string|null} [assetName]
+ * @property {number|null} [incidentId]
+ * @property {string|null} [requestedBy]
+ * @property {string|null} [closedBy]
  */
 
 /**
@@ -36,6 +41,11 @@ export class TechnicalServiceRequest {
         resultNotes = null,
         functionalTestPassed = null,
         closedAt = null,
+        assetLocationId = null,
+        assetName = null,
+        incidentId = null,
+        requestedBy = null,
+        closedBy = null,
     }) {
         this.id = Number(id);
         this.organizationId = Number(organizationId);
@@ -49,5 +59,10 @@ export class TechnicalServiceRequest {
         this.resultNotes = resultNotes;
         this.functionalTestPassed = functionalTestPassed;
         this.closedAt = closedAt;
+        this.assetLocationId = assetLocationId === null || assetLocationId === undefined ? null : Number(assetLocationId);
+        this.assetName = assetName;
+        this.incidentId = incidentId === null || incidentId === undefined ? null : Number(incidentId);
+        this.requestedBy = requestedBy;
+        this.closedBy = closedBy;
     }
 }
