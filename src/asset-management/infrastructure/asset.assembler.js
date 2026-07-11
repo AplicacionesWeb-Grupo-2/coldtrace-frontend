@@ -16,6 +16,7 @@ import {Asset} from '@/asset-management/domain/model/asset-entity.js';
  * @property {*} [lastIncident]
  * @property {*} [currentTemperature]
  * @property {*} [entryDate]
+ * @property {*} [createdAt]
  * @property {*} [connectivity]
  */
 

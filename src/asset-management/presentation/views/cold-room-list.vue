@@ -4,6 +4,7 @@ import {storeToRefs} from 'pinia';
 import {useI18n} from 'vue-i18n';
 import useAssetManagementStore from '@/asset-management/application/asset-management.store.js';
 import useIdentityAccessStore from '@/identity-access/application/identity-access.store.js';
+import useMonitoringStore from '@/monitoring/application/monitoring.store.js';
 import {Asset} from '@/asset-management/domain/model/asset-entity.js';
 import {AssetStatus} from '@/asset-management/domain/model/asset-status.js';
 import {AssetType} from '@/asset-management/domain/model/asset-type.js';
@@ -17,9 +18,10 @@ import {IOT_DEVICE_DEFINITIONS} from '@/asset-management/domain/model/iot-device
 import {Location} from '@/asset-management/domain/model/location-entity.js';
 import ListPagination from '@/shared/presentation/components/list-pagination.vue';
 
-const {t} = useI18n();
+const {t, locale} = useI18n();
 const assetManagementStore = useAssetManagementStore();
 const identityAccessStore = useIdentityAccessStore();
+const monitoringStore = useMonitoringStore();
 const {assets, iotDevices, gateways, locations, loading, errors} = storeToRefs(assetManagementStore);
 
 const assetTypeTabs = [AssetType.ColdRoom, AssetType.Transport, 'location', 'gateway', 'iot-device'];
@@ -237,7 +239,10 @@ async function loadPageData() {
     try {
         const accessData = await identityAccessStore.fetchAccessData();
         const organizationId = identityAccessStore.currentOrganizationIdFrom(accessData.users);
-        await assetManagementStore.fetchAssetManagementData({organizationId, includeSettings: false});
+        await Promise.all([
+            assetManagementStore.fetchAssetManagementData({organizationId, includeSettings: false}),
+            monitoringStore.fetchReadings(organizationId),
+        ]);
         users.value = accessData.users;
         roles.value = accessData.roles;
         organizations.value = accessData.organizations;
@@ -1313,6 +1318,38 @@ function entryDate() {
 }
 
 /**
+ * Formats the latest temperature recorded for an asset.
+ *
+ * @param {*} asset
+ * @returns {string}
+ */
+function currentTemperatureFor(asset) {
+    const temperature = monitoringStore.getLatestTemperatureByAsset(asset.id);
+    if (temperature === null) return '—';
+    return `${new Intl.NumberFormat(locale.value, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+    }).format(temperature)}°C`;
+}
+
+/**
+ * Formats the date when an asset was registered.
+ *
+ * @param {*} asset
+ * @returns {string}
+ */
+function entryDateFor(asset) {
+    if (asset.createdAt) {
+        return new Intl.DateTimeFormat(locale.value?.startsWith('es') ? 'es-PE' : 'en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }).format(new Date(asset.createdAt));
+    }
+    return asset.entryDate || '—';
+}
+
+/**
  * Handles calibration count behavior in the asset management context.
  *
  * @param {string} status
@@ -2134,8 +2171,8 @@ function translateOrText(value) {
                     {{ t(incidentLabelKey(asset.lastIncident)) }}
                   </span>
                 </td>
-                <td :data-label="t('asset-management.table.temperature')">{{ asset.currentTemperature }}</td>
-                <td :data-label="t('asset-management.table.entry-date')">{{ asset.entryDate }}</td>
+                <td :data-label="t('asset-management.table.temperature')">{{ currentTemperatureFor(asset) }}</td>
+                <td :data-label="t('asset-management.table.entry-date')">{{ entryDateFor(asset) }}</td>
                 <td :data-label="t('asset-management.table.status')">
                   <label
                     v-if="canManageAssets"
