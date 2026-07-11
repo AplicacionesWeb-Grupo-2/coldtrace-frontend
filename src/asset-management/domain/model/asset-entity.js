@@ -18,6 +18,7 @@ import {ConnectivityStatus} from '@/asset-management/domain/model/connectivity-s
  * @property {string} [lastIncident]
  * @property {string} [currentTemperature]
  * @property {string} [entryDate]
+ * @property {string|null} [createdAt]
  * @property {*} [connectivity]
  */
 
@@ -43,6 +44,7 @@ export class Asset {
         lastIncident = 'none',
         currentTemperature = '—',
         entryDate = '',
+        createdAt = null,
         connectivity = ConnectivityStatus.Online,
     }) {
         this.id = Number(id);
@@ -59,6 +61,7 @@ export class Asset {
         this.lastIncident = lastIncident;
         this.currentTemperature = currentTemperature;
         this.entryDate = entryDate;
+        this.createdAt = createdAt;
         this.connectivity = connectivity;
     }
 }
